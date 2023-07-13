@@ -34,7 +34,7 @@ void BlaeckTCP::begin(int port, int maxClients, Stream *streamRef, unsigned int 
   Signals = new Signal[maximumSignalCount];
 
   StreamRef->print("BlaeckTCP Version: ");
-  StreamRef->println(BLAECKTCP_VERSION);
+  StreamRef->println(LIBRARY_VERSION);
 
   StreamRef->print("Max Clients allowed: ");
   StreamRef->println(maxClients);
@@ -738,7 +738,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].write('\0');
   Clients[i].print(DeviceFWVersion);
   Clients[i].write('\0');
-  Clients[i].print(BLAECKTCP_VERSION);
+  Clients[i].print(LIBRARY_VERSION);
   Clients[i].write('\0');
   Clients[i].print(LIBRARY_NAME);
   Clients[i].write('\0');
