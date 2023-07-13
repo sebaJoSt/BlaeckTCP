@@ -1,0 +1,760 @@
+/*
+        File: BlaeckTCP.cpp
+        Author: Sebastian Strobl
+*/
+
+#include "BlaeckTCP.h"
+#include <TelnetPrint.h>
+
+BlaeckTCP::BlaeckTCP()
+{
+}
+
+BlaeckTCP::~BlaeckTCP()
+{
+  delete Signals;
+  delete Clients;
+}
+
+void BlaeckTCP::begin(int port, int maxClients, Stream *streamRef, unsigned int maximumSignalCount)
+{
+  byte blaeckWriteClientMask[maxClients];
+  for (byte i = 0; i < maxClients; ++i)
+  {
+    blaeckWriteClientMask[i] = 1;
+  }
+
+  begin(port, maxClients, streamRef, maximumSignalCount, blaeckWriteClientMask);
+}
+
+void BlaeckTCP::begin(int port, int maxClients, Stream *streamRef, unsigned int maximumSignalCount, byte blaeckWriteClientMask[])
+{
+  StreamRef = (Stream *)streamRef;
+
+  Signals = new Signal[maximumSignalCount];
+
+  StreamRef->print("BlaeckTCP Version: ");
+  StreamRef->println(BLAECKTCP_VERSION);
+
+  StreamRef->print("Max Clients allowed: ");
+  StreamRef->println(maxClients);
+
+  _blaeckWriteClientMask = blaeckWriteClientMask;
+  StreamRef->print("Clients receiving Blaeck Data: ");
+  byte allowedClientsCount = 0;
+  for (byte i = 0; i < maxClients; ++i)
+  {
+    if (_blaeckWriteClientMask[i] == 1)
+    {
+      if (allowedClientsCount == 0)
+      {
+        StreamRef->print("#");
+        StreamRef->print(i);
+      }
+      if (allowedClientsCount > 0)
+      {
+        StreamRef->print(", #");
+        StreamRef->print(i);
+      }
+      allowedClientsCount++;
+    }
+  }
+  if (allowedClientsCount == 0)
+  {
+    StreamRef->print(F("none"));
+  }
+  StreamRef->println();
+
+  Clients = new NetClient[maxClients];
+
+  // start listening for clients
+  TelnetPrint = NetServer(port);
+  TelnetPrint.begin();
+}
+
+void BlaeckTCP::addSignal(String symbolName, bool *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_bool;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, byte *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_byte;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, short *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_short;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, unsigned short *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_ushort;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, int *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_int;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, unsigned int *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_uint;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, long *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_long;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, unsigned long *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_ulong;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+void BlaeckTCP::addSignal(String symbolName, float *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_float;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+#ifdef __AVR__
+void BlaeckTCP::addSignal(String symbolName, double *value, bool prefixSlaveID)
+{
+  /*On the Uno and other ATMEGA based boards, the double implementation occupies 4 bytes
+    and is exactly the same as the float, with no gain in precision.*/
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_float;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+#else
+void BlaeckTCP::addSignal(String symbolName, double *value, bool prefixSlaveID)
+{
+  Signals[_signalIndex].SymbolName = symbolName;
+  Signals[_signalIndex].DataType = Blaeck_double;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
+#endif
+
+void BlaeckTCP::deleteSignals()
+{
+  _signalIndex = 0;
+}
+
+void BlaeckTCP::read()
+{
+
+  if (recvWithStartEndMarkers() == true)
+  {
+    parseData();
+    StreamRef->print("<");
+    StreamRef->print(receivedChars);
+    StreamRef->println(">");
+
+    if (strcmp(COMMAND, "BLAECK.WRITE_SYMBOLS") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->writeSymbols(msg_id);
+    }
+    else if (strcmp(COMMAND, "BLAECK.WRITE_DATA") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->writeData(msg_id);
+    }
+    else if (strcmp(COMMAND, "BLAECK.GET_DEVICES") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->writeDevices(msg_id);
+    }
+    else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
+    {
+      unsigned long parameter = PARAMETER[0];
+      if (parameter > 32767)
+        parameter = 32767;
+      unsigned long unit_multiplicator = 1000;
+      unsigned long timedInterval_ms = parameter * unit_multiplicator;
+
+      this->setTimedData(true, timedInterval_ms);
+    }
+    else if (strcmp(COMMAND, "BLAECK.DEACTIVATE") == 0)
+    {
+      this->setTimedData(false, _timedInterval_ms);
+    }
+
+    if (_readCallback != NULL)
+      _readCallback(COMMAND, PARAMETER, STRING_01);
+  }
+}
+
+void BlaeckTCP::attachRead(void (*readCallback)(char *command, int *parameter, char *string_01))
+{
+  _readCallback = readCallback;
+}
+
+void BlaeckTCP::attachUpdate(void (*updateCallback)())
+{
+  _updateCallback = updateCallback;
+}
+
+bool BlaeckTCP::recvWithStartEndMarkers()
+{
+  bool newData = false;
+  static boolean recvInProgress = false;
+  static byte ndx = 0;
+  char startMarker = '<';
+  char endMarker = '>';
+  char rc;
+
+  NetClient newClient = TelnetPrint.accept();
+
+  if (newClient)
+  {
+    // newClient.setConnectionTimeout(100);
+
+    for (byte i = 0; i < 8; i++)
+    {
+      if (!Clients[i])
+      {
+        StreamRef->print("We have a new client #");
+        StreamRef->println(i);
+        newClient.print("Hello, client number: ");
+        newClient.println(i);
+        // Once we "accept", the client is no longer tracked by EthernetServer
+        // so we must store it into our list of clients
+        Clients[i] = newClient;
+        break;
+      }
+    }
+  }
+
+  for (byte i = 0; i < 8; i++)
+  {
+    while (Clients[i].available() && newData == false)
+    {
+      rc = Clients[i].read();
+      if (recvInProgress == true)
+      {
+        if (rc != endMarker)
+        {
+          receivedChars[ndx] = rc;
+          ndx++;
+          if (ndx >= MAXIMUM_CHAR_COUNT)
+          {
+            ndx = MAXIMUM_CHAR_COUNT - 1;
+          }
+        }
+        else
+        {
+          // terminate the string
+          receivedChars[ndx] = '\0';
+          recvInProgress = false;
+          ndx = 0;
+          newData = true;
+          ActiveClient = Clients[i];
+          break;
+        }
+      }
+      else if (rc == startMarker)
+      {
+        recvInProgress = true;
+      }
+    }
+  }
+
+  // stop any clients which disconnect
+  for (byte i = 0; i < 8; i++)
+  {
+    if (Clients[i] && !Clients[i].connected())
+    {
+      Clients[i].stop();
+      StreamRef->print("Client #");
+      StreamRef->print(i);
+      StreamRef->println(" disconnected");
+    }
+  }
+
+  return newData;
+}
+
+void BlaeckTCP::parseData()
+{
+  // split the data into its parts
+  char tempChars[sizeof(receivedChars)];
+  strcpy(tempChars, receivedChars);
+  char *strtokIndx;
+  strtokIndx = strtok(tempChars, ",");
+  strcpy(COMMAND, strtokIndx);
+
+  strtokIndx = strtok(NULL, ",");
+  if (strtokIndx != NULL)
+  {
+    // PARAMETER 1 is stored in PARAMETER_01 & STRING_01 (if PARAMETER 1 is a string)
+
+    // Only copy first 15 chars
+    strncpy(STRING_01, strtokIndx, 15);
+    // 16th Char = Null Terminator
+    STRING_01[15] = '\0';
+    PARAMETER[0] = atoi(strtokIndx);
+  }
+  else
+  {
+    STRING_01[0] = '\0';
+    PARAMETER[0] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[1] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[1] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[2] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[2] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[3] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[3] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[4] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[4] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[5] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[5] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[6] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[6] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[7] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[7] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[8] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[8] = 0;
+  }
+
+  strtokIndx = strtok(NULL, ", ");
+  if (strtokIndx != NULL)
+  {
+    PARAMETER[9] = atoi(strtokIndx);
+  }
+  else
+  {
+    PARAMETER[9] = 0;
+  }
+}
+
+void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms)
+{
+  _timedActivated = timedActivated;
+
+  if (_timedActivated)
+  {
+    if (timedInterval_ms > 32767000)
+    {
+      _timedSetPoint_ms = 32767000;
+      _timedInterval_ms = 32767000;
+    }
+    else
+    {
+      _timedSetPoint_ms = timedInterval_ms;
+      _timedInterval_ms = timedInterval_ms;
+    }
+    _timedFirstTime = true;
+  }
+}
+
+void BlaeckTCP::writeSymbols()
+{
+  for (byte client = 0; client < 8; client++)
+  {
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeSymbols(1, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeSymbols(unsigned long msg_id)
+{
+  for (byte client = 0; client < 8; client++)
+  {
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeSymbols(msg_id, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
+{
+  Clients[i].write("<BLAECK:");
+  byte msg_key = 0xB0;
+  Clients[i].write(msg_key);
+  Clients[i].write(":");
+  ulngCvt.val = msg_id;
+  Clients[i].write(ulngCvt.bval, 4);
+  Clients[i].write(":");
+
+  for (int j = 0; j < _signalIndex; j++)
+  {
+    Clients[i].write((byte)0);
+    Clients[i].write((byte)0);
+
+    Signal signal = Signals[j];
+    Clients[i].print(signal.SymbolName);
+    Clients[i].write('\0');
+
+    switch (signal.DataType)
+    {
+    case (Blaeck_bool):
+    {
+      Clients[i].write((byte)0x0);
+      break;
+    }
+    case (Blaeck_byte):
+    {
+      Clients[i].write(0x1);
+      break;
+    }
+    case (Blaeck_short):
+    {
+      Clients[i].write(0x2);
+      break;
+    }
+    case (Blaeck_ushort):
+    {
+      Clients[i].write(0x3);
+      break;
+    }
+    case (Blaeck_int):
+    {
+      Clients[i].write(0x4);
+      break;
+    }
+    case (Blaeck_uint):
+    {
+      Clients[i].write(0x5);
+      break;
+    }
+    case (Blaeck_long):
+    {
+      Clients[i].write(0x6);
+      break;
+    }
+    case (Blaeck_ulong):
+    {
+      Clients[i].write(0x7);
+      break;
+    }
+    case (Blaeck_float):
+    {
+      Clients[i].write(0x8);
+      break;
+    }
+    case (Blaeck_double):
+    {
+      Clients[i].write(0x9);
+      break;
+    }
+    }
+  }
+
+  Clients[i].write("/BLAECK>");
+  Clients[i].write("\r\n");
+  Clients[i].flush();
+}
+
+void BlaeckTCP::writeData()
+{
+  if (_updateCallback != NULL)
+    _updateCallback();
+
+  for (byte client = 0; client < 8; client++)
+  {
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeData(1, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeData(unsigned long msg_id)
+{
+  if (_updateCallback != NULL)
+    _updateCallback();
+
+  for (byte client = 0; client < 8; client++)
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeData(msg_id, client);
+    }
+}
+
+void BlaeckTCP::writeData(unsigned long msg_id, byte i)
+{
+  _crc.setPolynome(0x04C11DB7);
+  _crc.setStartXOR(0xFFFFFFFF);
+  _crc.setEndXOR(0xFFFFFFFF);
+  _crc.setReverseIn(true);
+  _crc.setReverseOut(true);
+  _crc.restart();
+
+  Clients[i].write("<BLAECK:");
+  byte msg_key = 0xB1;
+  Clients[i].write(msg_key);
+  Clients[i].write(":");
+  ulngCvt.val = msg_id;
+  Clients[i].write(ulngCvt.bval, 4);
+  Clients[i].write(":");
+
+  _crc.add(msg_key);
+  _crc.add(':');
+  _crc.add(ulngCvt.bval, 4);
+  _crc.add(':');
+
+  for (int j = 0; j < _signalIndex; j++)
+  {
+    intCvt.val = j;
+    Clients[i].write(intCvt.bval, 2);
+    _crc.add(intCvt.bval, 2);
+
+    Signal signal = Signals[j];
+    switch (signal.DataType)
+    {
+    case (Blaeck_bool):
+    {
+      boolCvt.val = *((bool *)signal.Address);
+      Clients[i].write(boolCvt.bval, 1);
+      _crc.add(boolCvt.bval, 1);
+    }
+    break;
+    case (Blaeck_byte):
+    {
+      Clients[i].write(*((byte *)signal.Address));
+      _crc.add(*((byte *)signal.Address));
+    }
+    break;
+    case (Blaeck_short):
+    {
+      shortCvt.val = *((short *)signal.Address);
+      Clients[i].write(shortCvt.bval, 2);
+      _crc.add(shortCvt.bval, 2);
+    }
+    break;
+    case (Blaeck_ushort):
+    {
+      ushortCvt.val = *((unsigned short *)signal.Address);
+      Clients[i].write(ushortCvt.bval, 2);
+      _crc.add(ushortCvt.bval, 2);
+    }
+    break;
+    case (Blaeck_int):
+    {
+      intCvt.val = *((int *)signal.Address);
+      Clients[i].write(intCvt.bval, 2);
+      _crc.add(intCvt.bval, 2);
+    }
+    break;
+    case (Blaeck_uint):
+    {
+      uintCvt.val = *((unsigned int *)signal.Address);
+      Clients[i].write(uintCvt.bval, 2);
+      _crc.add(uintCvt.bval, 2);
+    }
+    break;
+    case (Blaeck_long):
+    {
+      lngCvt.val = *((long *)signal.Address);
+      Clients[i].write(lngCvt.bval, 4);
+      _crc.add(lngCvt.bval, 4);
+    }
+    break;
+    case (Blaeck_ulong):
+    {
+      ulngCvt.val = *((unsigned long *)signal.Address);
+      Clients[i].write(ulngCvt.bval, 4);
+      _crc.add(ulngCvt.bval, 4);
+    }
+    break;
+    case (Blaeck_float):
+    {
+      fltCvt.val = *((float *)signal.Address);
+      Clients[i].write(fltCvt.bval, 4);
+      _crc.add(fltCvt.bval, 4);
+    }
+    break;
+    case (Blaeck_double):
+    {
+      dblCvt.val = *((double *)signal.Address);
+      Clients[i].write(dblCvt.bval, 8);
+      _crc.add(dblCvt.bval, 8);
+    }
+    break;
+    }
+  }
+
+  // StatusByte 0: Normal transmission
+  // StatusByte + CRC First Byte + CRC Second Byte + CRC Third Byte + CRC Fourth Byte
+  Clients[i].write((byte)0);
+
+  uint32_t crc_value = _crc.getCRC();
+  Clients[i].write((byte *)&crc_value, 4);
+
+  Clients[i].write("/BLAECK>");
+  Clients[i].write("\r\n");
+  Clients[i].flush();
+}
+
+void BlaeckTCP::timedWriteData()
+{
+  this->timedWriteData(185273099);
+}
+
+void BlaeckTCP::timedWriteData(unsigned long msg_id)
+{
+
+  if (_timedFirstTime == true)
+    _timedFirstTimeDone_ms = millis();
+  unsigned long _timedElapsedTime_ms = (millis() - _timedFirstTimeDone_ms);
+
+  if (((_timedElapsedTime_ms >= _timedSetPoint_ms) || _timedFirstTime == true) && _timedActivated == true)
+  {
+    if (_timedFirstTime == false)
+      _timedSetPoint_ms += _timedInterval_ms;
+    _timedFirstTime = false;
+
+    this->writeData(msg_id);
+  }
+}
+
+void BlaeckTCP::writeDevices()
+{
+  for (byte client = 0; client < 8; client++)
+  {
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeDevices(1, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeDevices(unsigned long msg_id)
+{
+  for (byte client = 0; client < 8; client++)
+  {
+    if (Clients[client].connected() && _blaeckWriteClientMask[client] == 1)
+    {
+      this->writeDevices(msg_id, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
+{
+  Clients[i].write("<BLAECK:");
+  byte msg_key = 0xB3;
+  Clients[i].write(msg_key);
+  Clients[i].write(":");
+  ulngCvt.val = msg_id;
+  Clients[i].write(ulngCvt.bval, 4);
+  Clients[i].write(":");
+  Clients[i].write((byte)0);
+  Clients[i].write((byte)0);
+  Clients[i].print(DeviceName);
+  Clients[i].write('\0');
+  Clients[i].print(DeviceHWVersion);
+  Clients[i].write('\0');
+  Clients[i].print(DeviceFWVersion);
+  Clients[i].write('\0');
+  Clients[i].print(BLAECKTCP_VERSION);
+  Clients[i].write('\0');
+  Clients[i].print(LIBRARY_NAME);
+  Clients[i].write('\0');
+
+  Clients[i].write("/BLAECK>");
+  Clients[i].write("\r\n");
+  Clients[i].flush();
+}
+
+void BlaeckTCP::tick()
+{
+  this->tick(185273099);
+}
+
+void BlaeckTCP::tick(unsigned long msg_id)
+{
+  this->read();
+  this->timedWriteData(msg_id);
+}
