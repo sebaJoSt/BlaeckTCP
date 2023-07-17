@@ -56,7 +56,7 @@ void setup()
     // wait for serial port to connect. Needed for native USB port only
   }
 
-   // Check for Ethernet hardware present
+  // Check for Ethernet hardware present
   if (Ethernet.hardwareStatus() == EthernetNoHardware)
   {
     Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
@@ -75,19 +75,14 @@ void setup()
   Serial.print(":");
   Serial.println(SERVER_PORT);
 
-  // Setup the clients, which are allowed to receive Blaeck Data
-  // 1: Client receives Blaeck Data
-  // 0: Client does not received Blaeck Data
-  byte blaeckWriteClientMask[MAX_CLIENTS] = {1, 0, 1, 1, 1, 1, 1, 1};
-
   // Setup BlaeckTCP
   // Create a server that listens for incoming connections on the specified port.
   BlaeckTCP.begin(
-      SERVER_PORT,          // Port to listen on
-      MAX_CLIENTS,          // Maximal number of allowed clients
-      &Serial,              // Serial reference, used for debugging
-      MAX_SIGNALS,          // Maximal signal count used;
-      blaeckWriteClientMask // Clients allowed to receive Blaeck Data
+      SERVER_PORT, // Port to listen on
+      MAX_CLIENTS, // Maximal number of allowed clients
+      &Serial,     // Serial reference, used for debugging
+      MAX_SIGNALS, // Maximal signal count used;
+      0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
@@ -122,17 +117,11 @@ void UpdateSineNumbers()
 // Implement the function, don't forget the arguments
 void startCommand(char *command, int *parameter, char *string01)
 {
-  // Setup the clients, you want to print to.
+  // Setup the clients, you want to print to
+  // From right to left: client #0, #1, .. , #7
   // 1: Print enabled
   // 0: Print disabled
-  static byte clientMask[MAX_CLIENTS] = {1,  // client #0
-                                         1,  // client #1
-                                         0,  // client #2: Print disabled
-                                         1,  // client #3
-                                         1,  // client #4
-                                         1,  // client #5
-                                         1,  // client #6
-                                         1}; // client #7
+  int clientMask = 0b11111011; // client #2: Print disabled
 
   if (strcmp(command, "SwitchLED") == 0)
   {
@@ -144,7 +133,7 @@ void startCommand(char *command, int *parameter, char *string01)
 
       for (byte i = 0; i < MAX_CLIENTS; i++)
       {
-        if (BlaeckTCP.Clients[i].connected() && clientMask[i] == 1)
+        if (BlaeckTCP.Clients[i].connected() && bitRead(clientMask, i) == 1)
         {
           // Print to clients connected and enabled in clientMask
           BlaeckTCP.Clients[i].println("LED is ON.");
@@ -159,7 +148,7 @@ void startCommand(char *command, int *parameter, char *string01)
 
       for (byte i = 0; i < MAX_CLIENTS; i++)
       {
-        if (BlaeckTCP.Clients[i].connected() && clientMask[i] == 1)
+        if (BlaeckTCP.Clients[i].connected() && bitRead(clientMask, i) == 1)
         {
           // Print to clients connected and enabled in clientMask
           BlaeckTCP.Clients[i].println("LED is OFF.");
