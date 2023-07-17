@@ -80,7 +80,6 @@ void setup()
   // Setup BlaeckTCP
   // Create a server that listens for incoming connections on the specified port.
   BlaeckTCP.begin(
-      &server,
       SERVER_PORT, // Port to listen on
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
