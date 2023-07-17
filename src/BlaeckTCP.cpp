@@ -188,12 +188,7 @@ void BlaeckTCP::read()
     }
     else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
     {
-      unsigned long parameter = PARAMETER[0];
-      if (parameter > 32767)
-        parameter = 32767;
-      unsigned long unit_multiplicator = 1000;
-      unsigned long timedInterval_ms = parameter * unit_multiplicator;
-
+      unsigned long timedInterval_ms = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
       this->setTimedData(true, timedInterval_ms);
     }
     else if (strcmp(COMMAND, "BLAECK.DEACTIVATE") == 0)
@@ -425,10 +420,10 @@ void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms
 
   if (_timedActivated)
   {
-    if (timedInterval_ms > 32767000)
+    if (timedInterval_ms > 4294967)
     {
-      _timedSetPoint_ms = 32767000;
-      _timedInterval_ms = 32767000;
+      _timedSetPoint_ms = 4294967;
+      _timedInterval_ms = 4294967;
     }
     else
     {
@@ -569,8 +564,8 @@ void BlaeckTCP::writeData(unsigned long msg_id)
 void BlaeckTCP::writeData(unsigned long msg_id, byte i)
 {
   _crc.setPolynome(0x04C11DB7);
-  _crc.setStartXOR(0xFFFFFFFF);
-  _crc.setEndXOR(0xFFFFFFFF);
+  _crc.setInitial(0xFFFFFFFF);
+  _crc.setXorOut(0xFFFFFFFF);
   _crc.setReverseIn(true);
   _crc.setReverseOut(true);
   _crc.restart();
@@ -673,7 +668,7 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
   // StatusByte + CRC First Byte + CRC Second Byte + CRC Third Byte + CRC Fourth Byte
   Clients[i].write((byte)0);
 
-  uint32_t crc_value = _crc.getCRC();
+  uint32_t crc_value = _crc.calc();
   Clients[i].write((byte *)&crc_value, 4);
 
   Clients[i].write("/BLAECK>");

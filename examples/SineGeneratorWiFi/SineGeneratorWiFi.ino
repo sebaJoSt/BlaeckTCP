@@ -46,8 +46,6 @@ void setup()
   }
 
   wifiMulti.addAP(ssid, password);
-  wifiMulti.addAP("ssid_from_AP_2", "your_password_for_AP_2");
-  wifiMulti.addAP("ssid_from_AP_3", "your_password_for_AP_3");
 
   Serial.println("Connecting Wifi..");
   for (int loops = 10; loops > 0; loops--)
