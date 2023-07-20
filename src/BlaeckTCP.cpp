@@ -224,7 +224,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
 
   if (newClient)
   {
-    // newClient.setConnectionTimeout(100);
 
     for (byte i = 0; i < _maxClients; i++)
     {
@@ -420,10 +419,10 @@ void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms
 
   if (_timedActivated)
   {
-    if (timedInterval_ms > 4294967)
+    if (timedInterval_ms > 4294967295)
     {
-      _timedSetPoint_ms = 4294967;
-      _timedInterval_ms = 4294967;
+      _timedSetPoint_ms = 4294967295;
+      _timedInterval_ms = 4294967295;
     }
     else
     {
