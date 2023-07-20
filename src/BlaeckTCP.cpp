@@ -3,8 +3,10 @@
         Author: Sebastian Strobl
 */
 
-#include "BlaeckTCP.h"
+#include <Arduino.h>
 #include <TelnetPrint.h>
+#include "BlaeckTCP.h"
+
 
 BlaeckTCP::BlaeckTCP()
 {
