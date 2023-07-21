@@ -42,8 +42,8 @@ public:
   ~BlaeckTCP();
 
   // ----- Initialize
-  void begin(int port, byte maxClients, Stream *streamRef, unsigned int size);
-  void begin(int port, byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteClientMask);
+  void begin(byte maxClients, Stream *streamRef, unsigned int size);
+  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteClientMask);
   /**
            @brief Set these variables in your Arduino sketch
     */

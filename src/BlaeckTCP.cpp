@@ -18,14 +18,14 @@ BlaeckTCP::~BlaeckTCP()
   delete Clients;
 }
 
-void BlaeckTCP::begin(int port, byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
+void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
 {
   int blaeckWriteClientMask = pow(2, maxClients) - 1;
 
-  begin(port, maxClients, streamRef, maximumSignalCount, blaeckWriteClientMask);
+  begin(maxClients, streamRef, maximumSignalCount, blaeckWriteClientMask);
 }
 
-void BlaeckTCP::begin(int port, byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteClientMask)
+void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteClientMask)
 {
   StreamRef = (Stream *)streamRef;
   
@@ -66,10 +66,6 @@ void BlaeckTCP::begin(int port, byte maxClients, Stream *streamRef, unsigned int
   StreamRef->println();
 
   Clients = new NetClient[maxClients];
-
-  // start listening for clients
-  TelnetPrint = NetServer(port);
-  TelnetPrint.begin();
 }
 
 void BlaeckTCP::addSignal(String symbolName, bool *value, bool prefixSlaveID)

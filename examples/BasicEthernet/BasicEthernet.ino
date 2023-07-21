@@ -86,9 +86,7 @@ void setup()
   Serial.println(SERVER_PORT);
 
   // Setup BlaeckTCP
-  // Create a server that listens for incoming connections on the specified port.
   BlaeckTCP.begin(
-      SERVER_PORT, // Port to listen on
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       2,           // Maximal signal count used;
@@ -107,6 +105,10 @@ void setup()
     first parameter: timedActivated
     second parameter: timedInterval_ms */
   // BlaeckTCP.setTimedData(true, 60000);
+
+  // Start listening for clients
+  TelnetPrint = NetServer(SERVER_PORT);
+  TelnetPrint.begin();
 }
 
 void loop()

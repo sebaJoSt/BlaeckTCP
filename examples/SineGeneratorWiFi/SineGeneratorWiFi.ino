@@ -18,8 +18,8 @@
 #define MAX_SIGNALS 10
 
 WiFiMulti wifiMulti;
-const char *ssid = "iPhone von Sebastian";
-const char *password = "abcd12347";
+const char *ssid = "**********";
+const char *password = "**********";
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
@@ -27,19 +27,10 @@ BlaeckTCP BlaeckTCP;
 // Signals
 float sine;
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-IPAddress ip(192, 168, 1, 177);
-IPAddress myDns(192, 168, 1, 1);
-IPAddress gateway(192, 168, 1, 1);
-IPAddress subnet(255, 255, 0, 0);
-
 void setup()
 {
   // Open serial communications and wait for port to open:
-  Serial.begin(115200);
+  Serial.begin(9600);
   while (!Serial)
   {
     // wait for serial port to connect. Needed for native USB port only
@@ -47,6 +38,7 @@ void setup()
 
   wifiMulti.addAP(ssid, password);
 
+  Serial.println();
   Serial.println("Connecting Wifi..");
   for (int loops = 10; loops > 0; loops--)
   {
@@ -76,9 +68,7 @@ void setup()
   Serial.println(SERVER_PORT);
 
   // Setup BlaeckTCP
-  // Create a server that listens for incoming connections on the specified port.
   BlaeckTCP.begin(
-      SERVER_PORT, // Port to listen on
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
@@ -95,6 +85,16 @@ void setup()
     String signalName = "Sine_";
     BlaeckTCP.addSignal(signalName + i, &sine);
   }
+
+  // Start listening for clients
+  TelnetPrint = NetServer(SERVER_PORT);
+  TelnetPrint.begin();
+
+  /*
+   Uncomment the function below when you use fast logging intervals to prevent delayed logging values.
+   This disables the Nagle algorithm, which delays messages until a big enough packet is assembled.
+  */
+  // TelnetPrint.setNoDelay(true);
 }
 
 void loop()
