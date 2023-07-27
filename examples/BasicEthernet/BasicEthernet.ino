@@ -1,7 +1,7 @@
 /*
   BasicEthernet.ino
 
-  This is a sample sketch to show how to use the BlaecTCP library to transmit data
+  This is a sample sketch to show how to use the BlaeckTCP library to transmit data
   from the Arduino board to your PC every minute (or the user-set interval).
 
   Copyright (c) by Sebastian Strobl,
