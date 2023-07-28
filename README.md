@@ -60,7 +60,7 @@ void loop()
 }
 ```
 
-##BlaeckTCP commands
+## BlaeckTCP commands
 
 Here's a full list of the commands handled by this library:
 
