@@ -80,7 +80,6 @@ void setup()
   Serial.println();
   if (Ethernet.linkStatus() == LinkOFF)
   {
-
     Serial.println("Ethernet cable is not connected.");
   }
 
