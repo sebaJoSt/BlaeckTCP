@@ -90,7 +90,8 @@ Type| MSGKEY | Elements| Description
 ----|--------|---------------------------------|---------------------------------------------
 Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up to n symbols.** Response to request for available symbols `<BLAECK.WRITE_SYMBOLS>`
 Data | B1 | **`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
-Devices | B3 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
+~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP version 1.0.0 or older)
+Devices | B4 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client><BlaeckDataEnabled>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
   
 
  Element|Type    |  DESCRIPTION:
