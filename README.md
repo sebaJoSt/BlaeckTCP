@@ -109,6 +109,8 @@ Devices | B4 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
    `DeviceFWVersion`      | String0 |          set with public variable DeviceFWVersion
    `LibraryVersion`       | String0 |          set with public const LIBRARY_VERSION
    `LibraryName`          | String0 |          set with public const LIBRARY_NAME
+   `Client`               | byte |             Client number 
+   `BlaeckDataEnabled`    | byte |             Client is allowed to receive Data (MSGKEY: B1); Set with blaeckWriteDataClientMask in `BlaeckTCP::begin`
    `StatusByte`           | byte |             1 byte; Always 0: Normal Transmission (no master/slave support in this library)
    `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
          
