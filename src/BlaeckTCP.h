@@ -43,7 +43,7 @@ public:
 
   // ----- Initialize
   void begin(byte maxClients, Stream *streamRef, unsigned int size);
-  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteClientMask);
+  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
   /**
            @brief Set these variables in your Arduino sketch
     */
@@ -52,7 +52,7 @@ public:
   String DeviceFWVersion = "n/a";
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "1.0.0";
+  const String LIBRARY_VERSION = "2.0.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
@@ -133,7 +133,7 @@ public:
 
 private:
   Stream *StreamRef;
-  int _blaeckWriteClientMask;
+  int _blaeckWriteDataClientMask;
   byte _maxClients = 0;
 
   Signal *Signals;

@@ -7,7 +7,6 @@
 #include <TelnetPrint.h>
 #include "BlaeckTCP.h"
 
-
 BlaeckTCP::BlaeckTCP()
 {
 }
@@ -20,17 +19,17 @@ BlaeckTCP::~BlaeckTCP()
 
 void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
 {
-  int blaeckWriteClientMask = pow(2, maxClients) - 1;
+  int blaeckWriteDataClientMask = pow(2, maxClients) - 1;
 
-  begin(maxClients, streamRef, maximumSignalCount, blaeckWriteClientMask);
+  begin(maxClients, streamRef, maximumSignalCount, blaeckWriteDataClientMask);
 }
 
-void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteClientMask)
+void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteDataClientMask)
 {
   StreamRef = (Stream *)streamRef;
-  
+
   _maxClients = maxClients;
-  _blaeckWriteClientMask = blaeckWriteClientMask;
+  _blaeckWriteDataClientMask = blaeckWriteDataClientMask;
 
   Signals = new Signal[maximumSignalCount];
 
@@ -44,7 +43,7 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   byte allowedClientsCount = 0;
   for (int client = 0; client < maxClients; client++)
   {
-    if (bitRead(_blaeckWriteClientMask, client) == 1)
+    if (bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       if (allowedClientsCount == 0)
       {
@@ -231,9 +230,19 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         StreamRef->println(i);
         newClient.print("Hello, client number: ");
         newClient.println(i);
+        bool blaeckDataEnabled = bitRead(_blaeckWriteDataClientMask, i);
+        if (blaeckDataEnabled)
+        {
+          newClient.println("You are enabled to receive Blaeck data.");
+        }
+        else
+        {
+          newClient.println("Receiving Blaeck data was disabled for you.");
+        }
         // Once we "accept", the client is no longer tracked by the server
         // so we must store it into our list of clients
         Clients[i] = newClient;
+
         break;
       }
     }
@@ -435,7 +444,7 @@ void BlaeckTCP::writeSymbols()
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected())
     {
       this->writeSymbols(1, client);
     }
@@ -446,7 +455,7 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id)
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected())
     {
       this->writeSymbols(msg_id, client);
     }
@@ -529,7 +538,9 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
 
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
+#ifndef ESP32 // flush not used with ESP32 because it discards input
   Clients[i].flush();
+#endif
 }
 
 void BlaeckTCP::writeData()
@@ -539,7 +550,7 @@ void BlaeckTCP::writeData()
 
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(1, client);
     }
@@ -552,7 +563,7 @@ void BlaeckTCP::writeData(unsigned long msg_id)
     _updateCallback();
 
   for (byte client = 0; client < _maxClients; client++)
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(msg_id, client);
     }
@@ -670,7 +681,9 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
 
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
+#ifndef ESP32 // flush not used with ESP32 because it discards input
   Clients[i].flush();
+#endif
 }
 
 void BlaeckTCP::timedWriteData()
@@ -699,7 +712,7 @@ void BlaeckTCP::writeDevices()
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected())
     {
       this->writeDevices(1, client);
     }
@@ -710,7 +723,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteClientMask, client) == 1)
+    if (Clients[client].connected())
     {
       this->writeDevices(msg_id, client);
     }
@@ -719,8 +732,11 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
 
 void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
 {
+  byte clientNo = i;
+  byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, client);
+
   Clients[i].write("<BLAECK:");
-  byte msg_key = 0xB3;
+  byte msg_key = 0xB4;
   Clients[i].write(msg_key);
   Clients[i].write(":");
   ulngCvt.val = msg_id;
@@ -738,10 +754,15 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].write('\0');
   Clients[i].print(LIBRARY_NAME);
   Clients[i].write('\0');
-
+  Clients[i].print(clientNo);
+  Clients[i].write('\0');
+  Clients[i].print(clientDataEnabled);
+  Clients[i].write('\0');
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
+#ifndef ESP32 // flush not used with ESP32 because it discards input
   Clients[i].flush();
+#endif
 }
 
 void BlaeckTCP::tick()

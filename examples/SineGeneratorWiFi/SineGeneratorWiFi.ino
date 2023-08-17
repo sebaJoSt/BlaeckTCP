@@ -7,7 +7,6 @@
  created by Sebastian Strobl
  */
 
-#include <SPI.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
 #include "BlaeckTCP.h"
@@ -89,12 +88,7 @@ void setup()
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);
   TelnetPrint.begin();
-
-  /*
-   Uncomment the function below when you use fast logging intervals to prevent delayed logging values.
-   This disables the Nagle algorithm, which delays messages until a big enough packet is assembled.
-  */
-  // TelnetPrint.setNoDelay(true);
+  TelnetPrint.setNoDelay(true);
 }
 
 void loop()
