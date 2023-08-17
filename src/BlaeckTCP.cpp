@@ -733,7 +733,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
 void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
 {
   byte clientNo = i;
-  byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, client);
+  byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, clientNo);
 
   Clients[i].write("<BLAECK:");
   byte msg_key = 0xB4;
