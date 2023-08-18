@@ -7,8 +7,8 @@ All notable changes to this project will be documented in this file.
 When upgrading from 1.0.0 no changes in the sketches are required. Just update BlaeckTCP to version 2.0.0 and recompile your sketch. 
 
 ### Added
-- Signal names can now be stored in flash memory to save RAM with the new function `BlaeckTCP::setFlashSignalNameTable`. This is especially helpful for microcontrollers like the ATmega328P (Arduino Uno), which only have 2048 bytes of RAM
-- Example `StorageOfSignalNamesInFlashMemory.ino` added to show how it works
+- **Only for AVR Architecture:** Signal names can now be stored in flash memory to save RAM with the new function `BlaeckTCP::setFlashSignalNameTable`. This is especially helpful for the ATmega328P (Arduino Uno/Nano), which only have 2048 bytes of RAM
+- Example `StorageOfSignalNamesInFlashMemoryAVROnly.ino` added to show how it works
 
 ### Changed
 - **Breaking change:** Include `Client#` and `ClientDataEnabled` in response to `<BLAECK.GET_DEVICES>`, new message key: `MSGKEY: B4`
