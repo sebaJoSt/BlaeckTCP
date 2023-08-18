@@ -13,7 +13,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 ### Changed
 - **Breaking change:** Include `Client#` and `ClientDataEnabled` in response to `<BLAECK.GET_DEVICES>`, new message key: `MSGKEY: B4`
 - **Breaking change:** Behavior change of `blaeckWriteClientMask` in `BlaeckTCP::begin`; instead of every message key in 1.0.0 in the new version 2.0.0 only data (`MSGKEY: B1`) is masked and not sent to the masked clients. Devices (`MSGKEY: B4`) and symbol list `MSGKEY: B0` are always sent to all connected clients.
-- **Only for ESP32:** client.flush() was removed for this ESP32, because it discarded input, which led to the server not receiving commands, when the logging speed was high.
+- **Only for ESP32:** client.flush() was removed for ESP32, because it discarded input, which led to the server not receiving commands, when the logging speed was high.
 - In example SineGeneratorWiFi.ino setNoDelay is set to true per default to improve logging timing.
 
 
