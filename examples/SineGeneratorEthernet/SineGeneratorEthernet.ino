@@ -2,12 +2,28 @@
   SineGeneratorEthernet.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit identical sine waves
-  from the Arduino board to your PC.
+  from an Arduino with Ethernet Shield (Server) to your PC (Client) every minute (or the user-set interval).
 
   Circuit:
- * Ethernet shield attached to pins 10, 11, 12, 13
+   Ethernet shield attached to pins 10, 11, 12, 13
+  
+  Usage:
+    Upload the sketch to your board.
+    Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    Type the following commands and press enter:
 
- created by Sebastian Strobl
+    <BLAECK.GET_DEVICES>              Writes the device's information to the PC
+    <BLAECK.WRITE_SYMBOLS>            Writes the symbol list to the PC
+    <BLAECK.WRITE_DATA>               Writes the data to the PC
+    <BLAECK.ACTIVATE,96,234>          The data is written every 60 seconds (60 000ms)
+                                      first Byte:  0b01100000 = 96 DEC
+                                      second Byte: 0b11101010 = 234 DEC
+                                      Minimum: 0[milliseconds] Maximum: 4 294 967 295[milliseconds]
+    <BLAECK.DEACTIVATE>               Stops writing the data every 60s
+
+
+  created by Sebastian Strobl
+  More information on: https://github.com/sebaJoSt/BlaeckTCP
  */
 
 #include <SPI.h>

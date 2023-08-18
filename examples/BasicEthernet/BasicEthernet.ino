@@ -2,13 +2,13 @@
   BasicEthernet.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
-  from the Arduino board to your PC every minute (or the user-set interval).
+  from an Arduino with Ethernet Shiel (Server) to your PC (Client) every minute (or the user-set interval).
 
-  Copyright (c) by Sebastian Strobl,
-  More information on: https://github.com/sebaJoSt/BlaeckTCP
+  Circuit:
+    Ethernet shield attached to pins 10, 11, 12, 13
 
-  Setup:
-    Upload the sketch to your Arduino.
+  Usage:
+    Upload the sketch to your board.
     Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
     Type the following commands and press enter:
 
@@ -20,7 +20,11 @@
                                       second Byte: 0b11101010 = 234 DEC
                                       Minimum: 0[milliseconds] Maximum: 4 294 967 295[milliseconds]
     <BLAECK.DEACTIVATE>               Stops writing the data every 60s
-*/
+
+
+  created by Sebastian Strobl
+  More information on: https://github.com/sebaJoSt/BlaeckTCP
+ */
 
 #include <SPI.h>
 #include <Ethernet.h>

@@ -2,7 +2,9 @@
   SineGeneratorWiFi.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit identical sine waves
-  from the Arduino board to your PC.
+  from the Arduino board to your PC over WiFi.
+
+  This example was tested on ESP32. It should be easily adoptable to ESP8266.
 
  created by Sebastian Strobl
  */

@@ -4,9 +4,10 @@
   This is a sample sketch combining SineGeneratorEthernet.ino and CommandsEthernet.ino
 
   Circuit:
- * Ethernet shield attached to pins 10, 11, 12, 13
+    Ethernet shield attached to pins 10, 11, 12, 13
 
- created by Sebastian Strobl
+  created by Sebastian Strobl
+  More information on: https://github.com/sebaJoSt/BlaeckTCP
  */
 
 #include <SPI.h>
