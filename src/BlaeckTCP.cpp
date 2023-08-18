@@ -72,6 +72,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_bool;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -80,6 +81,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, byte *value)
@@ -87,6 +89,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_byte;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -95,6 +98,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, short *value)
@@ -102,6 +106,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_short;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -110,6 +115,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
@@ -117,6 +123,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_ushort;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -125,6 +132,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, int *value)
@@ -132,6 +140,7 @@ void BlaeckTCP::addSignal(String signalName, int *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_int;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -140,6 +149,7 @@ void BlaeckTCP::addSignal(String signalName, int *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
@@ -147,6 +157,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_uint;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -155,6 +166,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, long *value)
@@ -162,6 +174,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_long;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -170,6 +183,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
@@ -177,6 +191,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_ulong;
   Signals[_signalIndex].Address = value;
+#ifdef __AVR__
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -185,6 +200,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
+#endif
   _signalIndex++;
 }
 void BlaeckTCP::addSignal(String signalName, float *value)
@@ -192,24 +208,7 @@ void BlaeckTCP::addSignal(String signalName, float *value)
   Signals[_signalIndex].SignalName = signalName;
   Signals[_signalIndex].DataType = Blaeck_float;
   Signals[_signalIndex].Address = value;
-  if (signalName == "")
-  {
-    Signals[_signalIndex].UseFlashSignalName = true;
-  }
-  else
-  {
-    Signals[_signalIndex].UseFlashSignalName = false;
-  }
-  _signalIndex++;
-}
 #ifdef __AVR__
-void BlaeckTCP::addSignal(String signalName, double *value)
-{
-  /*On the Uno and other ATMEGA based boards, the double implementation occupies 4 bytes
-    and is exactly the same as the float, with no gain in precision.*/
-  Signals[_signalIndex].SignalName = signalName;
-  Signals[_signalIndex].DataType = Blaeck_float;
-  Signals[_signalIndex].Address = value;
   if (signalName == "")
   {
     Signals[_signalIndex].UseFlashSignalName = true;
@@ -218,35 +217,43 @@ void BlaeckTCP::addSignal(String signalName, double *value)
   {
     Signals[_signalIndex].UseFlashSignalName = false;
   }
-  _signalIndex++;
-}
-#else
-void BlaeckTCP::addSignal(String signalName, double *value)
-{
-  Signals[_signalIndex].SignalName = signalName;
-  Signals[_signalIndex].DataType = Blaeck_double;
-  Signals[_signalIndex].Address = value;
-  if (signalName == "")
-  {
-    Signals[_signalIndex].UseFlashSignalName = true;
-  }
-  else
-  {
-    Signals[_signalIndex].UseFlashSignalName = false;
-  }
-  _signalIndex++;
-}
 #endif
+  _signalIndex++;
+}
+
+void BlaeckTCP::addSignal(String signalName, double *value)
+{
+  Signals[_signalIndex].SignalName = signalName;
+#ifdef __AVR__
+  /*On the Uno and other ATMEGA based boards, the double implementation occupies 4 bytes
+  and is exactly the same as the float, with no gain in precision.*/
+  Signals[_signalIndex].DataType = Blaeck_float;
+  if (signalName == "")
+  {
+    Signals[_signalIndex].UseFlashSignalName = true;
+  }
+  else
+  {
+    Signals[_signalIndex].UseFlashSignalName = false;
+  }
+#else
+  Signals[_signalIndex].DataType = Blaeck_double;
+#endif
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+}
 
 void BlaeckTCP::deleteSignals()
 {
   _signalIndex = 0;
 }
 
+#ifdef __AVR__
 void BlaeckTCP::setFlashSignalNameTable(PGM_P const *flashSignalNameTable)
 {
   _flashSignalNameTable = flashSignalNameTable;
 }
+#endif
 
 void BlaeckTCP::read()
 {
@@ -571,7 +578,7 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
     Clients[i].write((byte)0);
 
     Signal signal = Signals[j];
-
+#ifdef __AVR__
     if (signal.UseFlashSignalName)
     {
       PGM_P progMemString = (PGM_P)pgm_read_ptr(&_flashSignalNameTable[j]);
@@ -586,6 +593,10 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
       Clients[i].print(signal.SignalName);
       Clients[i].write('\0');
     }
+#else
+    Clients[i].print(signal.SignalName);
+    Clients[i].write('\0');
+#endif
 
     switch (signal.DataType)
     {

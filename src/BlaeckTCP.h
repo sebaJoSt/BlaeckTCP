@@ -30,7 +30,9 @@ struct Signal
   String SignalName;
   dataType DataType;
   void *Address;
+#ifdef __AVR__
   bool UseFlashSignalName;
+#endif
 };
 
 class BlaeckTCP
@@ -73,13 +75,14 @@ public:
   void addSignal(String signalName, double *value);
   void deleteSignals();
 
+#ifdef __AVR__
   // Passes the flashSignalNameTable, which is defined in the sketch and stored in flash memory, to the BlaeckTCPLibrary
-  // - Adding a signal with empty signalName (e.g. addSignal("", &someGlobalVariable)) 
+  // - Adding a signal with empty signalName (e.g. addSignal("", &someGlobalVariable))
   //    leads to a signal name lookup in the flashSignalNameTable (later in BlaeckTCP::writeSymbols).
   // - Adding a signal with non-empty signalName (e.g. addSignal("SignalName_1", &someGlobalVariable))
   //    leads to normal signal name storage in RAM
   void setFlashSignalNameTable(PGM_P const *flashSignalNameTable);
-
+#endif
   // ----- Devices -----
   void writeDevices();
   void writeDevices(unsigned long messageID);
@@ -147,7 +150,9 @@ private:
   Signal *Signals;
   int _signalIndex = 0;
 
+#ifdef __AVR__
   PGM_P const *_flashSignalNameTable;
+#endif
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
