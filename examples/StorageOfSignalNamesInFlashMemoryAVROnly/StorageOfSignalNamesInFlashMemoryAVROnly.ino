@@ -1,8 +1,11 @@
 /*
-  StorageOfSignalNamesInFlashMemory.ino
+  StorageOfSignalNamesInFlashMemoryAVROnly.ino
 
   This example sketch is similar to SineGeneratorEthernet but stores the
   Signal names in flash memory to save RAM.
+
+  Storage of signal names in flash memory is implemented only in AVR architecture (ATMega328p,..).
+  Other microcontrollers, like the ESP32, should have sufficient RAM.
 
   Circuit:
  * Ethernet shield attached to pins 10, 11, 12, 13
