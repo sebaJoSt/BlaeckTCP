@@ -27,9 +27,10 @@ typedef enum DataType
 
 struct Signal
 {
-  String SymbolName;
+  String SignalName;
   dataType DataType;
   void *Address;
+  bool UseFlashSignalName;
 };
 
 class BlaeckTCP
@@ -60,17 +61,24 @@ public:
 
   // ----- Signals -----
   // add or delete signals
-  void addSignal(String symbolName, bool *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, byte *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, short *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, unsigned short *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, int *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, unsigned int *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, long *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, unsigned long *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, float *value, bool prefixSlaveID = true);
-  void addSignal(String symbolName, double *value, bool prefixSlaveID = true);
+  void addSignal(String signalName, bool *value);
+  void addSignal(String signalName, byte *value);
+  void addSignal(String signalName, short *value);
+  void addSignal(String signalName, unsigned short *value);
+  void addSignal(String signalName, int *value);
+  void addSignal(String signalName, unsigned int *value);
+  void addSignal(String signalName, long *value);
+  void addSignal(String signalName, unsigned long *value);
+  void addSignal(String signalName, float *value);
+  void addSignal(String signalName, double *value);
   void deleteSignals();
+
+  // Passes the flashSignalNameTable, which is defined in the sketch and stored in flash memory, to the BlaeckTCPLibrary
+  // - Adding a signal with empty signalName (e.g. addSignal("", &someGlobalVariable)) 
+  //    leads to a signal name lookup in the flashSignalNameTable (later in BlaeckTCP::writeSymbols).
+  // - Adding a signal with non-empty signalName (e.g. addSignal("SignalName_1", &someGlobalVariable))
+  //    leads to normal signal name storage in RAM
+  void setFlashSignalNameTable(PGM_P const *flashSignalNameTable);
 
   // ----- Devices -----
   void writeDevices();
@@ -138,6 +146,8 @@ private:
 
   Signal *Signals;
   int _signalIndex = 0;
+
+  PGM_P const *_flashSignalNameTable;
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
