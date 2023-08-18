@@ -3,11 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 ## [2.0.0] - 2023-08-17
+### Information
+When upgrading from 1.0.0 no changes in the sketches are required. Just update BlaeckTCP to version 2.0.0 and recompile your sketch. 
+
+### Added
+- Signal names can now be stored in flash memory to save RAM with the new function `BlaeckTCP::setFlashSignalNameTable`. This is especially helpful for microcontrollers like the ATmega328P (Arduino Uno), which only have 2048 bytes of RAM
+- Example `StorageOfSignalNamesInFlashMemory.ino` added to show how it works
 
 ### Changed
 - **Breaking change:** Include `Client#` and `ClientDataEnabled` in response to `<BLAECK.GET_DEVICES>`, new message key: `MSGKEY: B4`
 - **Breaking change:** Behavior change of `blaeckWriteClientMask` in `BlaeckTCP::begin`; instead of every message key in 1.0.0 in the new version 2.0.0 only data (`MSGKEY: B1`) is masked and not sent to the masked clients. Devices (`MSGKEY: B4`) and symbol list `MSGKEY: B0` are always sent to all connected clients.
-- **Only for ESP32:** client.flush() was removed for this microcontroller, because it discarded input, which led to the server not receiving commands, when the logging speed was high.
+- **Only for ESP32:** client.flush() was removed for this ESP32, because it discarded input, which led to the server not receiving commands, when the logging speed was high.
 - In example SineGeneratorWiFi.ino setNoDelay is set to true per default to improve logging timing.
 
 
