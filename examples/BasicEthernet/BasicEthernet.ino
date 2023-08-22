@@ -2,7 +2,7 @@
   BasicEthernet.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
-  from an Arduino with Ethernet Shiel (Server) to your PC (Client) every minute (or the user-set interval).
+  from an Arduino with Ethernet Shield (Server) to your PC (Client) every minute (or the user-set interval).
 
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
