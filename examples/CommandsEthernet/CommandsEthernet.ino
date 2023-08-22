@@ -6,8 +6,6 @@
   the command <SwitchLED> which turns the on-board LED on
   or off.
 
-  Copyright (c) by Sebastian Strobl,
-
   The command syntax for implementing your own commands:
 
     Command:         <COMMAND,PARAMETER01,PARAMETER02,...,PARAMETER10>
@@ -28,20 +26,23 @@
     e.g. don't do: <COMMAND,,PARAMETER02>   <- PARAMETER02 will be stored in PARAMETER01
                do: <COMMAND,PARAMETER01,PARAMETER02>
 
-  The circuit:
+  Circuit:
     - Ethernet shield attached to pins 10, 11, 12, 13
     - Use the on-board LED
       Note: Most Arduinos have an on-board LED you can control. On the UNO and MEGA
             it is attached to digital pin 13. LED_BUILTIN is set to the correct LED pin
             independent of which board is used.
 
-  Using the sketch:
+  Usage:
     - Upload the sketch to your Arduino.
     - Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
     - Type the following command and press enter:
         <SwitchLED,1>    Turn on the LED
         <SwitchLED,0>    Turn off the LED
-*/
+  
+  created by Sebastian Strobl
+  More information on: https://github.com/sebaJoSt/BlaeckTCP
+ */
 
 #include <SPI.h>
 #include <Ethernet.h>
