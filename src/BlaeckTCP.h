@@ -50,9 +50,9 @@ public:
   /**
            @brief Set these variables in your Arduino sketch
     */
-  String DeviceName = "Unknown";
-  String DeviceHWVersion = "n/a";
-  String DeviceFWVersion = "n/a";
+  String DeviceName;
+  String DeviceHWVersion;
+  String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
   const String LIBRARY_VERSION = "2.0.0";

@@ -849,6 +849,18 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
 
 void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
 {
+  String deviceName = DeviceName;
+  if (deviceName == "")
+    deviceName = "Unknown";
+
+  String deviceHWVersion = DeviceHWVersion;
+  if (deviceHWVersion == "")
+    deviceHWVersion = "n/a";
+
+  String deviceFWVersion = DeviceFWVersion;
+  if (deviceFWVersion == "")
+    deviceFWVersion = "n/a";
+
   byte clientNo = i;
   byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, clientNo);
 
@@ -861,11 +873,11 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].write(":");
   Clients[i].write((byte)0);
   Clients[i].write((byte)0);
-  Clients[i].print(DeviceName);
+  Clients[i].print(deviceName);
   Clients[i].write('\0');
-  Clients[i].print(DeviceHWVersion);
+  Clients[i].print(deviceHWVersion);
   Clients[i].write('\0');
-  Clients[i].print(DeviceFWVersion);
+  Clients[i].print(deviceFWVersion);
   Clients[i].write('\0');
   Clients[i].print(LIBRARY_VERSION);
   Clients[i].write('\0');
