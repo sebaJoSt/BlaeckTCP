@@ -78,7 +78,7 @@ void setup()
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
-  BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+  BlaeckTCP.DeviceHWVersion = "ESP32";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP
