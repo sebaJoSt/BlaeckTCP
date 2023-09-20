@@ -8,7 +8,9 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 ### Added
 - **Only for AVR Architecture:** Signal names can now be stored in flash memory to save RAM with the new function `BlaeckTCP::setFlashSignalNameTable`. This is especially helpful for the ATmega328P (Arduino Uno/Nano), which only has 2048 bytes of RAM
-- Example `StorageOfSignalNamesInFlashMemoryAVROnly.ino` added to show how it works
+- New example `StorageOfSignalNamesInFlashMemoryAVROnly.ino` added to show how it works
+- New example `BasicETH` which uses ESP32 ETH.h library and demonstrates integration of the board ESP32-EthernetKit_A_V1.2
+- New example `BasicWT32-ETH01` which uses WebServer_WT32_ETH01 library and demonstrates integration of the board WT32-ETH01 V1.4
 
 ### Changed
 - **Breaking change:** Include `Client#` and `ClientDataEnabled` in response to `<BLAECK.GET_DEVICES>`, new message key: `MSGKEY: B4`
