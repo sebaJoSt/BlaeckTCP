@@ -32,6 +32,8 @@ struct Signal
   void *Address;
 #ifdef __AVR__
   bool UseFlashSignalName;
+  PGM_P const *SignalNameTable;
+  int SignalNameIndex;
 #endif
 };
 
@@ -73,16 +75,22 @@ public:
   void addSignal(String signalName, unsigned long *value);
   void addSignal(String signalName, float *value);
   void addSignal(String signalName, double *value);
-  void deleteSignals();
 
 #ifdef __AVR__
-  // Passes the flashSignalNameTable, which is defined in the sketch and stored in flash memory, to the BlaeckTCPLibrary
-  // - Adding a signal with empty signalName (e.g. addSignal("", &someGlobalVariable))
-  //    leads to a signal name lookup in the flashSignalNameTable (later in BlaeckTCP::writeSymbols).
-  // - Adding a signal with non-empty signalName (e.g. addSignal("SignalName_1", &someGlobalVariable))
-  //    leads to normal signal name storage in RAM
-  void setFlashSignalNameTable(PGM_P const *flashSignalNameTable);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, bool *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, byte *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, short *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned short *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, int *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned int *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, long *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned long *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, float *value);
+  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, double *value);
 #endif
+
+  void deleteSignals();
+
   // ----- Devices -----
   void writeDevices();
   void writeDevices(unsigned long messageID);
@@ -149,10 +157,6 @@ private:
 
   Signal *Signals;
   int _signalIndex = 0;
-
-#ifdef __AVR__
-  PGM_P const *_flashSignalNameTable;
-#endif
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
