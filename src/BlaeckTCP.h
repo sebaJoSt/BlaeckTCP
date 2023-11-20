@@ -57,7 +57,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "2.0.0";
+  const String LIBRARY_VERSION = "2.0.1";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command

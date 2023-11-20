@@ -559,16 +559,8 @@ void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms
 
   if (_timedActivated)
   {
-    if (timedInterval_ms > 4294967295)
-    {
-      _timedSetPoint_ms = 4294967295;
-      _timedInterval_ms = 4294967295;
-    }
-    else
-    {
-      _timedSetPoint_ms = timedInterval_ms;
-      _timedInterval_ms = timedInterval_ms;
-    }
+    _timedSetPoint_ms = timedInterval_ms;
+    _timedInterval_ms = timedInterval_ms;
     _timedFirstTime = true;
   }
 }
@@ -619,16 +611,16 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
       // Copy from flash into RAM
       strcpy_P(buffer, progMemString);
       Clients[i].print(buffer);
-      Clients[i].write('\0');
+      Clients[i].print('\0');
     }
     else
     {
       Clients[i].print(signal.SignalName);
-      Clients[i].write('\0');
+      Clients[i].print('\0');
     }
 #else
     Clients[i].print(signal.SignalName);
-    Clients[i].write('\0');
+    Clients[i].print('\0');
 #endif
 
     switch (signal.DataType)
@@ -907,19 +899,19 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].write((byte)0);
   Clients[i].write((byte)0);
   Clients[i].print(deviceName);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(deviceHWVersion);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(deviceFWVersion);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(LIBRARY_VERSION);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(LIBRARY_NAME);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(clientNo);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].print(clientDataEnabled);
-  Clients[i].write('\0');
+  Clients[i].print('\0');
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
 #ifndef ESP32 // flush not used with ESP32 because it discards input

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1] - 2023-11-20
+
+### Changed
+- Changed from `StreamRef->write('\0')` to `StreamRef->print('\0')` because `Call of overloaded function is ambiguous` error was thrown when compiling for Arduino Due and other boards
+
+
 ## [2.0.0] - 2023-11-03
 ### Information
 When upgrading from 1.0.0 no changes in the sketches are required. Just update BlaeckTCP to version 2.0.0 and recompile your sketch. 
@@ -23,5 +29,6 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[2.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/sebaJoSt/BlaeckTCP/releases/tag/1.0.0
