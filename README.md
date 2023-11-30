@@ -18,9 +18,6 @@ Also included is a message parser which reads input in the syntax of `<HelloWorl
 
 https://github.com/sebaJoSt/BlaeckSerial/assets/388152/440fdcfb-c30b-45a9-837e-999d8a1426fe
 
-## Supported WiFi and Ethernet Libraries
-BlaeckTCP currently (September 2023) only works with WiFi and Ethernet libraries supporting the [`server.accept()`](https://www.arduino.cc/reference/en/libraries/ethernet/server.accept/) function. This includes the [official Arduino Ethernet library](https://github.com/arduino-libraries/Ethernet), [EthernetENC](https://github.com/JAndrassy/EthernetENC) and for WiFi: [Esp8266](https://github.com/esp8266/Arduino), [ESP32](https://github.com/espressif/arduino-esp32) (both ESP libraries use `accept()` as alias to `available()`) and [WiFiEspAT](https://github.com/JAndrassy/WiFiEspAT).
-
 ## Getting Started
 
 Clone this repository into `Arduino/Libraries` or use the built-in Arduino IDE Library manager to install
