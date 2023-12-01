@@ -9,8 +9,8 @@ All notable changes to this project will be documented in this file.
 - New example `SineGeneratorWiFiS3.ino` which uses the WiFiS3.h library
 
 ### Changed
-- Removed all `StreamRef->flush()`
-- Changed from `StreamRef->write('\0')` to `StreamRef->print('\0')` because `Call of overloaded function is ambiguous` error was thrown when compiling for Arduino Due and other boards
+- Removed all `Clients[i].flush()`
+- Changed from `Clients[i].write('\0')` to `Clients[i].print('\0')` because `Call of overloaded function is ambiguous` error was thrown when compiling for Arduino Due and other boards
 
 
 ## [2.0.0] - 2023-11-03
