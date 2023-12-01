@@ -11,6 +11,12 @@
 #include <TelnetPrint.h>
 #include <CRC32.h>
 
+#if __has_include(<WiFiS3.h>)
+#define MULTI_CLIENTS 0
+#else
+#define MULTI_CLIENTS 1
+#endif
+
 typedef enum DataType
 {
   Blaeck_bool,
@@ -47,8 +53,14 @@ public:
   ~BlaeckTCP();
 
   // ----- Initialize
+  void begin(Stream *streamRef, unsigned int size);
+#ifdef MULTI_CLIENTS
+#if (MULTI_CLIENTS == 1)
   void begin(byte maxClients, Stream *streamRef, unsigned int size);
   void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
+#endif
+#endif
+
   /**
            @brief Set these variables in your Arduino sketch
     */
@@ -57,7 +69,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "2.0.1";
+  const String LIBRARY_VERSION = "2.1.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command

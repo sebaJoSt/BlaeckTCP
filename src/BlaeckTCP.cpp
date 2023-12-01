@@ -17,6 +17,25 @@ BlaeckTCP::~BlaeckTCP()
   delete Clients;
 }
 
+void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
+{
+  StreamRef = (Stream *)streamRef;
+
+  _maxClients = 1;
+
+  _blaeckWriteDataClientMask = 1;
+
+  Signals = new Signal[maximumSignalCount];
+
+  StreamRef->print("BlaeckTCP Version: ");
+  StreamRef->println(LIBRARY_VERSION);
+
+  StreamRef->println("Only one client (= Client 0) can connect simultaneously!");
+
+  Clients = new NetClient[_maxClients];
+}
+#ifdef MULTI_CLIENTS
+#if (MULTI_CLIENTS == 1)
 void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
 {
   int blaeckWriteDataClientMask = pow(2, maxClients) - 1;
@@ -66,6 +85,8 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
 
   Clients = new NetClient[maxClients];
 }
+#endif
+#endif
 
 void BlaeckTCP::addSignal(String signalName, bool *value)
 {
@@ -350,6 +371,9 @@ bool BlaeckTCP::recvWithStartEndMarkers()
   char endMarker = '>';
   char rc;
 
+#ifdef MULTI_CLIENTS
+#if (MULTI_CLIENTS == 1)
+
   NetClient newClient = TelnetPrint.accept();
 
   if (newClient)
@@ -432,6 +456,47 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       StreamRef->println(" disconnected");
     }
   }
+
+#elif (MULTI_CLIENTS == 0)
+  NetClient client = TelnetPrint.available();
+
+  if (client.available())
+  {
+    while (client.available() && newData == false)
+    {
+      rc = client.read();
+      if (recvInProgress == true)
+      {
+        if (rc != endMarker)
+        {
+          receivedChars[ndx] = rc;
+          ndx++;
+          if (ndx >= MAXIMUM_CHAR_COUNT)
+          {
+            ndx = MAXIMUM_CHAR_COUNT - 1;
+          }
+        }
+        else
+        {
+          // terminate the string
+          receivedChars[ndx] = '\0';
+          recvInProgress = false;
+          ndx = 0;
+          newData = true;
+          Clients[0] = client;
+          ActiveClient = client;
+          break;
+        }
+      }
+      else if (rc == startMarker)
+      {
+        recvInProgress = true;
+      }
+    }
+  }
+
+#endif
+#endif
 
   return newData;
 }
@@ -680,9 +745,6 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
 
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
-#ifndef ESP32 // flush not used with ESP32 because it discards input
-  Clients[i].flush();
-#endif
 }
 
 void BlaeckTCP::writeData()
@@ -823,9 +885,6 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
 
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
-#ifndef ESP32 // flush not used with ESP32 because it discards input
-  Clients[i].flush();
-#endif
 }
 
 void BlaeckTCP::timedWriteData()
@@ -914,9 +973,6 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].print('\0');
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
-#ifndef ESP32 // flush not used with ESP32 because it discards input
-  Clients[i].flush();
-#endif
 }
 
 void BlaeckTCP::tick()

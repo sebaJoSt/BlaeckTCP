@@ -2,9 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2.0.1] - 2023-11-20
+## [2.1.0] - 2023-12-01
+
+### Added
+- Support for the WiFiS3 library (Arduino UNO R4 WiFi) by implementation of the server.available() function (Only one client can connect simultaneously to the Arduino board)
+- New example `SineGeneratorWiFiS3.ino` which uses the WiFiS3.h library
 
 ### Changed
+- Removed all `StreamRef->flush()`
 - Changed from `StreamRef->write('\0')` to `StreamRef->print('\0')` because `Call of overloaded function is ambiguous` error was thrown when compiling for Arduino Due and other boards
 
 
@@ -29,6 +34,6 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
-[2.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.0.1
+[2.1.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/sebaJoSt/BlaeckTCP/releases/tag/1.0.0
