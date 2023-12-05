@@ -36,11 +36,6 @@ struct Signal
   String SignalName;
   dataType DataType;
   void *Address;
-#ifdef __AVR__
-  bool UseFlashSignalName;
-  PGM_P const *SignalNameTable;
-  int SignalNameIndex;
-#endif
 };
 
 class BlaeckTCP
@@ -69,7 +64,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "2.1.0";
+  const String LIBRARY_VERSION = "2.2.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
@@ -87,19 +82,6 @@ public:
   void addSignal(String signalName, unsigned long *value);
   void addSignal(String signalName, float *value);
   void addSignal(String signalName, double *value);
-
-#ifdef __AVR__
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, bool *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, byte *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, short *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned short *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, int *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned int *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, long *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, unsigned long *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, float *value);
-  void addSignal(PGM_P const *signalNameTable, int signalNameIndex, double *value);
-#endif
 
   void deleteSignals();
 

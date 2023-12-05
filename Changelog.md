@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2023-12-05
+
+### Removed
+- Removed `BlaeckTCP::addSignal(PGM_P const *signalNameTable, int signalNameIndex, ..);` because it is easier and has the same effect to use the `F()` Macro
+
+### Changed
+- Example `SignalNamesInFlashLessRAMUsage.ino` now uses the `F()` Macro to store the signal names
+
+
 ## [2.1.0] - 2023-12-01
 
 ### Added

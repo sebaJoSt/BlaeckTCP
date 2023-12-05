@@ -104,7 +104,7 @@ void setup()
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
-  // Add signals to BlaeckSerial
+  // Add signals to BlaeckTCP
   BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
   BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 

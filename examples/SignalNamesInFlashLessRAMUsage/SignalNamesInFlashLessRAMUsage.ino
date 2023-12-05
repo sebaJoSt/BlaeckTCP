@@ -2,10 +2,10 @@
   SignalNamesInFlashLessRAMUsage.ino
 
   This example sketch is similar to BasisEthernet.ino but stores the
-  Signal names in flash memory to save RAM.
+  Signal names in flash memory using the F() Macro thereby saving RAM.
 
-  Storage of signal names in flash memory is currently only implemented in AVR architecture (ATMega328p,..).
-  Newer microcontrollers, like the ESP32, should have sufficient RAM.
+  This is useful for the AVR architecture (ATMega328p,..).
+  Other microcontrollers, like the ESP32, handle RAM differently.
 
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
@@ -43,16 +43,6 @@ BlaeckTCP BlaeckTCP;
 // Signals
 float randomSmallNumber;
 long randomBigNumber;
-
-// Signal Names
-/* Define the signal names here in flash memory.
-   Maximum length of each signal name is 50 chars */
-const char signalName0[] PROGMEM = "Small Number";
-const char signalName1[] PROGMEM = "Big Number";
-
-PGM_P const SignalNameTable[] PROGMEM = {
-    signalName0,
-    signalName1};
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
@@ -118,8 +108,8 @@ void setup()
     BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
     // Add signals to BlaeckTCP
-    BlaeckTCP.addSignal(SignalNameTable, 0, &randomSmallNumber);
-    BlaeckTCP.addSignal(SignalNameTable, 1, &randomBigNumber);
+    BlaeckTCP.addSignal(F("Small Number"), &randomSmallNumber);
+    BlaeckTCP.addSignal(F("Big Number"), &randomBigNumber);
 
     /*Uncomment this function for initial settings
       first parameter: timedActivated
