@@ -81,7 +81,7 @@ void setup()
   BlaeckTCP.DeviceHWVersion = "WT32-ETH01 V1.4";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
-  // Add signals to BlaeckSerial
+  // Add signals to BlaeckTCP
   BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
   BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 

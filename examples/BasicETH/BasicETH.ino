@@ -87,7 +87,7 @@ void setup()
   BlaeckTCP.DeviceHWVersion = "ESP32-EthernetKit_A_V1.2";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
-  // Add signals to BlaeckSerial
+  // Add signals to BlaeckTCP
   BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
   BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 
