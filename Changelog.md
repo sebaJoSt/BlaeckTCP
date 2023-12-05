@@ -43,6 +43,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[2.2.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/1.0.0...2.0.0
 [1.0.0]: https://github.com/sebaJoSt/BlaeckTCP/releases/tag/1.0.0
