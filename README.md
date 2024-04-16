@@ -94,7 +94,7 @@ Type| MSGKEY | Elements| Description
 Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up to n symbols.** Response to request for available symbols `<BLAECK.WRITE_SYMBOLS>`
 Data | B1 | **`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
 ~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP v1)
-Devices | B4 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>` | Deprecated (Used in BlaeckTCP v2)
+~~Devices~~ | ~~B4~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>`~~ | Deprecated (Used in BlaeckTCP v2)
 Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
   
 
@@ -108,14 +108,14 @@ Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
  `DTYPE` | byte | DataType  0=bool, 1=byte, 2=short, 3=ushort, 4=int, 5=uint, 6=long, 7=ulong, 8=float
   `MasterSlaveConfig`     | byte | always 0: Single device (no master/slave support in this library)
    `SlaveID`              | byte |             Slave Address, always 0 (no master/slave support in this library)
-   `DeviceName`           | String0 |          set with public variable DeviceName
-   `DeviceHWVersion`      | String0 |          set with public variable DeviceHWVersion
-   `DeviceFWVersion`      | String0 |          set with public variable DeviceFWVersion
-   `LibraryVersion`       | String0 |          set with public const LIBRARY_VERSION
-   `LibraryName`          | String0 |          set with public const LIBRARY_NAME
+   `DeviceName`           | String0 |          set with public variable `DeviceName`
+   `DeviceHWVersion`      | String0 |          set with public variable `DeviceHWVersion`
+   `DeviceFWVersion`      | String0 |          set with public variable `DeviceFWVersion`
+   `LibraryVersion`       | String0 |          set with public const `LIBRARY_VERSION`
+   `LibraryName`          | String0 |          set with public const `LIBRARY_NAME`
    `Client#`              | String0 |          Client number of the connected client
-   `ClientDataEnabled`    | String0 |          0 or 1; Client is not allowed/allowed to receive Data (MSGKEY: B1); Set with blaeckWriteDataClientMask in `BlaeckTCP::begin`
-   `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to `1` (at other times: `0`)
+   `ClientDataEnabled`    | String0 |          0 or 1; Client is not allowed/allowed to receive Data (MSGKEY: B1); Set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
+   `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
    `StatusByte`           | byte |             1 byte; Always 0: Normal Transmission (no master/slave support in this library)
    `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
          
