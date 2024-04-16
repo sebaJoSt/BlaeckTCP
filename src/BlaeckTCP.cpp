@@ -802,7 +802,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, clientNo);
 
   Clients[i].write("<BLAECK:");
-  byte msg_key = 0xB4;
+  byte msg_key = 0xB5;
   Clients[i].write(msg_key);
   Clients[i].write(":");
   ulngCvt.val = msg_id;
@@ -824,8 +824,15 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].print('\0');
   Clients[i].print(clientDataEnabled);
   Clients[i].print('\0');
+  Clients[i].print(_serverRestarted);
+  Clients[i].print('\0');
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");
+
+  if (_serverRestarted)
+  {
+    _serverRestarted = false;
+  }
 }
 
 void BlaeckTCP::tick()

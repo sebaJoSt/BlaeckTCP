@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2024-04-16
+### Information
+When upgrading from version 2 no changes in the sketches are required. Just update BlaeckTCP to version 3.0.0 and recompile your sketch. 
+
+### Changed
+- **Breaking change:** Include `ServerRestarted` in response to `<BLAECK.GET_DEVICES>`, first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to `1` (at other times: `0`); new message key: `MSGKEY: B5`.
+
+
 ## [2.2.0] - 2023-12-05
 
 ### Removed
@@ -43,6 +51,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[3.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.2.0...3.0.0
 [2.2.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/1.0.0...2.0.0

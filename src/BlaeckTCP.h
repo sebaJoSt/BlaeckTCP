@@ -64,7 +64,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "2.2.0";
+  const String LIBRARY_VERSION = "3.0.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
@@ -151,6 +151,8 @@ private:
 
   Signal *Signals;
   int _signalIndex = 0;
+
+  bool _serverRestarted = true;
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
