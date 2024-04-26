@@ -1,5 +1,3 @@
-[![arduino-library-badge](https://www.ardu-badge.com/badge/BlaeckTCP.svg)](https://www.ardu-badge.com/BlaeckTCP)
-
 <a href="url"><img src="https://user-images.githubusercontent.com/388152/185908831-4eccf7a6-5f43-405d-b7fe-5225eeba302d.png" height="75"></a>
 <a href="url"><img src="https://github.com/sebaJoSt/BlaeckTCP/assets/388152/15f6a932-2263-4453-9686-0ad9e36720fd"  alt="BlaeckTCP Logo SeeSaw Font" height="70"></a>
 ===
