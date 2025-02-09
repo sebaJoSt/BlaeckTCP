@@ -18,7 +18,7 @@
   |  (Running             |
   |  BridgeEthernet.ino)  |
   -------------------------
-           |  Tx     |  Tx
+           |  Tx     |  Rx
            |         |
            |         |-------- Serial connection, crossed lines (Tx-Rx, Rx-Tx)
            |  Rx     |  Tx
