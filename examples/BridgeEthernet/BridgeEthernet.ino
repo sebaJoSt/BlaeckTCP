@@ -18,10 +18,10 @@
   |  (Running             |
   |  BridgeEthernet.ino)  |
   -------------------------
-           |  tx     |  rx
+           |  Tx     |  Tx
            |         |
-           |         |-------- Serial connection, crossed lines (tx-rx, rx-tx)
-           |  rx     |  tx
+           |         |-------- Serial connection, crossed lines (Tx-Rx, Rx-Tx)
+           |  Rx     |  Tx
   --------------------------
   |  BLAECKSERIAL DEVICE   |
   |  Uno or Mega running   |
