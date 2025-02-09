@@ -85,6 +85,104 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
 
   Clients = new NetClient[maxClients];
 }
+
+void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream)
+{
+  _maxClients = maxClients;
+  StreamRef = streamRef;
+  _bridgeMode = true;
+  BridgeStreamRef = bridgeStream;
+
+  StreamRef->print("BlaeckTCP Version: ");
+  StreamRef->println(LIBRARY_VERSION);
+  StreamRef->println("Running in Bridge Mode");
+
+  StreamRef->print("Max Clients allowed: ");
+  StreamRef->println(maxClients);
+
+  Clients = new NetClient[maxClients];
+}
+
+void BlaeckTCP::tickBridge() {
+  // Handle new client connections
+  NetClient newClient = TelnetPrint.accept();
+  if (newClient) {
+    for (byte i = 0; i < _maxClients; i++) {
+      if (!Clients[i]) {
+        StreamRef->print("We have a new client #");
+        StreamRef->println(i);
+        newClient.print("Hello, client number: ");
+        newClient.println(i);
+        newClient.println("You are enabled to receive Blaeck data.");
+        Clients[i] = newClient;
+        break;
+      }
+    }
+  }
+
+  // Handle data from clients to bridge using larger buffer
+  static const int LARGE_BUFFER_SIZE = 1024; // Increased buffer size
+  static uint8_t buffer[LARGE_BUFFER_SIZE];
+  
+  for (byte i = 0; i < _maxClients; i++) {
+    if (Clients[i] && Clients[i].connected()) {
+      while (Clients[i].available() > 0) {
+        int bytesAvailable = min(Clients[i].available(), LARGE_BUFFER_SIZE);
+        int bytesRead = Clients[i].read(buffer, bytesAvailable);
+        
+        if (bytesRead > 0) {
+          // Write data to bridge in chunks to avoid overwhelming it
+          int written = 0;
+          while (written < bytesRead) {
+            int toWrite = min(64, bytesRead - written); // Write in smaller chunks
+            BridgeStreamRef->write(&buffer[written], toWrite);
+            written += toWrite;
+            
+            // Only yield if we're processing a large amount of data
+            if (bytesRead > 64) {
+              yield(); // Allow other processes to run
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Handle disconnected clients
+  for (byte i = 0; i < _maxClients; i++) {
+    if (Clients[i] && !Clients[i].connected()) {
+      Clients[i].stop();
+      StreamRef->print("Client #");
+      StreamRef->print(i);
+      StreamRef->println(" disconnected");
+    }
+  }
+
+  // Forward data from bridge stream to clients
+  if (BridgeStreamRef->available()) {
+    int bytesAvailable = min(BridgeStreamRef->available(), LARGE_BUFFER_SIZE);
+    int bytesRead = BridgeStreamRef->readBytes(buffer, bytesAvailable);
+    
+    if (bytesRead > 0) {
+      // Send to all connected clients
+      for (byte client = 0; client < _maxClients; client++) {
+        if (Clients[client].connected()) {
+          int written = 0;
+          while (written < bytesRead) {
+            int toWrite = min(64, bytesRead - written);
+            Clients[client].write(&buffer[written], toWrite);
+            written += toWrite;
+            
+            // Only yield if we're processing a large amount of data
+            if (bytesRead > 64) {
+              yield(); // Allow other processes to run
+            }
+          }
+        }
+      }
+    }
+  }
+}
 #endif
 #endif
 

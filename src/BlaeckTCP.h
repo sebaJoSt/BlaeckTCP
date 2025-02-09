@@ -53,6 +53,7 @@ public:
 #if (MULTI_CLIENTS == 1)
   void begin(byte maxClients, Stream *streamRef, unsigned int size);
   void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
+  void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream);
 #endif
 #endif
 
@@ -144,10 +145,18 @@ public:
     */
   void tick(unsigned long messageID);
 
+#ifdef MULTI_CLIENTS
+#if (MULTI_CLIENTS == 1)
+  void tickBridge();
+#endif
+#endif
+
 private:
   Stream *StreamRef;
   int _blaeckWriteDataClientMask;
   byte _maxClients = 0;
+  Stream *BridgeStreamRef;
+  bool _bridgeMode;
 
   Signal *Signals;
   int _signalIndex = 0;
