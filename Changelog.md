@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.0] - 2025-02-11
+
+### Changed
+- **Breaking change:**  Start listening for clients is now added to `begin `(`begin(int port, ..)`). Pass the port number to  `begin` and remove all `TelnetPrint` code lines from your sketches (See updated examples).
+- Example `BasicWT32-ETH01.ino` uses a newer Ethernet library
+
+
 ## [3.0.0] - 2024-04-16
 ### Information
 When upgrading from version 2 no changes in the sketches are required. Just update BlaeckTCP to version 3.0.0 and recompile your sketch. 
@@ -51,6 +58,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[4.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/3.0.0...4.0.0
 [3.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.2.0...3.0.0
 [2.2.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.0.0...2.1.0
