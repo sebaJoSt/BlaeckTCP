@@ -5,7 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [4.0.0] - 2025-02-11
 
 ### Changed
-- **Breaking change:**  Start listening for clients is now added to `begin `(`begin(int port, ..)`). Pass the port number to  `begin` and remove all `TelnetPrint` code lines from your sketches (See updated examples).
+- **Breaking change:**  Start listening for clients is now added to `begin` (`begin(int port, ..)`). Pass the port number to  `begin` and remove any lines of code related to `TelnetPrint` from your sketches.
+- All examples that are affected by this change have been updated.
 - Example `BasicWT32-ETH01.ino` uses a newer Ethernet library
 
 
