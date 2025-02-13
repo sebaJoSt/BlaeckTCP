@@ -2,12 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [4.0.0] - 2025-02-11
+## [4.0.0] - 2025-02-13
+
+### Added
+- Bridge mode, see example `BridgeEthernet`
 
 ### Changed
-- **Breaking change:**  Start listening for clients is now added to `begin` (`begin(int port, ..)`). Pass the port number to  `begin` and remove any lines of code related to `TelnetPrint` from your sketches.
-- All examples that are affected by this change have been updated.
-- Example `BasicWT32-ETH01.ino` uses a newer Ethernet library
+- Reading now uses a buffer (`BLAECK_INPUT_BUFFER_SIZE`: default buffer size is 1024 bytes)
+- Writing now uses a fixed buffer of 256 bytes
+- Writing now includes yield points to prevent blocking (when writing chunks ≥ `BLAECK_OUTPUT_CHUNK_SIZE`)
+```c++
+    // Add before #include <BlaeckTCP.h>:
+    #define BLAECK_INPUT_BUFFER_SIZE 2048  // Default: 1024
+    #define BLAECK_OUTPUT_CHUNK_SIZE 128   // Default: 64
+```
+- Example `BasicWT32-ETH01.ino` uses preinstalled Ethernet library (`ETH.h`)
+- `WiFiS3.h` now supports server.accept() function so multiple clients can connect simultaneously
 
 
 ## [3.0.0] - 2024-04-16
