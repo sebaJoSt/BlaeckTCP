@@ -47,6 +47,12 @@ BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
 BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 ```
 
+### Start TCP-Server and listen for clients
+```CPP
+TelnetPrint = NetServer(SERVER_PORT);
+TelnetPrint.begin();
+```
+
 ### Update your variables and don't forget to `tick()`!
 ```CPP
 void loop()
