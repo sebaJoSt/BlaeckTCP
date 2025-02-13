@@ -427,7 +427,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         }
 
         // Give other processes a chance to run
-        if (bytesRead >= BLAECK_OUTPUT_CHUNK_SIZE)
+        if (bytesRead >= BLAECK_CHUNK_SIZE)
         {
           yield();
         }
@@ -725,7 +725,7 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
     if (bufferIndex > 0)
     {
       Clients[i].write(buffer, bufferIndex);
-      if (bufferIndex >= BLAECK_OUTPUT_CHUNK_SIZE)
+      if (bufferIndex >= BLAECK_CHUNK_SIZE)
       {
         yield();
       }

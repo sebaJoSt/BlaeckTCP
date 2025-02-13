@@ -10,8 +10,8 @@
 #define BLAECK_INPUT_BUFFER_SIZE 1024
 #endif
 
-#ifndef BLAECK_OUTPUT_CHUNK_SIZE
-#define BLAECK_OUTPUT_CHUNK_SIZE 64
+#ifndef BLAECK_CHUNK_SIZE
+#define BLAECK_CHUNK_SIZE 64
 #endif
 
 #include <Arduino.h>

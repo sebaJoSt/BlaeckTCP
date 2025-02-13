@@ -10,11 +10,11 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Reading now uses a buffer (`BLAECK_INPUT_BUFFER_SIZE`: default buffer size is 1024 bytes)
 - Writing now uses a fixed buffer of 256 bytes
-- Writing now includes yield points to prevent blocking (when writing chunks ≥ `BLAECK_OUTPUT_CHUNK_SIZE`)
+- Writing now includes yield points to prevent blocking (when writing chunks ≥ `BLAECK_CHUNK_SIZE`)
 ```c++
     // Add before #include <BlaeckTCP.h>:
     #define BLAECK_INPUT_BUFFER_SIZE 2048  // Default: 1024
-    #define BLAECK_OUTPUT_CHUNK_SIZE 128   // Default: 64
+    #define BLAECK_CHUNK_SIZE 128          // Default: 64
 ```
 - Example `BasicWT32-ETH01.ino` uses preinstalled Ethernet library (`ETH.h`)
 - `WiFiS3.h` now supports server.accept() function so multiple clients can connect simultaneously
