@@ -107,7 +107,6 @@ void setup()
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(
-      SERVER_PORT,
       MAX_CLIENTS,
       &Serial,
       2,
