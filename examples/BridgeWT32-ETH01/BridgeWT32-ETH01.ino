@@ -1,7 +1,7 @@
 /*
-  BridgeEthernet.ino
+ BridgeWT32-ETH01.ino
 
-  This is a sample sketch to show how to use the BlaeckTCP library in Bridge mode.
+  This is a sample sketch to show how to use the BlaeckTCP library with the WT32-ETH01 V1.4 board in Bridge mode.
 
   Circuit:
 
@@ -9,15 +9,12 @@
      |
      |----------- Ethernet-Cable
      |
-  -------------------------
-  |  BLAECKTCP BRIDGE     |
-  |  Uno or Mega with     |
-  |  Ethernet shield      |
-  |  attached to pins     |
-  |  10, 11, 12, 13       |
-  |  (Running             |
-  |  BridgeEthernet.ino)  |
-  -------------------------
+  ---------------------------
+  |  BLAECKTCP BRIDGE       |
+  |  WT32-ETH01 v1.4        |
+  |  (Running               |
+  |  BridgeWT32-ETH01.ino)  |
+  ---------------------------
            |  Tx     |  Rx
            |         |
            |         |-------- Serial connection, crossed lines (Tx-Rx, Rx-Tx)
@@ -52,75 +49,86 @@
   More information on: https://github.com/sebaJoSt/BlaeckTCP
  */
 
-#include <SPI.h>
-#include <Ethernet.h>
+#include <ETH.h>
 #include "BlaeckTCP.h"
 
+#define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
+
+// ETH pins for WT32-ETH01
+#define ETH_PHY_TYPE ETH_PHY_LAN8720
+#define ETH_PHY_MDC 23
+#define ETH_PHY_MDIO 18
+#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Enter a MAC address and IP address for your controller below.
+// Enter a static IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 1, 177);
-IPAddress myDns(192, 168, 1, 1);
+IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 0, 0);
 
+void onEvent(arduino_event_id_t event)
+{
+  switch (event)
+  {
+  case ARDUINO_EVENT_ETH_START:
+    Serial.println("ETH Started");
+    ETH.setHostname("WT32-ETH01");
+    break;
+  case ARDUINO_EVENT_ETH_CONNECTED:
+    Serial.println("ETH Connected");
+    break;
+  case ARDUINO_EVENT_ETH_GOT_IP:
+    Serial.print("ETH MAC: ");
+    Serial.print(ETH.macAddress());
+    Serial.print(", IPv4: ");
+    Serial.print(ETH.localIP());
+    Serial.print(", ");
+    Serial.print(ETH.subnetMask());
+    Serial.print(", ");
+    Serial.println(ETH.gatewayIP());
+    break;
+  case ARDUINO_EVENT_ETH_DISCONNECTED:
+    Serial.println("ETH Disconnected");
+    break;
+  case ARDUINO_EVENT_ETH_STOP:
+    Serial.println("ETH Stopped");
+    break;
+  default:
+    break;
+  }
+}
+
 void setup()
 {
-  // You can use Ethernet.init(pin) to configure the CS pin
-  // Ethernet.init(10);  // Most Arduino shields
-  // Ethernet.init(5);   // MKR ETH Shield
-  // Ethernet.init(0);   // Teensy 2.0
-  // Ethernet.init(20);  // Teensy++ 2.0
-  // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
-  // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
+  Serial.begin(115200);
+  delay(500);
 
-  // initialize the Ethernet device
-  Ethernet.begin(mac, ip, myDns, gateway, subnet);
+  // Power up ETH PHY
+  pinMode(16, OUTPUT);
+  digitalWrite(16, HIGH);
+  delay(100);
 
-  // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial)
-  {
-    // wait for serial port to connect. Needed for native USB port only
-  }
+  // Register ETH event handler
+  Network.onEvent(onEvent);
 
-  // In this example Serial1 of the Mega is used to bridge the Signals (Pin 18: TX1, Pin 19: RX1)
-  Serial1.begin(115200);
+  // Initialize ETH
+  ETH.begin();
 
-  // Check for Ethernet hardware present
-  if (Ethernet.hardwareStatus() == EthernetNoHardware)
-  {
-    Serial.println();
-    Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
-    while (true)
-    {
-      delay(1); // do nothing, no point running without Ethernet hardware
-    }
-  }
-
-  Serial.println();
-  if (Ethernet.linkStatus() == LinkOFF)
-  {
-    Serial.println("Ethernet cable is not connected.");
-  }
-
-  Serial.print("BlaeckTCP Server: ");
-  Serial.print(Ethernet.localIP());
-  Serial.print(":");
-  Serial.println(SERVER_PORT);
+  // Configure static IP
+  ETH.config(ip, gateway, subnet, dns);
 
   // Setup BlaeckTCP
   BlaeckTCP.beginBridge(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, only used for debugging
-      &Serial1     // Bridge Serial reference; connects to the BlaeckSerial device
+      &Serial      // Bridge Serial reference; connects to the BlaeckSerial device
   );
 
   // Start listening for clients

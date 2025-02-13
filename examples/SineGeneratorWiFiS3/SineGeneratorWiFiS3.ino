@@ -19,6 +19,7 @@
 
 #define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
 #define MAX_SIGNALS 10
 
 #include "arduino_secrets.h"
@@ -78,13 +79,12 @@ void setup()
   Serial.print(":");
   Serial.println(SERVER_PORT);
 
-  /* Setup BlaeckTCP
-   Some Ethernet/WiFi libraries, like the WiFiS3 library used in this sketch, do not support the server.accept() function.
-   Therefore only one client can be connected simultaneously and you must use BlaeckTCP.begin(Stream *streamRef, unsigned int maximumSignalCount)
-   instead of BlaeckTCP.begin(byte maxClients,..) */
+  // Setup BlaeckTCP
   BlaeckTCP.begin(
-      &Serial,    // Serial reference, used for debugging
-      MAX_SIGNALS // Maximal signal count used;
+      MAX_CLIENTS, // Maximal number of allowed clients
+      &Serial,     // Serial reference, used for debugging
+      MAX_SIGNALS, // Maximal signal count used;
+      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
@@ -107,8 +107,9 @@ void loop()
 {
   UpdateSineNumbers();
 
-  /*Keeps watching for commands from TCP client and
-    transmits the data back to client at the user-set interval*/
+  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
+     connected clients (data messages only to permitted)
+   - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();
 }
 

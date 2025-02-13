@@ -34,8 +34,7 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
 
   Clients = new NetClient[_maxClients];
 }
-#ifdef MULTI_CLIENTS
-#if (MULTI_CLIENTS == 1)
+
 void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
 {
   int blaeckWriteDataClientMask = pow(2, maxClients) - 1;
@@ -58,7 +57,7 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   StreamRef->print("Max Clients allowed: ");
   StreamRef->println(maxClients);
 
-  StreamRef->print("Clients receiving Blaeck Data: ");
+  StreamRef->print("Clients receiving data messages: ");
   byte allowedClientsCount = 0;
   for (int client = 0; client < maxClients; client++)
   {
@@ -103,43 +102,51 @@ void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeSt
   Clients = new NetClient[maxClients];
 }
 
-void BlaeckTCP::tickBridge() {
+void BlaeckTCP::bridgePoll()
+{
   // Handle new client connections
   NetClient newClient = TelnetPrint.accept();
-  if (newClient) {
-    for (byte i = 0; i < _maxClients; i++) {
-      if (!Clients[i]) {
+  if (newClient)
+  {
+    for (byte i = 0; i < _maxClients; i++)
+    {
+      if (!Clients[i])
+      {
         StreamRef->print("We have a new client #");
         StreamRef->println(i);
         newClient.print("Hello, client number: ");
         newClient.println(i);
-        newClient.println("You are enabled to receive Blaeck data.");
         Clients[i] = newClient;
         break;
       }
     }
   }
 
-  // Handle data from clients to bridge using larger buffer
-  static const int LARGE_BUFFER_SIZE = 1024; // Increased buffer size
-  static uint8_t buffer[LARGE_BUFFER_SIZE];
-  
-  for (byte i = 0; i < _maxClients; i++) {
-    if (Clients[i] && Clients[i].connected()) {
-      while (Clients[i].available() > 0) {
-        int bytesAvailable = min(Clients[i].available(), LARGE_BUFFER_SIZE);
+  // Handle data from clients to bridge using buffer
+  static uint8_t buffer[BLAECK_INPUT_BUFFER_SIZE];
+
+  for (byte i = 0; i < _maxClients; i++)
+  {
+    if (Clients[i] && Clients[i].connected())
+    {
+      while (Clients[i].available() > 0)
+      {
+        int bytesAvailable = min(Clients[i].available(), BLAECK_INPUT_BUFFER_SIZE);
         int bytesRead = Clients[i].read(buffer, bytesAvailable);
-        
-        if (bytesRead > 0) {
+
+        if (bytesRead > 0)
+        {
           // Write data to bridge in chunks to avoid overwhelming it
           int written = 0;
-          while (written < bytesRead) {
+          while (written < bytesRead)
+          {
             int toWrite = min(64, bytesRead - written); // Write in smaller chunks
             BridgeStreamRef->write(&buffer[written], toWrite);
             written += toWrite;
-            
+
             // Only yield if we're processing a large amount of data
-            if (bytesRead > 64) {
+            if (bytesRead > 64)
+            {
               yield(); // Allow other processes to run
             }
           }
@@ -149,8 +156,10 @@ void BlaeckTCP::tickBridge() {
   }
 
   // Handle disconnected clients
-  for (byte i = 0; i < _maxClients; i++) {
-    if (Clients[i] && !Clients[i].connected()) {
+  for (byte i = 0; i < _maxClients; i++)
+  {
+    if (Clients[i] && !Clients[i].connected())
+    {
       Clients[i].stop();
       StreamRef->print("Client #");
       StreamRef->print(i);
@@ -159,22 +168,28 @@ void BlaeckTCP::tickBridge() {
   }
 
   // Forward data from bridge stream to clients
-  if (BridgeStreamRef->available()) {
-    int bytesAvailable = min(BridgeStreamRef->available(), LARGE_BUFFER_SIZE);
+  if (BridgeStreamRef->available())
+  {
+    int bytesAvailable = min(BridgeStreamRef->available(), BLAECK_INPUT_BUFFER_SIZE);
     int bytesRead = BridgeStreamRef->readBytes(buffer, bytesAvailable);
-    
-    if (bytesRead > 0) {
+
+    if (bytesRead > 0)
+    {
       // Send to all connected clients
-      for (byte client = 0; client < _maxClients; client++) {
-        if (Clients[client].connected()) {
+      for (byte client = 0; client < _maxClients; client++)
+      {
+        if (Clients[client].connected())
+        {
           int written = 0;
-          while (written < bytesRead) {
+          while (written < bytesRead)
+          {
             int toWrite = min(64, bytesRead - written);
             Clients[client].write(&buffer[written], toWrite);
             written += toWrite;
-            
+
             // Only yield if we're processing a large amount of data
-            if (bytesRead > 64) {
+            if (bytesRead > 64)
+            {
               yield(); // Allow other processes to run
             }
           }
@@ -183,8 +198,6 @@ void BlaeckTCP::tickBridge() {
     }
   }
 }
-#endif
-#endif
 
 void BlaeckTCP::addSignal(String signalName, bool *value)
 {
@@ -339,9 +352,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
   char endMarker = '>';
   char rc;
 
-#ifdef MULTI_CLIENTS
-#if (MULTI_CLIENTS == 1)
-
   NetClient newClient = TelnetPrint.accept();
 
   if (newClient)
@@ -358,11 +368,11 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         bool blaeckDataEnabled = bitRead(_blaeckWriteDataClientMask, i);
         if (blaeckDataEnabled)
         {
-          newClient.println("You are enabled to receive Blaeck data.");
+          newClient.println("You are enabled to receive data messages.");
         }
         else
         {
-          newClient.println("Receiving Blaeck data was disabled for you.");
+          newClient.println("Receiving data messages was disabled for you.");
         }
         // Once we "accept", the client is no longer tracked by the server
         // so we must store it into our list of clients
@@ -373,41 +383,53 @@ bool BlaeckTCP::recvWithStartEndMarkers()
     }
   }
 
+  // Use a buffer to read chunks of data
+  static char tempBuffer[BLAECK_INPUT_BUFFER_SIZE];
+
   for (byte i = 0; i < _maxClients; i++)
   {
     if (Clients[i] && Clients[i].connected())
     {
-      if (Clients[i].available())
+      while (Clients[i].available() > 0 && !newData)
       {
-        while (Clients[i].available() && newData == false)
+        // Read data in chunks
+        int bytesToRead = min(Clients[i].available(), BLAECK_INPUT_BUFFER_SIZE);
+        int bytesRead = Clients[i].read((uint8_t *)tempBuffer, bytesToRead);
+
+        // Process each character in the buffer
+        for (int j = 0; j < bytesRead && !newData; j++)
         {
-          rc = Clients[i].read();
-          if (recvInProgress == true)
+          char rc = tempBuffer[j];
+
+          if (recvInProgress)
           {
             if (rc != endMarker)
             {
-              receivedChars[ndx] = rc;
-              ndx++;
-              if (ndx >= MAXIMUM_CHAR_COUNT)
+              if (ndx < MAXIMUM_CHAR_COUNT - 1)
               {
-                ndx = MAXIMUM_CHAR_COUNT - 1;
+                receivedChars[ndx] = rc;
+                ndx++;
               }
             }
             else
             {
-              // terminate the string
               receivedChars[ndx] = '\0';
               recvInProgress = false;
               ndx = 0;
               newData = true;
               ActiveClient = Clients[i];
-              break;
             }
           }
           else if (rc == startMarker)
           {
             recvInProgress = true;
           }
+        }
+
+        // Give other processes a chance to run
+        if (bytesRead >= BLAECK_OUTPUT_CHUNK_SIZE)
+        {
+          yield();
         }
       }
     }
@@ -424,47 +446,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       StreamRef->println(" disconnected");
     }
   }
-
-#elif (MULTI_CLIENTS == 0)
-  NetClient client = TelnetPrint.available();
-
-  if (client.available())
-  {
-    while (client.available() && newData == false)
-    {
-      rc = client.read();
-      if (recvInProgress == true)
-      {
-        if (rc != endMarker)
-        {
-          receivedChars[ndx] = rc;
-          ndx++;
-          if (ndx >= MAXIMUM_CHAR_COUNT)
-          {
-            ndx = MAXIMUM_CHAR_COUNT - 1;
-          }
-        }
-        else
-        {
-          // terminate the string
-          receivedChars[ndx] = '\0';
-          recvInProgress = false;
-          ndx = 0;
-          newData = true;
-          Clients[0] = client;
-          ActiveClient = client;
-          break;
-        }
-      }
-      else if (rc == startMarker)
-      {
-        recvInProgress = true;
-      }
-    }
-  }
-
-#endif
-#endif
 
   return newData;
 }
@@ -733,109 +714,170 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
   _crc.setReverseOut(true);
   _crc.restart();
 
-  Clients[i].write("<BLAECK:");
-  byte msg_key = 0xB1;
-  Clients[i].write(msg_key);
-  Clients[i].write(":");
-  ulngCvt.val = msg_id;
-  Clients[i].write(ulngCvt.bval, 4);
-  Clients[i].write(":");
+  // Buffer for chunked writing
+  const size_t bufferSize = 256;
+  uint8_t buffer[bufferSize];
+  size_t bufferIndex = 0;
 
-  _crc.add(msg_key);
+  // Helper function to flush buffer
+  auto flushBuffer = [&]()
+  {
+    if (bufferIndex > 0)
+    {
+      Clients[i].write(buffer, bufferIndex);
+      if (bufferIndex >= BLAECK_OUTPUT_CHUNK_SIZE)
+      {
+        yield();
+      }
+      bufferIndex = 0;
+    }
+  };
+
+  // Helper function to add to buffer
+  auto addToBuffer = [&](const uint8_t *data, size_t len)
+  {
+    while (len > 0)
+    {
+      size_t chunk = min(len, bufferSize - bufferIndex);
+      memcpy(buffer + bufferIndex, data, chunk);
+      bufferIndex += chunk;
+      len -= chunk;
+
+      if (bufferIndex >= bufferSize)
+      {
+        flushBuffer();
+      }
+    }
+  };
+
+  // Write header
+  uint8_t header[] = {'<', 'B', 'L', 'A', 'E', 'C', 'K', ':', 0xB1, ':'};
+  addToBuffer(header, sizeof(header));
+
+  // Add message ID
+  ulngCvt.val = msg_id;
+  addToBuffer(ulngCvt.bval, 4);
+  addToBuffer((const uint8_t *)":", 1);
+
+  // Update CRC with header
+  _crc.add(0xB1); // msg_key
   _crc.add(':');
   _crc.add(ulngCvt.bval, 4);
   _crc.add(':');
 
+  // Write data for each signal
   for (int j = 0; j < _signalIndex; j++)
   {
+    // Write signal index
     intCvt.val = j;
-    Clients[i].write(intCvt.bval, 2);
+    addToBuffer(intCvt.bval, 2);
     _crc.add(intCvt.bval, 2);
 
     Signal signal = Signals[j];
     switch (signal.DataType)
     {
-    case (Blaeck_bool):
+    case Blaeck_bool:
     {
       boolCvt.val = *((bool *)signal.Address);
-      Clients[i].write(boolCvt.bval, 1);
+      addToBuffer(boolCvt.bval, 1);
       _crc.add(boolCvt.bval, 1);
+      break;
     }
-    break;
-    case (Blaeck_byte):
+
+    case Blaeck_byte:
     {
-      Clients[i].write(*((byte *)signal.Address));
-      _crc.add(*((byte *)signal.Address));
+      uint8_t byteVal = *((byte *)signal.Address);
+      addToBuffer(&byteVal, 1);
+      _crc.add(byteVal);
+      break;
     }
-    break;
-    case (Blaeck_short):
+
+    case Blaeck_short:
     {
       shortCvt.val = *((short *)signal.Address);
-      Clients[i].write(shortCvt.bval, 2);
+      addToBuffer(shortCvt.bval, 2);
       _crc.add(shortCvt.bval, 2);
+      break;
     }
-    break;
-    case (Blaeck_ushort):
+
+    case Blaeck_ushort:
     {
       ushortCvt.val = *((unsigned short *)signal.Address);
-      Clients[i].write(ushortCvt.bval, 2);
+      addToBuffer(ushortCvt.bval, 2);
       _crc.add(ushortCvt.bval, 2);
+      break;
     }
-    break;
-    case (Blaeck_int):
+
+    case Blaeck_int:
     {
       intCvt.val = *((int *)signal.Address);
-      Clients[i].write(intCvt.bval, 2);
+      addToBuffer(intCvt.bval, 2);
       _crc.add(intCvt.bval, 2);
+      break;
     }
-    break;
-    case (Blaeck_uint):
+
+    case Blaeck_uint:
     {
       uintCvt.val = *((unsigned int *)signal.Address);
-      Clients[i].write(uintCvt.bval, 2);
+      addToBuffer(uintCvt.bval, 2);
       _crc.add(uintCvt.bval, 2);
+      break;
     }
-    break;
-    case (Blaeck_long):
+
+    case Blaeck_long:
     {
       lngCvt.val = *((long *)signal.Address);
-      Clients[i].write(lngCvt.bval, 4);
+      addToBuffer(lngCvt.bval, 4);
       _crc.add(lngCvt.bval, 4);
+      break;
     }
-    break;
-    case (Blaeck_ulong):
+
+    case Blaeck_ulong:
     {
       ulngCvt.val = *((unsigned long *)signal.Address);
-      Clients[i].write(ulngCvt.bval, 4);
+      addToBuffer(ulngCvt.bval, 4);
       _crc.add(ulngCvt.bval, 4);
+      break;
     }
-    break;
-    case (Blaeck_float):
+
+    case Blaeck_float:
     {
       fltCvt.val = *((float *)signal.Address);
-      Clients[i].write(fltCvt.bval, 4);
+      addToBuffer(fltCvt.bval, 4);
       _crc.add(fltCvt.bval, 4);
+      break;
     }
-    break;
-    case (Blaeck_double):
+
+    case Blaeck_double:
     {
       dblCvt.val = *((double *)signal.Address);
-      Clients[i].write(dblCvt.bval, 8);
+      addToBuffer(dblCvt.bval, 8);
       _crc.add(dblCvt.bval, 8);
+      break;
     }
-    break;
+    }
+
+    // Yield periodically during processing
+    if (j % 10 == 0)
+    {
+      yield();
     }
   }
 
-  // StatusByte 0: Normal transmission
-  // StatusByte + CRC First Byte + CRC Second Byte + CRC Third Byte + CRC Fourth Byte
-  Clients[i].write((byte)0);
+  // Write status byte (0 for normal transmission)
+  uint8_t statusByte = 0;
+  addToBuffer(&statusByte, 1);
 
+  // Calculate and write CRC
   uint32_t crc_value = _crc.calc();
-  Clients[i].write((byte *)&crc_value, 4);
+  addToBuffer((uint8_t *)&crc_value, 4);
 
-  Clients[i].write("/BLAECK>");
-  Clients[i].write("\r\n");
+  // Write footer
+  const char *footer = "/BLAECK>\r\n";
+  addToBuffer((const uint8_t *)footer, strlen(footer));
+
+  // Ensure all remaining data is flushed
+  flushBuffer();
 }
 
 void BlaeckTCP::timedWriteData()

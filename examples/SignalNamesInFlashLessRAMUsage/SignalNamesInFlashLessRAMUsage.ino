@@ -34,8 +34,8 @@
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
-#define MAX_CLIENTS 8
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
@@ -55,86 +55,87 @@ IPAddress subnet(255, 255, 0, 0);
 
 void setup()
 {
-    // You can use Ethernet.init(pin) to configure the CS pin
-    // Ethernet.init(10);  // Most Arduino shields
-    // Ethernet.init(5);   // MKR ETH Shield
-    // Ethernet.init(0);   // Teensy 2.0
-    // Ethernet.init(20);  // Teensy++ 2.0
-    // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
-    // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
+  // You can use Ethernet.init(pin) to configure the CS pin
+  // Ethernet.init(10);  // Most Arduino shields
+  // Ethernet.init(5);   // MKR ETH Shield
+  // Ethernet.init(0);   // Teensy 2.0
+  // Ethernet.init(20);  // Teensy++ 2.0
+  // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
+  // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
 
-    // initialize the Ethernet device
-    Ethernet.begin(mac, ip, myDns, gateway, subnet);
+  // initialize the Ethernet device
+  Ethernet.begin(mac, ip, myDns, gateway, subnet);
 
-    // Open serial communications and wait for port to open:
-    Serial.begin(9600);
-    while (!Serial)
-    {
-        // wait for serial port to connect. Needed for native USB port only
-    }
+  // Open serial communications and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial)
+  {
+    // wait for serial port to connect. Needed for native USB port only
+  }
 
-    // Check for Ethernet hardware present
-    if (Ethernet.hardwareStatus() == EthernetNoHardware)
-    {
-        Serial.println();
-        Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
-        while (true)
-        {
-            delay(1); // do nothing, no point running without Ethernet hardware
-        }
-    }
-
+  // Check for Ethernet hardware present
+  if (Ethernet.hardwareStatus() == EthernetNoHardware)
+  {
     Serial.println();
-    if (Ethernet.linkStatus() == LinkOFF)
+    Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
+    while (true)
     {
-        Serial.println("Ethernet cable is not connected.");
+      delay(1); // do nothing, no point running without Ethernet hardware
     }
+  }
 
-    Serial.print("BlaeckTCP Server: ");
-    Serial.print(Ethernet.localIP());
-    Serial.print(":");
-    Serial.println(SERVER_PORT);
+  Serial.println();
+  if (Ethernet.linkStatus() == LinkOFF)
+  {
+    Serial.println("Ethernet cable is not connected.");
+  }
 
-    // Setup BlaeckTCP
-    BlaeckTCP.begin(
-        MAX_CLIENTS, // Maximal number of allowed clients
-        &Serial,     // Serial reference, used for debugging
-        2,           // Maximal signal count used;
-        0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
-    );
+  Serial.print("BlaeckTCP Server: ");
+  Serial.print(Ethernet.localIP());
+  Serial.print(":");
+  Serial.println(SERVER_PORT);
 
-    BlaeckTCP.DeviceName = "Random Number Generator";
-    BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
-    BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
+  // Setup BlaeckTCP
+  BlaeckTCP.begin(
+      MAX_CLIENTS, // Maximal number of allowed clients
+      &Serial,     // Serial reference, used for debugging
+      2,           // Maximal signal count used;
+      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
+  );
 
-    // Add signals to BlaeckTCP using the F() Macro
-    BlaeckTCP.addSignal(F("Small Number"), &randomSmallNumber);
-    BlaeckTCP.addSignal(F("Big Number"), &randomBigNumber);
+  BlaeckTCP.DeviceName = "Random Number Generator";
+  BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+  BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
-    /*Uncomment this function for initial settings
-      first parameter: timedActivated
-      second parameter: timedInterval_ms */
-    // BlaeckTCP.setTimedData(true, 60000);
+  // Add signals to BlaeckTCP using the F() Macro
+  BlaeckTCP.addSignal(F("Small Number"), &randomSmallNumber);
+  BlaeckTCP.addSignal(F("Big Number"), &randomBigNumber);
 
-    // Start listening for clients
-    TelnetPrint = NetServer(SERVER_PORT);
-    TelnetPrint.begin();
+  /*Uncomment this function for initial settings
+    first parameter: timedActivated
+    second parameter: timedInterval_ms */
+  // BlaeckTCP.setTimedData(true, 60000);
+
+  // Start listening for clients
+  TelnetPrint = NetServer(SERVER_PORT);
+  TelnetPrint.begin();
 }
 
 void loop()
 {
-    UpdateRandomNumbers();
+  UpdateRandomNumbers();
 
-    /*Keeps watching for commands from TCP client and
-       transmits the data back to client at the user-set interval*/
-    BlaeckTCP.tick();
+  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
+      connected clients (data messages only to permitted)
+    - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
+  BlaeckTCP.tick();
 }
 
 void UpdateRandomNumbers()
 {
-    // Random small number from 0.00 to 10.00
-    randomSmallNumber = random(1001) / 100.0;
+  // Random small number from 0.00 to 10.00
+  randomSmallNumber = random(1001) / 100.0;
 
-    // Random big number from 2 000 000 000 to 2 100 000 000
-    randomBigNumber = random(2000000000, 2100000001);
+  // Random big number from 2 000 000 000 to 2 100 000 000
+  randomBigNumber = random(2000000000, 2100000001);
 }

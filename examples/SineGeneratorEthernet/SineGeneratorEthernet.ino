@@ -6,7 +6,7 @@
 
   Circuit:
    Ethernet shield attached to pins 10, 11, 12, 13
-  
+
   Usage:
     Upload the sketch to your board.
     Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
@@ -31,8 +31,8 @@
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
-#define MAX_CLIENTS 8
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
 #define MAX_SIGNALS 10
 
 // Instantiate a new BlaeckTCP object
@@ -97,7 +97,7 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
-      0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
+      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
@@ -120,8 +120,9 @@ void loop()
 {
   UpdateSineNumbers();
 
-  /*Keeps watching for commands from TCP client and
-    transmits the data back to client at the user-set interval*/
+  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
+      connected clients (data messages only to permitted)
+    - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();
 }
 

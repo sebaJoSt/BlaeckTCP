@@ -39,7 +39,7 @@
     - Type the following command and press enter:
         <SwitchLED,1>    Turn on the LED
         <SwitchLED,0>    Turn off the LED
-  
+
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
  */
@@ -48,8 +48,8 @@
 #include <Ethernet.h>
 #include "BlaeckTCP.h"
 
-#define MAX_CLIENTS 8
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
@@ -99,7 +99,6 @@ void setup()
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
-  
   Serial.println();
   if (Ethernet.linkStatus() == LinkOFF)
   {

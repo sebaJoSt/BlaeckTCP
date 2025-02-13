@@ -6,16 +6,18 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
+#ifndef BLAECK_INPUT_BUFFER_SIZE
+#define BLAECK_INPUT_BUFFER_SIZE 1024
+#endif
+
+#ifndef BLAECK_OUTPUT_CHUNK_SIZE
+#define BLAECK_OUTPUT_CHUNK_SIZE 64
+#endif
+
 #include <Arduino.h>
 #include <Ethernet.h>
 #include <TelnetPrint.h>
 #include <CRC32.h>
-
-#if __has_include(<WiFiS3.h>)
-#define MULTI_CLIENTS 0
-#else
-#define MULTI_CLIENTS 1
-#endif
 
 typedef enum DataType
 {
@@ -47,32 +49,22 @@ public:
   // ----- Destructor -----
   ~BlaeckTCP();
 
-  // ----- Initialize
   void begin(Stream *streamRef, unsigned int size);
-#ifdef MULTI_CLIENTS
-#if (MULTI_CLIENTS == 1)
   void begin(byte maxClients, Stream *streamRef, unsigned int size);
   void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
   void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream);
-#endif
-#endif
 
-  /**
-           @brief Set these variables in your Arduino sketch
-    */
   String DeviceName;
   String DeviceHWVersion;
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "3.0.0";
+  const String LIBRARY_VERSION = "4.0.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
   NetClient ActiveClient;
 
-  // ----- Signals -----
-  // add or delete signals
   void addSignal(String signalName, bool *value);
   void addSignal(String signalName, byte *value);
   void addSignal(String signalName, short *value);
@@ -86,70 +78,69 @@ public:
 
   void deleteSignals();
 
-  // ----- Devices -----
   void writeDevices();
   void writeDevices(unsigned long messageID);
   void writeDevices(unsigned long messageID, byte client);
 
-  // ----- Symbols -----
   void writeSymbols();
   void writeSymbols(unsigned long messageID);
   void writeSymbols(unsigned long messageID, byte client);
 
-  // ----- Data -----
   void writeData();
   void writeData(unsigned long messageID);
   void writeData(unsigned long messageID, byte client);
 
-  // ----- Timed Data -----
   /**
-           @brief Call this function every some milliseconds for writing timed data; default messageId = 185273099
-    */
+  Call this function every some milliseconds for writing timed data; default Message Id: 185273099
+  */
   void timedWriteData();
+
   /**
-           @brief Call this function every some milliseconds for writing timed data
-           @param messageId --> A unique message ID which echoes back to transmitter to indicate a response to a message.
-    */
+  Call this function every some milliseconds for writing timed data
+  messageId: A unique message ID which echoes back to transmitter to indicate a response to a message.
+  */
   void timedWriteData(unsigned long messageID);
+
   /**
-           @brief Call this function for timed data settings
-    */
+  Sets initial settings, call this function in setup() if you require initial settings
+  */
   void setTimedData(bool timedActivated, unsigned long timedInterval_ms);
 
-  // ----- Update before data write Callback function  -----
   /**
-          @brief Attach a function that will be called just before transmitting data.
-    */
+  Attach a function that will be called just before transmitting data.
+  */
   void attachUpdate(void (*updateCallback)());
 
-  // ----- Read  -----
   /**
-           @brief Call this function every some milliseconds for reading TCP input
-    */
+  Call this function every some milliseconds for reading TCP input
+  */
   void read();
+
   /**
-          @brief Attach a function that will be called when a valid message was received;
-    */
+  Attach a function that will be called when a valid message was received;
+  */
   void attachRead(void (*readCallback)(char *command, int *parameter, char *string_01));
 
-  // ----- All-in-one -----
   /**
-          @brief Call this function every some milliseconds for reading TCP input
-           and writing timed data; default messageId = 185273099
-    */
+  Call this function every some milliseconds for reading TCP input
+  and writing timed data; default Message Id: 185273099
+  */
   void tick();
   /**
-          @brief Call this function every some milliseconds for reading TCP input
-           and writing timed data with messageID;
-          @param messageId --> A unique message ID which echoes back to transmitter to indicate a response to a message.
-    */
+   Call this function every some milliseconds for reading TCP input
+    and writing timed data with messageID;
+  messageId: A unique message ID which echoes back to transmitter to indicate a response to a message.
+  */
   void tick(unsigned long messageID);
 
-#ifdef MULTI_CLIENTS
-#if (MULTI_CLIENTS == 1)
-  void tickBridge();
-#endif
-#endif
+
+  /**
+  Handles bidirectional data transfer between TCP and UART interface. This function
+  should be called in the main loop to maintain communication flow.
+  Data received from TCP is forwarded to UART and responses are sent back.
+  */
+  void bridgePoll();
+
 
 private:
   Stream *StreamRef;

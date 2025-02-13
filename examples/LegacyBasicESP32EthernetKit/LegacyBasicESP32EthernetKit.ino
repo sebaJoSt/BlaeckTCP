@@ -1,5 +1,7 @@
 /*
-  BasicETH.ino
+  LegacyBasicESP32EthernetKit.ino
+
+  This example currently only works with ESP32 2.x firmware (Board: ESP32 Dev Module),
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
   from the ESP32-EthernetKit_A_V1.2 (Server) to your PC (Client) every minute (or the user-set interval).
@@ -33,19 +35,19 @@
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
-#define MAX_CLIENTS 8
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
 
+// Pin definitions for ESP32 Ethernet Kit_A with IP101GRI
 #define ETH_ADDR 1
 #define ETH_POWER_PIN 5
 #define ETH_MDC_PIN 23
 #define ETH_MDIO_PIN 18
 #define ETH_TYPE ETH_PHY_IP101
 
-// Enter a MAC address and IP address for your controller below.
+// Enter a static IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 1, 177);
 IPAddress myDns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
@@ -80,7 +82,7 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       2,           // Maximal signal count used;
-      0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
+      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
   );
 
   BlaeckTCP.DeviceName = "Random Number Generator";
@@ -106,8 +108,9 @@ void loop()
 
   UpdateRandomNumbers();
 
-  /*Keeps watching for commands from TCP client and
-     transmits the data back to client at the user-set interval*/
+  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
+      connected clients (data messages only to permitted)
+    - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();
 }
 

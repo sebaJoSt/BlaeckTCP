@@ -4,10 +4,8 @@
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
   from the WT32-ETH01 V1.4 board (Server) to your PC (Client) every minute (or the user-set interval).
 
- Setup:
-
-    - Install the additional library WebServer_WT32_ETH01
-    - Upload the sketch to your board.
+  Setup:
+    Upload the sketch to your board.
 
   Usage:
 
@@ -28,12 +26,18 @@
   More information on: https://github.com/sebaJoSt/BlaeckTCP
  */
 
-#include <WebServer_WT32_ETH01.h>
+#include <ETH.h>
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
-#define MAX_CLIENTS 8
 #define SERVER_PORT 23
+#define MAX_CLIENTS 8
+
+// ETH pins for WT32-ETH01
+#define ETH_PHY_TYPE ETH_PHY_LAN8720
+#define ETH_PHY_MDC 23
+#define ETH_PHY_MDIO 18
+#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
@@ -42,40 +46,72 @@ BlaeckTCP BlaeckTCP;
 float randomSmallNumber;
 long randomBigNumber;
 
-// Enter a MAC address and IP address for your controller below.
+// Enter a static IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 1, 177);
-IPAddress myDns(192, 168, 1, 1);
+IPAddress dns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 0, 0);
 
+void onEvent(arduino_event_id_t event)
+{
+  switch (event)
+  {
+  case ARDUINO_EVENT_ETH_START:
+    Serial.println("ETH Started");
+    ETH.setHostname("WT32-ETH01");
+    break;
+  case ARDUINO_EVENT_ETH_CONNECTED:
+    Serial.println("ETH Connected");
+    break;
+  case ARDUINO_EVENT_ETH_GOT_IP:
+    Serial.print("ETH MAC: ");
+    Serial.print(ETH.macAddress());
+    Serial.print(", IPv4: ");
+    Serial.print(ETH.localIP());
+    Serial.print(", ");
+    Serial.print(ETH.subnetMask());
+    Serial.print(", ");
+    Serial.println(ETH.gatewayIP());
+    break;
+  case ARDUINO_EVENT_ETH_DISCONNECTED:
+    Serial.println("ETH Disconnected");
+    break;
+  case ARDUINO_EVENT_ETH_STOP:
+    Serial.println("ETH Stopped");
+    break;
+  default:
+    break;
+  }
+}
+
 void setup()
 {
-  // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  delay(3000);
+  delay(500);
 
-  WT32_ETH01_onEvent();
+  // Power up ETH PHY
+  pinMode(16, OUTPUT);
+  digitalWrite(16, HIGH);
+  delay(100);
 
-  ETH.begin(ETH_PHY_ADDR, ETH_PHY_POWER);
-  ETH.config(ip, gateway, subnet, myDns);
+  // Register ETH event handler
+  Network.onEvent(onEvent);
 
-  WT32_ETH01_waitForConnect();
+  // Initialize ETH
+  ETH.begin();
 
-  Serial.print("BlaeckTCP Server: ");
-  Serial.print(ETH.localIP());
-  Serial.print(":");
-  Serial.println(SERVER_PORT);
+  // Configure static IP
+  ETH.config(ip, gateway, subnet, dns);
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(
-      MAX_CLIENTS, // Maximal number of allowed clients
-      &Serial,     // Serial reference, used for debugging
-      2,           // Maximal signal count used;
-      0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
-  );
+      SERVER_PORT,
+      MAX_CLIENTS,
+      &Serial,
+      2,
+      0b11111101);
 
   BlaeckTCP.DeviceName = "Random Number Generator";
   BlaeckTCP.DeviceHWVersion = "WT32-ETH01 V1.4";
@@ -98,17 +134,11 @@ void setup()
 void loop()
 {
   UpdateRandomNumbers();
-
-  /*Keeps watching for commands from TCP client and
-     transmits the data back to client at the user-set interval*/
   BlaeckTCP.tick();
 }
 
 void UpdateRandomNumbers()
 {
-  // Random small number from 0.00 to 10.00
   randomSmallNumber = random(1001) / 100.0;
-
-  // Random big number from 2 000 000 000 to 2 100 000 000
   randomBigNumber = random(2000000000, 2100000001);
 }
