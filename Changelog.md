@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [4.0.0] - 2025-02-13
 
 ### Added
-- Bridge mode, see example `BridgeEthernet`
+- Bridge mode, see example `BridgeEthernet` or `BridgeWT32-ETH01`
 
 ### Changed
 - Reading now uses a buffer (`BLAECK_INPUT_BUFFER_SIZE`: default buffer size is 1024 bytes)
