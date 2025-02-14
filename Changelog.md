@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [4.0.0] - 2025-02-13
+### Information
+When upgrading from version 3 no changes in the sketches are required. Just update BlaeckTCP to version 4.0.0 and recompile your sketch. 
 
 ### Added
 - Bridge mode, see example `BridgeEthernet` or `BridgeWT32-ETH01`
