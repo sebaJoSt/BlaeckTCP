@@ -123,7 +123,7 @@ void BlaeckTCP::bridgePoll()
   }
 
   // Handle data from clients to bridge using buffer
-  static uint8_t buffer[BLAECK_INPUT_BUFFER_SIZE];
+  static uint8_t buffer[BLAECK_BUFFER_SIZE];
 
   for (byte i = 0; i < _maxClients; i++)
   {
@@ -131,7 +131,7 @@ void BlaeckTCP::bridgePoll()
     {
       while (Clients[i].available() > 0)
       {
-        int bytesAvailable = min(Clients[i].available(), BLAECK_INPUT_BUFFER_SIZE);
+        int bytesAvailable = min(Clients[i].available(), BLAECK_BUFFER_SIZE);
         int bytesRead = Clients[i].read(buffer, bytesAvailable);
 
         if (bytesRead > 0)
@@ -143,12 +143,6 @@ void BlaeckTCP::bridgePoll()
             int toWrite = min(64, bytesRead - written); // Write in smaller chunks
             BridgeStreamRef->write(&buffer[written], toWrite);
             written += toWrite;
-
-            // Only yield if we're processing a large amount of data
-            if (bytesRead > 64)
-            {
-              yield(); // Allow other processes to run
-            }
           }
         }
       }
@@ -170,7 +164,7 @@ void BlaeckTCP::bridgePoll()
   // Forward data from bridge stream to clients
   if (BridgeStreamRef->available())
   {
-    int bytesAvailable = min(BridgeStreamRef->available(), BLAECK_INPUT_BUFFER_SIZE);
+    int bytesAvailable = min(BridgeStreamRef->available(), BLAECK_BUFFER_SIZE);
     int bytesRead = BridgeStreamRef->readBytes(buffer, bytesAvailable);
 
     if (bytesRead > 0)
@@ -186,12 +180,6 @@ void BlaeckTCP::bridgePoll()
             int toWrite = min(64, bytesRead - written);
             Clients[client].write(&buffer[written], toWrite);
             written += toWrite;
-
-            // Only yield if we're processing a large amount of data
-            if (bytesRead > 64)
-            {
-              yield(); // Allow other processes to run
-            }
           }
         }
       }
@@ -383,8 +371,8 @@ bool BlaeckTCP::recvWithStartEndMarkers()
     }
   }
 
-  // Use a buffer to read chunks of data
-  static char tempBuffer[BLAECK_INPUT_BUFFER_SIZE];
+  // Use a buffer
+  static char tempBuffer[BLAECK_BUFFER_SIZE];
 
   for (byte i = 0; i < _maxClients; i++)
   {
@@ -393,7 +381,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       while (Clients[i].available() > 0 && !newData)
       {
         // Read data in chunks
-        int bytesToRead = min(Clients[i].available(), BLAECK_INPUT_BUFFER_SIZE);
+        int bytesToRead = min(Clients[i].available(), BLAECK_BUFFER_SIZE);
         int bytesRead = Clients[i].read((uint8_t *)tempBuffer, bytesToRead);
 
         // Process each character in the buffer
@@ -424,12 +412,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
           {
             recvInProgress = true;
           }
-        }
-
-        // Give other processes a chance to run
-        if (bytesRead >= BLAECK_CHUNK_SIZE)
-        {
-          yield();
         }
       }
     }
@@ -714,170 +696,109 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
   _crc.setReverseOut(true);
   _crc.restart();
 
-  // Buffer for chunked writing
-  const size_t bufferSize = 256;
-  uint8_t buffer[bufferSize];
-  size_t bufferIndex = 0;
-
-  // Helper function to flush buffer
-  auto flushBuffer = [&]()
-  {
-    if (bufferIndex > 0)
-    {
-      Clients[i].write(buffer, bufferIndex);
-      if (bufferIndex >= BLAECK_CHUNK_SIZE)
-      {
-        yield();
-      }
-      bufferIndex = 0;
-    }
-  };
-
-  // Helper function to add to buffer
-  auto addToBuffer = [&](const uint8_t *data, size_t len)
-  {
-    while (len > 0)
-    {
-      size_t chunk = min(len, bufferSize - bufferIndex);
-      memcpy(buffer + bufferIndex, data, chunk);
-      bufferIndex += chunk;
-      len -= chunk;
-
-      if (bufferIndex >= bufferSize)
-      {
-        flushBuffer();
-      }
-    }
-  };
-
-  // Write header
-  uint8_t header[] = {'<', 'B', 'L', 'A', 'E', 'C', 'K', ':', 0xB1, ':'};
-  addToBuffer(header, sizeof(header));
-
-  // Add message ID
+  Clients[i].write("<BLAECK:");
+  byte msg_key = 0xB1;
+  Clients[i].write(msg_key);
+  Clients[i].write(":");
   ulngCvt.val = msg_id;
-  addToBuffer(ulngCvt.bval, 4);
-  addToBuffer((const uint8_t *)":", 1);
+  Clients[i].write(ulngCvt.bval, 4);
+  Clients[i].write(":");
 
-  // Update CRC with header
-  _crc.add(0xB1); // msg_key
+  _crc.add(msg_key);
   _crc.add(':');
   _crc.add(ulngCvt.bval, 4);
   _crc.add(':');
 
-  // Write data for each signal
   for (int j = 0; j < _signalIndex; j++)
   {
-    // Write signal index
     intCvt.val = j;
-    addToBuffer(intCvt.bval, 2);
+    Clients[i].write(intCvt.bval, 2);
     _crc.add(intCvt.bval, 2);
 
     Signal signal = Signals[j];
     switch (signal.DataType)
     {
-    case Blaeck_bool:
+    case (Blaeck_bool):
     {
       boolCvt.val = *((bool *)signal.Address);
-      addToBuffer(boolCvt.bval, 1);
+      Clients[i].write(boolCvt.bval, 1);
       _crc.add(boolCvt.bval, 1);
-      break;
     }
-
-    case Blaeck_byte:
+    break;
+    case (Blaeck_byte):
     {
-      uint8_t byteVal = *((byte *)signal.Address);
-      addToBuffer(&byteVal, 1);
-      _crc.add(byteVal);
-      break;
+      Clients[i].write(*((byte *)signal.Address));
+      _crc.add(*((byte *)signal.Address));
     }
-
-    case Blaeck_short:
+    break;
+    case (Blaeck_short):
     {
       shortCvt.val = *((short *)signal.Address);
-      addToBuffer(shortCvt.bval, 2);
+      Clients[i].write(shortCvt.bval, 2);
       _crc.add(shortCvt.bval, 2);
-      break;
     }
-
-    case Blaeck_ushort:
+    break;
+    case (Blaeck_ushort):
     {
       ushortCvt.val = *((unsigned short *)signal.Address);
-      addToBuffer(ushortCvt.bval, 2);
+      Clients[i].write(ushortCvt.bval, 2);
       _crc.add(ushortCvt.bval, 2);
-      break;
     }
-
-    case Blaeck_int:
+    break;
+    case (Blaeck_int):
     {
       intCvt.val = *((int *)signal.Address);
-      addToBuffer(intCvt.bval, 2);
+      Clients[i].write(intCvt.bval, 2);
       _crc.add(intCvt.bval, 2);
-      break;
     }
-
-    case Blaeck_uint:
+    break;
+    case (Blaeck_uint):
     {
       uintCvt.val = *((unsigned int *)signal.Address);
-      addToBuffer(uintCvt.bval, 2);
+      Clients[i].write(uintCvt.bval, 2);
       _crc.add(uintCvt.bval, 2);
-      break;
     }
-
-    case Blaeck_long:
+    break;
+    case (Blaeck_long):
     {
       lngCvt.val = *((long *)signal.Address);
-      addToBuffer(lngCvt.bval, 4);
+      Clients[i].write(lngCvt.bval, 4);
       _crc.add(lngCvt.bval, 4);
-      break;
     }
-
-    case Blaeck_ulong:
+    break;
+    case (Blaeck_ulong):
     {
       ulngCvt.val = *((unsigned long *)signal.Address);
-      addToBuffer(ulngCvt.bval, 4);
+      Clients[i].write(ulngCvt.bval, 4);
       _crc.add(ulngCvt.bval, 4);
-      break;
     }
-
-    case Blaeck_float:
+    break;
+    case (Blaeck_float):
     {
       fltCvt.val = *((float *)signal.Address);
-      addToBuffer(fltCvt.bval, 4);
+      Clients[i].write(fltCvt.bval, 4);
       _crc.add(fltCvt.bval, 4);
-      break;
     }
-
-    case Blaeck_double:
+    break;
+    case (Blaeck_double):
     {
       dblCvt.val = *((double *)signal.Address);
-      addToBuffer(dblCvt.bval, 8);
+      Clients[i].write(dblCvt.bval, 8);
       _crc.add(dblCvt.bval, 8);
-      break;
     }
-    }
-
-    // Yield periodically during processing
-    if (j % 10 == 0)
-    {
-      yield();
+    break;
     }
   }
 
-  // Write status byte (0 for normal transmission)
-  uint8_t statusByte = 0;
-  addToBuffer(&statusByte, 1);
+  // StatusByte 0: Normal transmission
+  // StatusByte + CRC First Byte + CRC Second Byte + CRC Third Byte + CRC Fourth Byte
+  Clients[i].write((byte)0);
 
-  // Calculate and write CRC
   uint32_t crc_value = _crc.calc();
-  addToBuffer((uint8_t *)&crc_value, 4);
+  Clients[i].write((byte *)&crc_value, 4);
 
-  // Write footer
-  const char *footer = "/BLAECK>\r\n";
-  addToBuffer((const uint8_t *)footer, strlen(footer));
-
-  // Ensure all remaining data is flushed
-  flushBuffer();
+  Clients[i].write("/BLAECK>");
+  Clients[i].write("\r\n");
 }
 
 void BlaeckTCP::timedWriteData()

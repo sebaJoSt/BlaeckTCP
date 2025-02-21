@@ -6,12 +6,8 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#ifndef BLAECK_INPUT_BUFFER_SIZE
-#define BLAECK_INPUT_BUFFER_SIZE 1024
-#endif
-
-#ifndef BLAECK_CHUNK_SIZE
-#define BLAECK_CHUNK_SIZE 64
+#ifndef BLAECK_BUFFER_SIZE
+#define BLAECK_BUFFER_SIZE 1024
 #endif
 
 #include <Arduino.h>

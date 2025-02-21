@@ -10,13 +10,13 @@ When upgrading from version 3 no changes in the sketches are required. Just upda
 - Bridge mode, see example `BridgeEthernet` or `BridgeWT32-ETH01`
 
 ### Changed
-- Reading now uses a buffer (`BLAECK_INPUT_BUFFER_SIZE`: default buffer size is 1024 bytes)
-- Writing now uses a fixed buffer of 256 bytes
-- Includes yield points to prevent blocking (when writing/reading chunks ≥ `BLAECK_CHUNK_SIZE`)
+- Implemented buffered I/O with configurable buffer size (default: 1024 byte)
+  - Used for reading incoming data in normal mode
+  - Used for bidirectional data transfer (read/write) in bridge mode
+
 ```c++
     // Add before #include <BlaeckTCP.h>:
-    #define BLAECK_INPUT_BUFFER_SIZE 2048  // Default: 1024
-    #define BLAECK_CHUNK_SIZE 128          // Default: 64
+    #define BLAECK_BUFFER_SIZE 2048  // Default: 1024
 ```
 - Example `BasicWT32-ETH01.ino` uses preinstalled Ethernet library (`ETH.h`)
 - `WiFiS3.h` now supports server.accept() function so multiple clients can connect simultaneously
