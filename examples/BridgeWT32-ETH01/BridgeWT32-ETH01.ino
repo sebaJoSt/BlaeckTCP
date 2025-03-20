@@ -93,6 +93,10 @@ void onEvent(arduino_event_id_t event)
     Serial.print(ETH.subnetMask());
     Serial.print(", ");
     Serial.println(ETH.gatewayIP());
+    Serial.print("BlaeckTCP Server: ");
+    Serial.print(ETH.localIP());
+    Serial.print(":");
+    Serial.println(SERVER_PORT);
     break;
   case ARDUINO_EVENT_ETH_DISCONNECTED:
     Serial.println("ETH Disconnected");

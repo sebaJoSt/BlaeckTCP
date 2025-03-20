@@ -8,7 +8,6 @@
     Upload the sketch to your board.
 
   Usage:
-
     Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
     Type the following commands and press enter:
 
@@ -74,6 +73,10 @@ void onEvent(arduino_event_id_t event)
     Serial.print(ETH.subnetMask());
     Serial.print(", ");
     Serial.println(ETH.gatewayIP());
+    Serial.print("BlaeckTCP Server: ");
+    Serial.print(ETH.localIP());
+    Serial.print(":");
+    Serial.println(SERVER_PORT);
     break;
   case ARDUINO_EVENT_ETH_DISCONNECTED:
     Serial.println("ETH Disconnected");
