@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 When upgrading from version 3 no changes in the sketches are required. Just update BlaeckTCP to version 4.0.0 and recompile your sketch. 
 
 ### Added
-- Bridge mode, see example `BridgeEthernet` or `BridgeWT32-ETH01`
+- Bridge mode (Connect to a serial device over the network), see example `BridgeEthernet` or `BridgeWT32-ETH01`
 
 ### Changed
 - Implemented buffered I/O with configurable buffer size (default: 1024 byte)
