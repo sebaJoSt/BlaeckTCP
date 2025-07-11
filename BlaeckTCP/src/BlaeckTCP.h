@@ -6,15 +6,14 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#ifndef BLAECK_BUFFER_SIZE
 #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
 #define BLAECK_BUFFER_SIZE 1024
 #elif defined(ARDUINO_ARCH_AVR)
-#define BLAECK_BUFFER_SIZE 32
+#define BLAECK_BUFFER_SIZE 1024 // Limited RAM
 #else
-#define BLAECK_BUFFER_SIZE 64
+#define BLAECK_BUFFER_SIZE  1024 // Default for other platforms
 #endif
-#endif
+#define BLAECK_BUFFER_SIZE  0 
 
 #include <Arduino.h>
 #include <Ethernet.h>
