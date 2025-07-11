@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.1] - 2025-07-11
+### Changed
+- Changeded buffer size defaults based on architecture
+
+```c++
+    #ifndef BLAECK_BUFFER_SIZE
+      #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+      #define BLAECK_BUFFER_SIZE 1024
+      #elif defined(ARDUINO_ARCH_AVR)
+      #define BLAECK_BUFFER_SIZE 32
+      #else
+      #define BLAECK_BUFFER_SIZE 64
+      #endif
+    #endif
+```
+
+
 ## [4.0.0] - 2025-04-15
 ### Information
 When upgrading from version 3 no changes in the sketches are required. Just update BlaeckTCP to version 4.0.0 and recompile your sketch. 
@@ -71,6 +88,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[4.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/3.0.0...4.0.0
 [3.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.2.0...3.0.0
 [2.2.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.1.0...2.2.0
