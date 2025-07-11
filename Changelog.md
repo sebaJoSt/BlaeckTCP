@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [4.0.1] - 2025-07-11
 ### Changed
-- Changeded buffer size defaults based on architecture
+- Changed buffer size defaults based on architecture
 
 ```c++
     #ifndef BLAECK_BUFFER_SIZE
