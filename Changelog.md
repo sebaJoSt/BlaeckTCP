@@ -15,7 +15,7 @@ When upgrading from version 3 no changes in the sketches are required. Just upda
   - Used for bidirectional data transfer (read/write) in bridge mode
 
 ```c++
-    // Add before #include <BlaeckTCP.h>:
+    // Change value in BlaeckTCP.h
     #define BLAECK_BUFFER_SIZE 2048  // Default: 1024
 ```
 - Example `BasicWT32-ETH01.ino` uses preinstalled Ethernet library (`ETH.h`)
