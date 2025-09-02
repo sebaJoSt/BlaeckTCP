@@ -88,7 +88,8 @@ The messages are in the following format:
 Type| MSGKEY | Elements| Description
 ----|--------|---------------------------------|---------------------------------------------
 Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up to n symbols.** Response to request for available symbols `<BLAECK.WRITE_SYMBOLS>`
-Data | B1 | **`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
+~~Data~~ | ~~B1~~ | ~~**`<SymbolID><DATA>`**`<StatusByte><CRC32>`~~ |  Deprecated (Used in BlaeckTCP version 4.0.1 or older)
+Data | D1 | `<RestartFlag>:<TimestampMode><Timestamp>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
 ~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP v1)
 ~~Devices~~ | ~~B4~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>`~~ | Deprecated (Used in BlaeckTCP v2)
 Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
@@ -101,7 +102,7 @@ Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
  `DATA`  | (varying)| Message Data, varying data types and length depending on message
  `SymbolID` | uint | Symbol ID number
  `SymbolName` |String0 | Symbol Name - Null Terminated String
- `DTYPE` | byte | DataType  0=bool, 1=byte, 2=short, 3=ushort, 4=int, 5=uint, 6=long, 7=ulong, 8=float
+ `DTYPE` | byte | DataType  0=bool, 1=byte, 2=short, 3=ushort, 4=int, 5=uint, 6=long, 7=ulong, 8=float, 9=double
   `MasterSlaveConfig`     | byte | always 0: Single device (no master/slave support in this library)
    `SlaveID`              | byte |             Slave Address, always 0 (no master/slave support in this library)
    `DeviceName`           | String0 |          set with public variable `DeviceName`
@@ -114,6 +115,9 @@ Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
    `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
    `StatusByte`           | byte |             1 byte; Always 0: Normal Transmission (no master/slave support in this library)
    `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
+   `RestartFlag`          | byte | Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
+   `TimestampMode`        | byte | Timestamp Mode, 0=No timestamp, 1=Microseconds, 2=Unix time; 1 byte transmitted  
+   `Timestamp`            | ulong | Timestamp value (only present if TimestampMode > 0); 4 bytes transmitted
          
    
  
@@ -156,35 +160,54 @@ Byte:  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 56 47 48 49 50 5
  Example from `BasicEthernet.ino`:
  `<BLAECK.WRITE_DATA, 255, 255, 255, 255>`:
  ````
-ASCII: <  B  L  A  E  C  K  :  °  :  °  °  °  °  :  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  /  B  L  A  E  C  K  >  \r \n
-HEX:   3C 42 4C 41 45 43 4B 3A B1 3A FF FF FF FF 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 FE D9 3D 20 2F 42 4C 41 45 43 4B 3E 0D 0A
-Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41
- ````
+ASCII: <  B  L  A  E  C  K  :  °  :  °  °  °  °  :  °  :  °  :  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  /  B  L  A  E  C  K  >  \r \n
+HEX:   3C 42 4C 41 45 43 4B 3A D1 3A FF FF FF FF 3A 00 3A 00 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 81 EC 79 9B 2F 42 4C 41 45 43 4B 3E 0D 0A
+Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45
+````
  
  Byte | DESCRIPTION:
 ----|---------------------------------------------
 8   | `MSGKEY`: B1 -> Data
 10-13| `MSGID`: Hex: FF FF FF FF -> Decimal: 4294967295
-15-16| `SymbolID`: Hex: 00 00 -> Decimal: 0
-17-20| `DATA`: Float -> 4 Bytes; Hex: B8 1E FD 40 -> Float: 7.91
-21-22| `SymbolID`: Hex: 01 00 -> Decimal: 1
-23-26| `DATA`: Long  -> 4 Bytes; Hex: D8 E6 32 7C -> Long: 2083710680
-27   | `StatusByte`: 0 -> Normal Transmission
-28-31| `CRC32`: 4 Bytes; Hex: 20 3D D9 FE (Calculated from 19 bytes: Byte 8-26)
+15  | `RestartFlag`: Hex: 00 -> Device has not restarted
+17  | `TimestampMode`: Hex: 00 -> No timestamp
+19-20| `SymbolID`: Hex: 00 00 -> Decimal: 0
+21-24| `DATA`: Float -> 4 Bytes; Hex: B8 1E FD 40 -> Float: 7.91
+25-26| `SymbolID`: Hex: 01 00 -> Decimal: 1
+27-30| `DATA`: Long  -> 4 Bytes; Hex: D8 E6 32 7C -> Long: 2083710680
+31   | `StatusByte`: 0 -> Normal Transmission
+32-35| `CRC32`: 4 Bytes; Hex: 20 3D D9 FE (Calculated from 19 bytes: Byte 8-26)
 
-## Datatypes
+## Data Types
 
-`DTYPE` | Datatype | Bytes
--- |----|---------------------------------------------
-0| bool | 1
-1|byte | 1
-2|short| 2
-3|unsigned short| 2
-4|int| 2
-5|unsigned int | 2
-6|long | 4
-7|unsigned long | 4
-8|float | 4
-9|double | 8
+BlaeckTCP automatically handles platform differences in data type sizes:
 
-On the Uno and other ATMEGA based boards, the double implementation occupies 4 byte and is exactly the same as the float, with no gain in precision. Therefore if you add a double signal with `addSignal("My Double Signal", &doubleVariable)` the symbol list will return the `DTYPE` 8 (float).
+**AVR Platforms (Arduino Uno, Nano, Mega, etc.):**
+- `int` and `unsigned int` are 2 bytes
+- `double` has no precision advantage over `float` (both 4 bytes)
+
+**32-bit Platforms (ESP32, ESP8266, Arduino Due, etc.):**
+- `int` and `unsigned int` are 4 bytes and get automatically mapped to `long`/`unsigned long` protocol types
+- `double` provides true 8-byte double precision
+
+| User Type | AVR Platform | 32-bit Platform |
+|-----------|--------------|-----------------|
+| `bool` | `DTYPE 0` (1 byte) | `DTYPE 0` (1 byte) |
+| `byte` | `DTYPE 1` (1 byte) | `DTYPE 1` (1 byte) |
+| `short` | `DTYPE 2` (2 bytes) | `DTYPE 2` (2 bytes) |
+| `unsigned short` | `DTYPE 3` (2 bytes) | `DTYPE 3` (2 bytes) |
+| `int` | `DTYPE 4` (2 bytes) | **`DTYPE 6`** (4 bytes) |
+| `unsigned int` | `DTYPE 5` (2 bytes) | **`DTYPE 7`** (4 bytes) |
+| `long` | `DTYPE 6` (4 bytes) | `DTYPE 6` (4 bytes) |
+| `unsigned long` | `DTYPE 7` (4 bytes) | `DTYPE 7` (4 bytes) |
+| `float` | `DTYPE 8` (4 bytes) | `DTYPE 8` (4 bytes) |
+| `double` | **`DTYPE 8`** (4 bytes) | `DTYPE 9` (8 bytes) |
+
+## Timestamp Modes
+
+| Mode Value | Name | Description |
+|------------|------|-------------|
+| 0 | `BLAECK_NO_TIMESTAMP` | No timestamp data included |
+| 1 | `BLAECK_MICROS` | Microsecond timestamps using `micros()` |
+| 2 | `BLAECK_RTC` | Unix epoch timestamps from RTC (requires callback) |
+
