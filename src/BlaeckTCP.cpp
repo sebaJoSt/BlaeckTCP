@@ -9,6 +9,7 @@
 
 BlaeckTCP::BlaeckTCP()
 {
+  validatePlatformSizes();
 }
 
 BlaeckTCP::~BlaeckTCP()
@@ -193,6 +194,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
   Signals[_signalIndex].DataType = Blaeck_bool;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, byte *value)
@@ -201,6 +203,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
   Signals[_signalIndex].DataType = Blaeck_byte;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, short *value)
@@ -209,6 +212,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
   Signals[_signalIndex].DataType = Blaeck_short;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
@@ -217,22 +221,33 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
   Signals[_signalIndex].DataType = Blaeck_ushort;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, int *value)
 {
   Signals[_signalIndex].SignalName = signalName;
-  Signals[_signalIndex].DataType = Blaeck_int;
+#ifdef __AVR__
+  Signals[_signalIndex].DataType = Blaeck_int; // 2 bytes
+#else
+  Signals[_signalIndex].DataType = Blaeck_long; // Treat as 4-byte long
+#endif
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 {
   Signals[_signalIndex].SignalName = signalName;
-  Signals[_signalIndex].DataType = Blaeck_uint;
+#ifdef __AVR__
+  Signals[_signalIndex].DataType = Blaeck_uint; // 2 bytes
+#else
+  Signals[_signalIndex].DataType = Blaeck_ulong; // Treat as 4-byte unsigned long
+#endif
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, long *value)
@@ -241,6 +256,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
   Signals[_signalIndex].DataType = Blaeck_long;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
@@ -249,6 +265,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
   Signals[_signalIndex].DataType = Blaeck_ulong;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, float *value)
@@ -257,6 +274,7 @@ void BlaeckTCP::addSignal(String signalName, float *value)
   Signals[_signalIndex].DataType = Blaeck_float;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::addSignal(String signalName, double *value)
@@ -271,11 +289,13 @@ void BlaeckTCP::addSignal(String signalName, double *value)
 #endif
   Signals[_signalIndex].Address = value;
   _signalIndex++;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::deleteSignals()
 {
   _signalIndex = 0;
+  SignalCount = _signalIndex;
 }
 
 void BlaeckTCP::read()
@@ -298,7 +318,7 @@ void BlaeckTCP::read()
     {
       unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
 
-      this->writeData(msg_id);
+      this->writeAllData(msg_id);
     }
     else if (strcmp(COMMAND, "BLAECK.GET_DEVICES") == 0)
     {
@@ -316,19 +336,19 @@ void BlaeckTCP::read()
       this->setTimedData(false, _timedInterval_ms);
     }
 
-    if (_readCallback != NULL)
-      _readCallback(COMMAND, PARAMETER, STRING_01);
+    if (_commandCallback != NULL)
+      _commandCallback(COMMAND, PARAMETER, STRING_01);
   }
 }
 
-void BlaeckTCP::attachRead(void (*readCallback)(char *command, int *parameter, char *string_01))
+void BlaeckTCP::setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01))
 {
-  _readCallback = readCallback;
+  _commandCallback = callback;
 }
 
-void BlaeckTCP::attachUpdate(void (*updateCallback)())
+void BlaeckTCP::setBeforeWriteCallback(void (*callback)())
 {
-  _updateCallback = updateCallback;
+  _beforeWriteCallback = callback;
 }
 
 bool BlaeckTCP::recvWithStartEndMarkers()
@@ -338,7 +358,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
   static byte ndx = 0;
   char startMarker = '<';
   char endMarker = '>';
-  char rc;
 
   NetClient newClient = TelnetPrint.accept();
 
@@ -661,34 +680,775 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
   Clients[i].write("\r\n");
 }
 
-void BlaeckTCP::writeData()
+void BlaeckTCP::update(int signalIndex, bool value)
 {
-  if (_updateCallback != NULL)
-    _updateCallback();
-
-  for (byte client = 0; client < _maxClients; client++)
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
   {
-    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+    if (Signals[signalIndex].DataType == Blaeck_bool)
     {
-      this->writeData(1, client);
+      *((bool *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
     }
   }
 }
 
-void BlaeckTCP::writeData(unsigned long msg_id)
+void BlaeckTCP::update(int signalIndex, byte value)
 {
-  if (_updateCallback != NULL)
-    _updateCallback();
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_byte)
+    {
+      *((byte *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
 
+void BlaeckTCP::update(int signalIndex, short value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_short)
+    {
+      *((short *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, unsigned short value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_ushort)
+    {
+      *((unsigned short *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, int value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    if (Signals[signalIndex].DataType == Blaeck_int)
+    {
+      *((int *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+#else
+    if (Signals[signalIndex].DataType == Blaeck_long)
+    {
+      *((int *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+#endif
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, unsigned int value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    if (Signals[signalIndex].DataType == Blaeck_uint)
+    {
+      *((unsigned int *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+#else
+    if (Signals[signalIndex].DataType == Blaeck_ulong)
+    {
+      *((unsigned int *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+#endif
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, long value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_long)
+    {
+      *((long *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, unsigned long value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_ulong)
+    {
+      *((unsigned long *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, float value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_float)
+    {
+      *((float *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+  }
+}
+
+void BlaeckTCP::update(int signalIndex, double value)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    // On AVR, double is same as float
+    if (Signals[signalIndex].DataType == Blaeck_float)
+    {
+      *((float *)Signals[signalIndex].Address) = (float)value;
+      Signals[signalIndex].Updated = true;
+    }
+#else
+    if (Signals[signalIndex].DataType == Blaeck_double)
+    {
+      *((double *)Signals[signalIndex].Address) = value;
+      Signals[signalIndex].Updated = true;
+    }
+#endif
+  }
+}
+
+void BlaeckTCP::update(String signalName, bool value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, byte value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, short value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, unsigned short value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, int value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, unsigned int value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, long value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, unsigned long value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, float value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::update(String signalName, double value)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    update(index, value);
+  }
+}
+
+void BlaeckTCP::write(String signalName, bool value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, byte value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, short value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, unsigned short value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, int value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, unsigned int value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, long value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, unsigned long value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, float value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, double value)
+{
+  this->write(signalName, value, 1);
+}
+
+void BlaeckTCP::write(String signalName, bool value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, byte value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, short value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, unsigned short value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, int value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, unsigned int value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, long value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, unsigned long value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, float value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, double value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(String signalName, bool value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, byte value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, short value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, unsigned short value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, int value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, unsigned int value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, long value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, unsigned long value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, float value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+void BlaeckTCP::write(String signalName, double value, unsigned long messageID, unsigned long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, bool value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, byte value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, short value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, unsigned short value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, int value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, unsigned int value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, long value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, unsigned long value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, float value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, double value)
+{
+  this->write(signalIndex, value, 1);
+}
+
+void BlaeckTCP::write(int signalIndex, bool value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, byte value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, short value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned short value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, long value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned long value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, float value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+
+void BlaeckTCP::write(int signalIndex, bool value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_bool)
+    {
+      *((bool *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, byte value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_byte)
+    {
+      *((byte *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, short value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_short)
+    {
+      *((short *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned short value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_ushort)
+    {
+      *((unsigned short *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    // On AVR, int stays as Blaeck_int (2 bytes)
+    if (Signals[signalIndex].DataType == Blaeck_int)
+    {
+      *((int *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#else
+    // On 32-bit platforms, int is mapped to Blaeck_long (4 bytes)
+    if (Signals[signalIndex].DataType == Blaeck_long)
+    {
+      *((int *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#endif
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    // On AVR, int stays as Blaeck_int (2 bytes)
+    if (Signals[signalIndex].DataType == Blaeck_uint)
+    {
+      *((unsigned int *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#else
+    // On 32-bit platforms, int is mapped to Blaeck_long (4 bytes)
+    if (Signals[signalIndex].DataType == Blaeck_ulong)
+    {
+      *((unsigned int *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#endif
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, long value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_long)
+    {
+      *((long *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_ulong)
+    {
+      *((unsigned long *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, float value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_float)
+    {
+      *((float *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, unsigned long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+#ifdef __AVR__
+    // On AVR, double is same as float
+    if (Signals[signalIndex].DataType == Blaeck_float)
+    {
+      *((float *)Signals[signalIndex].Address) = (float)value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#else
+    if (Signals[signalIndex].DataType == Blaeck_double)
+    {
+      *((double *)Signals[signalIndex].Address) = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+    }
+#endif
+  }
+}
+
+int BlaeckTCP::findSignalIndex(String signalName)
+{
+  for (int i = 0; i < _signalIndex; i++)
+  {
+    if (Signals[i].SignalName == signalName)
+    {
+      return i;
+    }
+  }
+  return -1; // Not found
+}
+
+void BlaeckTCP::writeAllData()
+{
+  this->writeAllData(1);
+}
+
+void BlaeckTCP::writeAllData(unsigned long msg_id)
+{
+  this->writeAllData(msg_id, getTimeStamp());
+}
+
+void BlaeckTCP::writeAllData(unsigned long msg_id, unsigned long timestamp)
+{
   for (byte client = 0; client < _maxClients; client++)
     if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
-      this->writeData(msg_id, client);
+      this->writeData(msg_id, client, 0, _signalIndex - 1, false, timestamp);
     }
 }
 
-void BlaeckTCP::writeData(unsigned long msg_id, byte i)
+void BlaeckTCP::writeUpdatedData()
 {
+  this->writeUpdatedData(1);
+}
+
+void BlaeckTCP::writeUpdatedData(unsigned long msg_id)
+{
+  this->writeUpdatedData(msg_id, getTimeStamp());
+}
+
+void BlaeckTCP::writeUpdatedData(unsigned long messageID, unsigned long timestamp)
+{
+  for (byte client = 0; client < _maxClients; client++)
+    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+    {
+      this->writeData(messageID, client, 0, _signalIndex - 1, true, timestamp);
+    }
+}
+
+void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp)
+{
+  if (onlyUpdated && !hasUpdatedSignals())
+    return; // No updated signals
+
+  // Bounds checking
+  if (signalIndex_start < 0)
+    signalIndex_start = 0;
+  if (signalIndex_end >= _signalIndex)
+    signalIndex_end = _signalIndex - 1;
+  if (signalIndex_start > signalIndex_end)
+    return; // No valid range
+
+  if (_beforeWriteCallback != NULL)
+    _beforeWriteCallback();
+
   _crc.setPolynome(0x04C11DB7);
   _crc.setInitial(0xFFFFFFFF);
   _crc.setXorOut(0xFFFFFFFF);
@@ -697,20 +1457,54 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
   _crc.restart();
 
   Clients[i].write("<BLAECK:");
-  byte msg_key = 0xB1;
+
+  // Message Key
+  byte msg_key = 0xD1;
   Clients[i].write(msg_key);
+  _crc.add(msg_key);
+
   Clients[i].write(":");
+  _crc.add(':');
+
+  // Message Id
   ulngCvt.val = msg_id;
   Clients[i].write(ulngCvt.bval, 4);
-  Clients[i].write(":");
-
-  _crc.add(msg_key);
-  _crc.add(':');
   _crc.add(ulngCvt.bval, 4);
+
+  Clients[i].write(":");
   _crc.add(':');
 
-  for (int j = 0; j < _signalIndex; j++)
+  // Restart flag
+  byte restart_flag = _sendRestartFlag ? 1 : 0;
+  Clients[i].write(restart_flag);
+  _crc.add(restart_flag);
+  _sendRestartFlag = false; // Clear the flag after first transmission
+
+  Clients[i].write(":");
+  _crc.add(':');
+
+  // Timestamp mode
+  byte timestamp_mode = (byte)_timestampMode;
+  Clients[i].write(timestamp_mode);
+  _crc.add(timestamp_mode);
+
+  // Add timestamp data if mode is not NO_TIMESTAMP
+  if (_timestampMode != BLAECK_NO_TIMESTAMP && hasValidTimestampCallback())
   {
+    ulngCvt.val = timestamp;
+    Clients[i].write(ulngCvt.bval, 4);
+    _crc.add(ulngCvt.bval, 4);
+  }
+
+  Clients[i].write(":");
+  _crc.add(':');
+
+  for (int j = signalIndex_start; j <= signalIndex_end; j++)
+  {
+    // Skip if onlyUpdated is true and signal is not updated
+    if (onlyUpdated && !Signals[j].Updated)
+      continue;
+
     intCvt.val = j;
     Clients[i].write(intCvt.bval, 2);
     _crc.add(intCvt.bval, 2);
@@ -788,6 +1582,12 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
     }
     break;
     }
+
+    // Clear the updated flag after transmission if we're only sending updated signals (onlyUpdated)
+    if (onlyUpdated)
+    {
+      Signals[j].Updated = false;
+    }
   }
 
   // StatusByte 0: Normal transmission
@@ -801,14 +1601,38 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i)
   Clients[i].write("\r\n");
 }
 
-void BlaeckTCP::timedWriteData()
+void BlaeckTCP::timedWriteAllData()
 {
-  this->timedWriteData(185273099);
+  this->timedWriteAllData(185273099);
 }
 
-void BlaeckTCP::timedWriteData(unsigned long msg_id)
+void BlaeckTCP::timedWriteAllData(unsigned long msg_id)
 {
+  this->timedWriteAllData(msg_id, getTimeStamp());
+}
 
+void BlaeckTCP::timedWriteAllData(unsigned long msg_id, unsigned long timestamp)
+{
+  this->timedWriteData(msg_id, 0, _signalIndex - 1, false, timestamp);
+}
+
+void BlaeckTCP::timedWriteUpdatedData()
+{
+  this->timedWriteUpdatedData(185273099);
+}
+
+void BlaeckTCP::timedWriteUpdatedData(unsigned long msg_id)
+{
+  this->timedWriteUpdatedData(185273099, getTimeStamp());
+}
+
+void BlaeckTCP::timedWriteUpdatedData(unsigned long msg_id, unsigned long timestamp)
+{
+  this->timedWriteData(msg_id, 0, _signalIndex - 1, true, timestamp);
+}
+
+void BlaeckTCP::timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp)
+{
   if (_timedFirstTime == true)
     _timedFirstTimeDone_ms = millis();
   unsigned long _timedElapsedTime_ms = (millis() - _timedFirstTimeDone_ms);
@@ -819,7 +1643,11 @@ void BlaeckTCP::timedWriteData(unsigned long msg_id)
       _timedSetPoint_ms += _timedInterval_ms;
     _timedFirstTime = false;
 
-    this->writeData(msg_id);
+    for (byte client = 0; client < _maxClients; client++)
+      if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+      {
+        this->writeData(msg_id, client, signalIndex_start, signalIndex_end, onlyUpdated, timestamp);
+      }
   }
 }
 
@@ -896,6 +1724,21 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   }
 }
 
+void BlaeckTCP::tickUpdated()
+{
+  this->tickUpdated(185273099);
+}
+
+void BlaeckTCP::tickUpdated(unsigned long msg_id)
+{
+  this->tickUpdated(msg_id, getTimeStamp());
+}
+
+void BlaeckTCP::tickUpdated(unsigned long msg_id, unsigned long timestamp)
+{
+  this->tick(msg_id, true, timestamp);
+}
+
 void BlaeckTCP::tick()
 {
   this->tick(185273099);
@@ -903,6 +1746,139 @@ void BlaeckTCP::tick()
 
 void BlaeckTCP::tick(unsigned long msg_id)
 {
+  this->tick(msg_id, getTimeStamp());
+}
+
+void BlaeckTCP::tick(unsigned long msg_id, unsigned long timestamp)
+{
+  this->tick(msg_id, false, timestamp);
+}
+
+void BlaeckTCP::tick(unsigned long msg_id, bool onlyUpdated, unsigned long timestamp)
+{
   this->read();
-  this->timedWriteData(msg_id);
+  this->timedWriteData(msg_id, 0, _signalIndex - 1, onlyUpdated, timestamp);
+}
+
+void BlaeckTCP::markSignalUpdated(int signalIndex)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    Signals[signalIndex].Updated = true;
+  }
+}
+
+void BlaeckTCP::markSignalUpdated(String signalName)
+{
+  for (int i = 0; i < _signalIndex; i++)
+  {
+    if (Signals[i].SignalName == signalName)
+    {
+      Signals[i].Updated = true;
+      break;
+    }
+  }
+}
+
+void BlaeckTCP::markAllSignalsUpdated()
+{
+  for (int i = 0; i < _signalIndex; i++)
+  {
+    Signals[i].Updated = true;
+  }
+}
+
+void BlaeckTCP::clearAllUpdateFlags()
+{
+  for (int i = 0; i < _signalIndex; i++)
+  {
+    Signals[i].Updated = false;
+  }
+}
+
+bool BlaeckTCP::hasUpdatedSignals()
+{
+  for (int i = 0; i < _signalIndex; i++)
+  {
+    if (Signals[i].Updated)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+void BlaeckTCP::setTimestampMode(BlaeckTimestampMode mode)
+{
+  _timestampMode = mode;
+
+  // Set default callbacks for built-in modes
+  switch (mode)
+  {
+  case BLAECK_MICROS:
+    _timestampCallback = micros;
+    break;
+  case BLAECK_UNIXTIME:
+    // User must provide RTC callback - don't override if already set
+    if (_timestampCallback == micros)
+    {
+      _timestampCallback = nullptr;
+    }
+    break;
+  case BLAECK_NO_TIMESTAMP:
+  default:
+    _timestampCallback = nullptr;
+    break;
+  }
+}
+
+void BlaeckTCP::setTimestampCallback(unsigned long (*callback)())
+{
+  _timestampCallback = callback;
+}
+
+bool BlaeckTCP::hasValidTimestampCallback() const
+{
+  return (_timestampMode != BLAECK_NO_TIMESTAMP && _timestampCallback != nullptr);
+}
+
+unsigned long BlaeckTCP::getTimeStamp()
+{
+  unsigned long timestamp = 0;
+
+  // Add timestamp data if mode is not NO_TIMESTAMP
+  if (_timestampMode != BLAECK_NO_TIMESTAMP && hasValidTimestampCallback())
+  {
+    timestamp = _timestampCallback();
+  }
+
+  return timestamp;
+}
+
+void BlaeckTCP::validatePlatformSizes()
+{
+#ifdef __AVR__
+  // AVR (8-bit) platform checks
+  static_assert(sizeof(int) == 2, "BlaeckTCP: Expected 2-byte int on AVR");
+  static_assert(sizeof(unsigned int) == 2, "BlaeckTCP: Expected 2-byte unsigned int on AVR");
+  static_assert(sizeof(double) == 4, "BlaeckTCP: Expected 4-byte double on AVR");
+  static_assert(sizeof(double) == sizeof(float), "BlaeckTCP: double should equal float on AVR");
+#else
+  // 32-bit platform checks
+  static_assert(sizeof(int) == 4, "BlaeckTCP: Expected 4-byte int on 32-bit platforms");
+  static_assert(sizeof(unsigned int) == 4, "BlaeckTCP: Expected 4-byte unsigned int on 32-bit platforms");
+  static_assert(sizeof(double) == 8, "BlaeckTCP: Expected 8-byte double on 32-bit platforms");
+  static_assert(sizeof(double) != sizeof(float), "BlaeckTCP: double should differ from float on 32-bit platforms");
+  static_assert(sizeof(int) == sizeof(long), "BlaeckTCP: int/long size mismatch breaks type remapping");
+  static_assert(sizeof(unsigned int) == sizeof(unsigned long), "BlaeckTCP: uint/ulong size mismatch breaks type remapping");
+#endif
+
+  // Universal checks (should be same on ALL Arduino platforms)
+  static_assert(sizeof(bool) == 1, "BlaeckTCP: Expected 1-byte bool");
+  static_assert(sizeof(byte) == 1, "BlaeckTCP: Expected 1-byte byte");
+  static_assert(sizeof(short) == 2, "BlaeckTCP: Expected 2-byte short");
+  static_assert(sizeof(unsigned short) == 2, "BlaeckTCP: Expected 2-byte unsigned short");
+  static_assert(sizeof(long) == 4, "BlaeckTCP: Expected 4-byte long");
+  static_assert(sizeof(unsigned long) == 4, "BlaeckTCP: Expected 4-byte unsigned long");
+  static_assert(sizeof(float) == 4, "BlaeckTCP: Expected 4-byte float");
 }

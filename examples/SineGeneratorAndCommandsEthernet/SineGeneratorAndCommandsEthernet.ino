@@ -98,8 +98,8 @@ void setup()
     BlaeckTCP.addSignal(signalName + i, &sine);
   }
 
-  // Setup read callback function by passing a function
-  BlaeckTCP.attachRead(startCommand);
+  // Setup command callback function by passing a function
+  BlaeckTCP.setCommandCallback(startCommand);
 
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);
@@ -110,7 +110,7 @@ void loop()
 {
   UpdateSineNumbers();
 
-  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all 
+  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
       connected clients (data messages only to permitted)
     - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();

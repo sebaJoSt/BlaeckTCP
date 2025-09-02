@@ -40,6 +40,14 @@ struct Signal
   String SignalName;
   dataType DataType;
   void *Address;
+  bool Updated = false;
+};
+
+enum BlaeckTimestampMode
+{
+  BLAECK_NO_TIMESTAMP = 0,
+  BLAECK_MICROS = 1,
+  BLAECK_UNIXTIME = 2
 };
 
 class BlaeckTCP
@@ -51,22 +59,26 @@ public:
   // ----- Destructor -----
   ~BlaeckTCP();
 
+  // ----- Initialize ----
   void begin(Stream *streamRef, unsigned int size);
   void begin(byte maxClients, Stream *streamRef, unsigned int size);
   void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
   void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream);
 
+  // Set these variables in your Arduino sketch
   String DeviceName;
   String DeviceHWVersion;
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "4.0.1";
+  const String LIBRARY_VERSION = "5.0.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
   NetClient ActiveClient;
 
+  // ----- Signals -----
+  // Add a Signal
   void addSignal(String signalName, bool *value);
   void addSignal(String signalName, byte *value);
   void addSignal(String signalName, short *value);
@@ -78,62 +90,158 @@ public:
   void addSignal(String signalName, float *value);
   void addSignal(String signalName, double *value);
 
+  // Delete all Signals
   void deleteSignals();
 
+  // Signal Count
+  int SignalCount;
+
+  // ----- Devices -----
   void writeDevices();
   void writeDevices(unsigned long messageID);
-  void writeDevices(unsigned long messageID, byte client);
 
+  // ----- Symbols -----
   void writeSymbols();
   void writeSymbols(unsigned long messageID);
-  void writeSymbols(unsigned long messageID, byte client);
 
-  void writeData();
-  void writeData(unsigned long messageID);
-  void writeData(unsigned long messageID, byte client);
+  // ----- Data Write -----
+  // Update value and write directly - by name
+  void write(String signalName, bool value);
+  void write(String signalName, byte value);
+  void write(String signalName, short value);
+  void write(String signalName, unsigned short value);
+  void write(String signalName, int value);
+  void write(String signalName, unsigned int value);
+  void write(String signalName, long value);
+  void write(String signalName, unsigned long value);
+  void write(String signalName, float value);
+  void write(String signalName, double value);
 
-  /**
-  Call this function every some milliseconds for writing timed data; default Message Id: 185273099
-  */
-  void timedWriteData();
+  void write(String signalName, bool value, unsigned long messageID);
+  void write(String signalName, byte value, unsigned long messageID);
+  void write(String signalName, short value, unsigned long messageID);
+  void write(String signalName, unsigned short value, unsigned long messageID);
+  void write(String signalName, int value, unsigned long messageID);
+  void write(String signalName, unsigned int value, unsigned long messageID);
+  void write(String signalName, long value, unsigned long messageID);
+  void write(String signalName, unsigned long value, unsigned long messageID);
+  void write(String signalName, float value, unsigned long messageID);
+  void write(String signalName, double value, unsigned long messageID);
 
-  /**
-  Call this function every some milliseconds for writing timed data
-  messageId: A unique message ID which echoes back to transmitter to indicate a response to a message.
-  */
-  void timedWriteData(unsigned long messageID);
+  void write(String signalName, bool value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, byte value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, short value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, unsigned short value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, int value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, unsigned int value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, long value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, unsigned long value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, float value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, double value, unsigned long messageID, unsigned long timestamp);
 
-  /**
-  Sets initial settings, call this function in setup() if you require initial settings
-  */
+  // Update value and write directly - by index
+  void write(int signalIndex, bool value);
+  void write(int signalIndex, byte value);
+  void write(int signalIndex, short value);
+  void write(int signalIndex, unsigned short value);
+  void write(int signalIndex, int value);
+  void write(int signalIndex, unsigned int value);
+  void write(int signalIndex, long value);
+  void write(int signalIndex, unsigned long value);
+  void write(int signalIndex, float value);
+  void write(int signalIndex, double value);
+
+  void write(int signalIndex, bool value, unsigned long messageID);
+  void write(int signalIndex, byte value, unsigned long messageID);
+  void write(int signalIndex, short value, unsigned long messageID);
+  void write(int signalIndex, unsigned short value, unsigned long messageID);
+  void write(int signalIndex, int value, unsigned long messageID);
+  void write(int signalIndex, unsigned int value, unsigned long messageID);
+  void write(int signalIndex, long value, unsigned long messageID);
+  void write(int signalIndex, unsigned long value, unsigned long messageID);
+  void write(int signalIndex, float value, unsigned long messageID);
+  void write(int signalIndex, double value, unsigned long messageID);
+
+  void write(int signalIndex, bool value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, byte value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, short value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, unsigned short value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, int value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, unsigned int value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, long value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, float value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, double value, unsigned long messageID, unsigned long timestamp);
+
+  // ----- Data Update -----
+  // Update value and mark Signal as updated - by name
+  void update(String signalName, bool value);
+  void update(String signalName, byte value);
+  void update(String signalName, short value);
+  void update(String signalName, unsigned short value);
+  void update(String signalName, int value);
+  void update(String signalName, unsigned int value);
+  void update(String signalName, long value);
+  void update(String signalName, unsigned long value);
+  void update(String signalName, float value);
+  void update(String signalName, double value);
+
+  // Update value and mark Signal as updated - by index
+  void update(int signalIndex, bool value);
+  void update(int signalIndex, byte value);
+  void update(int signalIndex, short value);
+  void update(int signalIndex, unsigned short value);
+  void update(int signalIndex, int value);
+  void update(int signalIndex, unsigned int value);
+  void update(int signalIndex, long value);
+  void update(int signalIndex, unsigned long value);
+  void update(int signalIndex, float value);
+  void update(int signalIndex, double value);
+
+  // ----- Mark Signals as Updated -----
+  // Use these mark functions for cases where you don't want to change the value
+  void markSignalUpdated(int signalIndex);
+  void markSignalUpdated(String signalName);
+  void markAllSignalsUpdated();
+  void clearAllUpdateFlags();
+  // Check if any Signals are marked as updated
+  bool hasUpdatedSignals();
+
+  // ----- Data Write All -----
+  void writeAllData();
+  void writeAllData(unsigned long messageID);
+  void writeAllData(unsigned long messageID, unsigned long timestamp);
+  void timedWriteAllData();
+  void timedWriteAllData(unsigned long messageID);
+  void timedWriteAllData(unsigned long messageID, unsigned long timestamp);
+
+  // ----- Data Write Updated -----
+  void writeUpdatedData();
+  void writeUpdatedData(unsigned long messageID);
+  void writeUpdatedData(unsigned long messageID, unsigned long timestamp);
+  void timedWriteUpdatedData();
+  void timedWriteUpdatedData(unsigned long messageID);
+  void timedWriteUpdatedData(unsigned long messageID, unsigned long timestamp);
+
+  // ----- Tick -----
+  void tick();
+  void tick(unsigned long messageID);
+  void tick(unsigned long messageID, unsigned long timestamp);
+  void tickUpdated();
+  void tickUpdated(unsigned long messageID);
+  void tickUpdated(unsigned long messageID, unsigned long timestamp);
+
+  // ----- Timed Data configuruation -----
   void setTimedData(bool timedActivated, unsigned long timedInterval_ms);
 
-  /**
-  Attach a function that will be called just before transmitting data.
-  */
-  void attachUpdate(void (*updateCallback)());
-
-  /**
-  Call this function every some milliseconds for reading TCP input
-  */
+  // ----- Read  -----
   void read();
 
-  /**
-  Attach a function that will be called when a valid message was received;
-  */
-  void attachRead(void (*readCallback)(char *command, int *parameter, char *string_01));
-
-  /**
-  Call this function every some milliseconds for reading TCP input
-  and writing timed data; default Message Id: 185273099
-  */
-  void tick();
-  /**
-   Call this function every some milliseconds for reading TCP input
-    and writing timed data with messageID;
-  messageId: A unique message ID which echoes back to transmitter to indicate a response to a message.
-  */
-  void tick(unsigned long messageID);
+  // ----- Command callback  -----
+  void setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01));
+  
+  // ----- Before data write callback  -----
+  void setBeforeWriteCallback(void (*callback)());
 
   /**
   Handles bidirectional data transfer between TCP and UART interface. This function
@@ -142,7 +250,27 @@ public:
   */
   void bridgePoll();
 
+  // Timestamp configuration methods
+  void setTimestampMode(BlaeckTimestampMode mode);
+  void setTimestampCallback(unsigned long (*callback)());
+  BlaeckTimestampMode getTimestampMode() const { return _timestampMode; }
+  bool hasValidTimestampCallback() const;
+
 private:
+  unsigned long getTimeStamp();
+  int findSignalIndex(String signalName);
+
+  void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
+  void tick(unsigned long messageID, bool onlyUpdated, unsigned long timestamp);
+
+  void writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
+
+  void writeDevices(unsigned long messageID, byte client);
+
+  void writeSymbols(unsigned long messageID, byte client);
+
+  static void validatePlatformSizes();
+
   Stream *StreamRef;
   int _blaeckWriteDataClientMask;
   byte _maxClients = 0;
@@ -153,6 +281,7 @@ private:
   int _signalIndex = 0;
 
   bool _serverRestarted = true;
+  bool _sendRestartFlag = true;
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
@@ -170,11 +299,14 @@ private:
 
   CRC32 _crc;
 
-  void (*_readCallback)(char *command, int *parameter, char *string01);
+  void (*_commandCallback)(char *command, int *parameter, char *string01) = nullptr;
   bool recvWithStartEndMarkers();
   void parseData();
 
-  void (*_updateCallback)();
+  void (*_beforeWriteCallback)() = nullptr;
+
+  BlaeckTimestampMode _timestampMode = BLAECK_NO_TIMESTAMP;
+  unsigned long (*_timestampCallback)() = nullptr;
 
   union
   {
@@ -190,7 +322,7 @@ private:
 
   union
   {
-    short val;
+    unsigned short val;
     byte bval[2];
   } ushortCvt;
 

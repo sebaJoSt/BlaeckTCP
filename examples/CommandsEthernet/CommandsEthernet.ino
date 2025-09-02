@@ -117,8 +117,8 @@ void setup()
       0            // Maximal signal count used;
   );
 
-  // Setup read callback function by passing a function
-  BlaeckTCP.attachRead(startCommand);
+  // Setup command callback function by passing a function
+  BlaeckTCP.setCommandCallback(startCommand);
 
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);
