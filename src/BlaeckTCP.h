@@ -239,7 +239,7 @@ public:
 
   // ----- Command callback  -----
   void setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01));
-  
+
   // ----- Before data write callback  -----
   void setBeforeWriteCallback(void (*callback)());
 
