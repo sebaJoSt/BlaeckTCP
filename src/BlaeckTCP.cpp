@@ -1818,7 +1818,7 @@ void BlaeckTCP::setTimestampMode(BlaeckTimestampMode mode)
   case BLAECK_MICROS:
     _timestampCallback = micros;
     break;
-  case BLAECK_UNIXTIME:
+  case BLAECK_RTC:
     // User must provide RTC callback - don't override if already set
     if (_timestampCallback == micros)
     {

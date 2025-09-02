@@ -100,8 +100,8 @@ void setup()
 
   BlaeckTCP.addSignal(F("Sine_1"), &sine);
 
-  // Unix timestamp transmitted with the data
-  //BlaeckTCP.setTimestampMode(BLAECK_UNIXTIME);
+  // Unix timestamp from RTC transmitted with the data
+  //BlaeckTCP.setTimestampMode(BLAECK_RTC);
   //BlaeckTCP.setTimestampCallback(GetRTCUnixTime);
 
   // micros() are transmitted with the data
