@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.0.0] - 2025-09-04
+This is a major rewrite, not all changes are listed here.
+
+### Added
+- Added timestamp support with three modes:
+  - `BLAECK_NO_TIMESTAMP` (0): No timestamp data included
+  - `BLAECK_MICROS` (1): Microsecond timestamps using `micros()`
+  - `BLAECK_RTC` (2): Unix epoch timestamps from RTC (requires callback)
+  - `setTimestampMode(BlaeckTimestampMode mode)`
+- Added RestartFlag in data messages to indicate device restart status
+- Added new functions:
+  - `write()` method overloads to write a single signal
+  - `update()` method overloads to update a single signal
+  - `tickUpdated()` and `timedWriteUpdatedData()` methods for writing only the updated signals
+  - `markSignalUpdated()` and `markAllSignalsUpdated()` to mark signals as updated and `clearAllUpdateFlags()` to clear the update flags
+  - `hasUpdatedSignals()` to check if any Signals are marked as updated
+- Added `SignalCount` to get the number of signals added
+
+### Changed
+- **Breaking change:** On 32 bit Architecture: Data type int and unsigned int are now treated correctly as 4 byte and they use DTYPE 6 (Blaeck_long) and DTYPE 7 (Blaeck_ulong) respectively.
+- **Breaking change:** `writeData()` renamed to `writeAllData()`
+- **Breaking change:** `timedWriteData()` renamed to `timedWriteAllData()`
+- **Breaking change:** Data message format updated from MSGKEY `B1` to `D1`
+- **Breaking change:** Enhanced data transmission protocol with timestamp support, data message structure now includes: `<RestartFlag>:<TimestampMode><Timestamp>:<SymbolID><DATA><StatusByte><CRC32>`
+- **Breaking change:** Deprecated old data format `<SymbolID><DATA><StatusByte><CRC32>` (used in BlaeckTCP version 4.0.1 or older)
+- **Breaking change:** Renamed callback functions for improved clarity:
+  - `attachUpdate()` → `setBeforeWriteCallback()`
+  - `attachRead()` → `setCommandCallback()`
+- Updated message parsing to handle new data format structure
+- Updated the examples + some new examples added
+
+
 ## [4.0.1] - 2025-07-11
 ### Changed
 - Changed buffer size defaults based on architecture
@@ -88,6 +120,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[5.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/4.0.1...5.0.0
 [4.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/3.0.0...4.0.0
 [3.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/2.2.0...3.0.0
