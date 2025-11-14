@@ -1731,12 +1731,7 @@ void BlaeckTCP::tickUpdated()
 
 void BlaeckTCP::tickUpdated(unsigned long msg_id)
 {
-  this->tickUpdated(msg_id, getTimeStamp());
-}
-
-void BlaeckTCP::tickUpdated(unsigned long msg_id, unsigned long timestamp)
-{
-  this->tick(msg_id, true, timestamp);
+  this->tick(msg_id, true);
 }
 
 void BlaeckTCP::tick()
@@ -1746,18 +1741,13 @@ void BlaeckTCP::tick()
 
 void BlaeckTCP::tick(unsigned long msg_id)
 {
-  this->tick(msg_id, getTimeStamp());
+  this->tick(msg_id, false);
 }
 
-void BlaeckTCP::tick(unsigned long msg_id, unsigned long timestamp)
-{
-  this->tick(msg_id, false, timestamp);
-}
-
-void BlaeckTCP::tick(unsigned long msg_id, bool onlyUpdated, unsigned long timestamp)
+void BlaeckTCP::tick(unsigned long msg_id, bool onlyUpdated)
 {
   this->read();
-  this->timedWriteData(msg_id, 0, _signalIndex - 1, onlyUpdated, timestamp);
+  this->timedWriteData(msg_id, 0, _signalIndex - 1, onlyUpdated, getTimeStamp());
 }
 
 void BlaeckTCP::markSignalUpdated(int signalIndex)

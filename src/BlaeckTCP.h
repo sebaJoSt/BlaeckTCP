@@ -71,7 +71,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "5.0.0";
+  const String LIBRARY_VERSION = "5.0.1";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
@@ -226,10 +226,8 @@ public:
   // ----- Tick -----
   void tick();
   void tick(unsigned long messageID);
-  void tick(unsigned long messageID, unsigned long timestamp);
   void tickUpdated();
   void tickUpdated(unsigned long messageID);
-  void tickUpdated(unsigned long messageID, unsigned long timestamp);
 
   // ----- Timed Data configuruation -----
   void setTimedData(bool timedActivated, unsigned long timedInterval_ms);
@@ -261,7 +259,7 @@ private:
   int findSignalIndex(String signalName);
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
-  void tick(unsigned long messageID, bool onlyUpdated, unsigned long timestamp);
+  void tick(unsigned long messageID, bool onlyUpdated);
 
   void writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
 

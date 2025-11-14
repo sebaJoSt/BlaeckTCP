@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [5.0.1] - 2025-11-14
+
+### Removed
+- Removed timestamp parameter overloads from `tick()` and `tickUpdated()` methods to fix chronological ordering issues with fast timed intervals. All timestamps are now captured at transmission time to ensure proper sequential ordering.
+
+
 ## [5.0.0] - 2025-09-04
 This is a major rewrite, not all changes are listed here.
 
