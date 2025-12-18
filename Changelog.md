@@ -8,7 +8,7 @@ All notable changes to this project will be documented in this file.
 - New example `SineGeneratorEthernetBonjour` which uses Bonjour/mDNS service to connect using the hostname `SineNumberGenerator`
 
 ### Changed 
-- Changed host name in `SineGeneratorESP32PoE` from `ESP32-ETH01` to `SineGeneratorESP32_01`
+- Changed host name in `SineGeneratorESP32PoE`-Example from `ESP32-ETH01` to `SineGeneratorESP32_01`
 
 
 ## [5.0.1] - 2025-11-14
