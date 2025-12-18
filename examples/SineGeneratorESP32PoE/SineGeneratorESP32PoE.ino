@@ -74,7 +74,7 @@ void onEvent(arduino_event_id_t event)
   {
   case ARDUINO_EVENT_ETH_START:
     Serial.println("ETH Started");
-    ETH.setHostname("ESP32-ETH01");
+    ETH.setHostname("SineGeneratorESP32_01");
     break;
   case ARDUINO_EVENT_ETH_CONNECTED:
     Serial.println("ETH Connected");
