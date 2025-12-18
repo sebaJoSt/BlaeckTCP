@@ -8,7 +8,9 @@
     Upload the sketch to your board.
 
   Usage:
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    Open a Telnet Client (e.g., PuTTY) and connect to the device's IP Address on Port 23
+    (By default, DHCP is used. For static IP, uncomment ETH.config(ip, gateway, subnet, dns))
+    
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC
