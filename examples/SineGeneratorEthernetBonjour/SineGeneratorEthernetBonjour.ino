@@ -2,8 +2,8 @@
  SineGeneratorEthernetBonjour.ino
 
  This sketch is based on SineGeneratorEthernet.ino with the addition of Bonjour/mDNS service.
- Bonjour/mDNS service allows clients to connect using the hostname "SineNumberGenerator" or
- "SineNumberGenerator.local" instead of the IP address.
+ Bonjour/mDNS service allows clients to connect using the hostname ("SineNumberGenerator" or
+ "SineNumberGenerator.local" in this example) instead of the IP address.
 
  This example requires EthernetBonjour Libray to be installed.
 
