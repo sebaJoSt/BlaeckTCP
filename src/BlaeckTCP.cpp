@@ -1640,7 +1640,10 @@ void BlaeckTCP::timedWriteData(unsigned long msg_id, int signalIndex_start, int 
   if (((_timedElapsedTime_ms >= _timedSetPoint_ms) || _timedFirstTime == true) && _timedActivated == true)
   {
     if (_timedFirstTime == false)
-      _timedSetPoint_ms += _timedInterval_ms;
+    {
+      while (_timedSetPoint_ms <= _timedElapsedTime_ms)
+        _timedSetPoint_ms += _timedInterval_ms;
+    }
     _timedFirstTime = false;
 
     for (byte client = 0; client < _maxClients; client++)
