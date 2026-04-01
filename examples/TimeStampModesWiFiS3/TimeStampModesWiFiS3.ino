@@ -100,9 +100,9 @@ void setup()
 
   BlaeckTCP.addSignal(F("Sine_1"), &sine);
 
-  // Unix timestamp from RTC transmitted with the data
-  //BlaeckTCP.setTimestampMode(BLAECK_RTC);
-  //BlaeckTCP.setTimestampCallback(GetRTCUnixTime);
+  // Unix timestamp from RTC transmitted with the data (microseconds since epoch)
+  //BlaeckTCP.setTimestampMode(BLAECK_UNIX);
+  //BlaeckTCP.setTimestampCallback(GetRTCUnixTimeMicros);
 
   // micros() are transmitted with the data
   BlaeckTCP.setTimestampMode(BLAECK_MICROS);
@@ -130,11 +130,11 @@ void UpdateSineNumbers()
   sine = sin(millis() * 0.00005);
 }
 
-unsigned long GetRTCUnixTime()
+unsigned long long GetRTCUnixTimeMicros()
 {
   RTCTime currentTime;
   // Get current time from RTC
   RTC.getTime(currentTime);
 
-  return currentTime.getUnixTime();
+  return (unsigned long long)currentTime.getUnixTime() * 1000000ULL;
 }

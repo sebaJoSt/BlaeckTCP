@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
-## [5.0.3] - 2026-03-31
+## [6.0.0] - 2026-04-01
+
+### Changed
+- **Breaking change:** Data message format updated from `D1` (0xD1) to `D2` (0xD2)
+- **Breaking change:** Timestamps are now 8 bytes (uint64) instead of 4 bytes (uint32)
+  - `BLAECK_MICROS` mode: tracks `micros()` overflow internally, produces monotonic uint64 (no more ~71 minute wrap)
+  - `BLAECK_UNIX` mode: callback returns microseconds since epoch directly (uint64)
+- **Breaking change:** Timestamp parameter type changed from `unsigned long` to `unsigned long long` in all public write methods
+- **Breaking change:** Timestamp callback signature changed from `unsigned long (*)()` to `unsigned long long (*)()`. For `BLAECK_UNIX` mode, the callback must now return microseconds since epoch instead of seconds.
+- Renamed `BLAECK_RTC` to `BLAECK_UNIX` (`BLAECK_RTC` kept as deprecated alias)
 
 ### Fixed
 - Fixed timer burst issue: when the main loop is delayed beyond the timed interval, `timedWriteData` no longer fires multiple times in rapid succession to catch up. It now skips missed intervals and resumes at the next boundary.
@@ -141,7 +150,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
-[5.0.3]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.2...5.0.3
+[6.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.2...6.0.0
 [5.0.2]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.1...5.0.2
 [5.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.0...5.0.1
 [5.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/4.0.1...5.0.0

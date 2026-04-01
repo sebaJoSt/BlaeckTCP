@@ -89,7 +89,8 @@ Type| MSGKEY | Elements| Description
 ----|--------|---------------------------------|---------------------------------------------
 Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up to n symbols.** Response to request for available symbols `<BLAECK.WRITE_SYMBOLS>`
 ~~Data~~ | ~~B1~~ | ~~**`<SymbolID><DATA>`**`<StatusByte><CRC32>`~~ |  Deprecated (Used in BlaeckTCP version 4.0.1 or older)
-Data | D1 | `<RestartFlag>:<TimestampMode><Timestamp>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
+~~Data~~ | ~~D1~~ | ~~`<RestartFlag>:<TimestampMode><Timestamp(4)>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>`~~ | Deprecated (Used in BlaeckTCP version 5.x)
+Data | D2 | `<RestartFlag>:<TimestampMode><Timestamp(8)>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
 ~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP v1)
 ~~Devices~~ | ~~B4~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>`~~ | Deprecated (Used in BlaeckTCP v2)
 Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
@@ -117,7 +118,7 @@ Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
    `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
    `RestartFlag`          | byte | Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
    `TimestampMode`        | byte | Timestamp Mode, 0=No timestamp, 1=Microseconds, 2=Unix time; 1 byte transmitted  
-   `Timestamp`            | ulong | Timestamp value (only present if TimestampMode > 0); 4 bytes transmitted
+   `Timestamp`            | uint64 | Timestamp value (only present if TimestampMode > 0); 8 bytes transmitted. Mode 1: microseconds with overflow tracking. Mode 2: Unix epoch microseconds.
          
    
  
@@ -161,13 +162,13 @@ Byte:  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 56 47 48 49 50 5
  `<BLAECK.WRITE_DATA, 255, 255, 255, 255>`:
  ````
 ASCII: <  B  L  A  E  C  K  :  °  :  °  °  °  °  :  °  :  °  :  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  /  B  L  A  E  C  K  >  \r \n
-HEX:   3C 42 4C 41 45 43 4B 3A D1 3A FF FF FF FF 3A 00 3A 00 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 81 EC 79 9B 2F 42 4C 41 45 43 4B 3E 0D 0A
+HEX:   3C 42 4C 41 45 43 4B 3A D2 3A FF FF FF FF 3A 00 3A 00 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 81 EC 79 9B 2F 42 4C 41 45 43 4B 3E 0D 0A
 Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45
 ````
  
  Byte | DESCRIPTION:
 ----|---------------------------------------------
-8   | `MSGKEY`: B1 -> Data
+8   | `MSGKEY`: D2 -> Data
 10-13| `MSGID`: Hex: FF FF FF FF -> Decimal: 4294967295
 15  | `RestartFlag`: Hex: 00 -> Device has not restarted
 17  | `TimestampMode`: Hex: 00 -> No timestamp
@@ -209,5 +210,5 @@ BlaeckTCP automatically handles platform differences in data type sizes:
 |------------|------|-------------|
 | 0 | `BLAECK_NO_TIMESTAMP` | No timestamp data included |
 | 1 | `BLAECK_MICROS` | Microsecond timestamps using `micros()` |
-| 2 | `BLAECK_RTC` | Unix epoch timestamps from RTC (requires callback) |
+| 2 | `BLAECK_UNIX` | Unix epoch timestamps (requires callback). `BLAECK_RTC` kept as deprecated alias. |
 

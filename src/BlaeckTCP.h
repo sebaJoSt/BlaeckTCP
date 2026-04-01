@@ -47,7 +47,8 @@ enum BlaeckTimestampMode
 {
   BLAECK_NO_TIMESTAMP = 0,
   BLAECK_MICROS = 1,
-  BLAECK_RTC = 2
+  BLAECK_UNIX = 2,
+  BLAECK_RTC = BLAECK_UNIX // Deprecated alias
 };
 
 class BlaeckTCP
@@ -71,7 +72,7 @@ public:
   String DeviceFWVersion;
 
   const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "5.0.3";
+  const String LIBRARY_VERSION = "6.0.0";
 
   NetClient *Clients;
   // ActiveClient is the client, which sent the command
@@ -128,16 +129,16 @@ public:
   void write(String signalName, float value, unsigned long messageID);
   void write(String signalName, double value, unsigned long messageID);
 
-  void write(String signalName, bool value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, byte value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, short value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, unsigned short value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, int value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, unsigned int value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, long value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, unsigned long value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, float value, unsigned long messageID, unsigned long timestamp);
-  void write(String signalName, double value, unsigned long messageID, unsigned long timestamp);
+  void write(String signalName, bool value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, byte value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, short value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, unsigned short value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, int value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, unsigned int value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, long value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, unsigned long value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, float value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, double value, unsigned long messageID, unsigned long long timestamp);
 
   // Update value and write directly - by index
   void write(int signalIndex, bool value);
@@ -162,16 +163,16 @@ public:
   void write(int signalIndex, float value, unsigned long messageID);
   void write(int signalIndex, double value, unsigned long messageID);
 
-  void write(int signalIndex, bool value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, byte value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, short value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, unsigned short value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, int value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, unsigned int value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, long value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, float value, unsigned long messageID, unsigned long timestamp);
-  void write(int signalIndex, double value, unsigned long messageID, unsigned long timestamp);
+  void write(int signalIndex, bool value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, byte value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, short value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, unsigned short value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, int value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, unsigned int value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, long value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, float value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, double value, unsigned long messageID, unsigned long long timestamp);
 
   // ----- Data Update -----
   // Update value and mark Signal as updated - by name
@@ -210,18 +211,18 @@ public:
   // ----- Data Write All -----
   void writeAllData();
   void writeAllData(unsigned long messageID);
-  void writeAllData(unsigned long messageID, unsigned long timestamp);
+  void writeAllData(unsigned long messageID, unsigned long long timestamp);
   void timedWriteAllData();
   void timedWriteAllData(unsigned long messageID);
-  void timedWriteAllData(unsigned long messageID, unsigned long timestamp);
+  void timedWriteAllData(unsigned long messageID, unsigned long long timestamp);
 
   // ----- Data Write Updated -----
   void writeUpdatedData();
   void writeUpdatedData(unsigned long messageID);
-  void writeUpdatedData(unsigned long messageID, unsigned long timestamp);
+  void writeUpdatedData(unsigned long messageID, unsigned long long timestamp);
   void timedWriteUpdatedData();
   void timedWriteUpdatedData(unsigned long messageID);
-  void timedWriteUpdatedData(unsigned long messageID, unsigned long timestamp);
+  void timedWriteUpdatedData(unsigned long messageID, unsigned long long timestamp);
 
   // ----- Tick -----
   void tick();
@@ -250,18 +251,18 @@ public:
 
   // Timestamp configuration methods
   void setTimestampMode(BlaeckTimestampMode mode);
-  void setTimestampCallback(unsigned long (*callback)());
+  void setTimestampCallback(unsigned long long (*callback)());
   BlaeckTimestampMode getTimestampMode() const { return _timestampMode; }
   bool hasValidTimestampCallback() const;
 
 private:
-  unsigned long getTimeStamp();
+  unsigned long long getTimeStamp();
   int findSignalIndex(String signalName);
 
-  void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
+  void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);
 
-  void writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long timestamp);
+  void writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
 
   void writeDevices(unsigned long messageID, byte client);
 
@@ -280,6 +281,10 @@ private:
 
   bool _serverRestarted = true;
   bool _sendRestartFlag = true;
+
+  // Micros overflow tracking for D2 (uint64 timestamp)
+  unsigned long _prevMicros = 0;
+  unsigned long long _overflowCount = 0;
 
   bool _timedActivated = false;
   bool _timedFirstTime = true;
@@ -303,8 +308,13 @@ private:
 
   void (*_beforeWriteCallback)() = nullptr;
 
+  static unsigned long long _microsWrapper()
+  {
+    return (unsigned long long)micros();
+  }
+
   BlaeckTimestampMode _timestampMode = BLAECK_NO_TIMESTAMP;
-  unsigned long (*_timestampCallback)() = nullptr;
+  unsigned long long (*_timestampCallback)() = nullptr;
 
   union
   {
@@ -347,6 +357,12 @@ private:
     unsigned long val;
     byte bval[4];
   } ulngCvt;
+
+  union
+  {
+    unsigned long long val;
+    byte bval[8];
+  } ullCvt;
 
   union
   {
