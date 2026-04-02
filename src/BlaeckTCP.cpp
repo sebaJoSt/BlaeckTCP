@@ -1767,9 +1767,13 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
     }
   }
 
-  // StatusByte 0: Normal transmission
-  // StatusByte + CRC First Byte + CRC Second Byte + CRC Third Byte + CRC Fourth Byte
-  Clients[i].write((byte)0);
+  // D2 tail: StatusByte + StatusPayload(4) + CRC32(4)
+  byte statusByte = 0;
+  byte statusPayload[4] = {0, 0, 0, 0};
+  Clients[i].write(statusByte);
+  Clients[i].write(statusPayload, 4);
+  _crc.add(statusByte);
+  _crc.add(statusPayload, 4);
 
   uint32_t crc_value = _crc.calc();
   Clients[i].write((byte *)&crc_value, 4);
