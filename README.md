@@ -106,32 +106,32 @@ Data | D2 | `<RestartFlag>:<SchemaHash>:<TimestampMode><Timestamp(8)>:`**`<Symbo
 Devices | B6 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted><DeviceType><Parent>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
   
 
- Element|Type    |  DESCRIPTION:
- -------|--------| ---------------------------------------------------------------------------
- `MSGKEY`| byte |  Message Key, A unique key for the type of message being sent; 1 byte transmitted
- `MSGID` | ulong|  Message ID,  A unique message ID which echoes back to transmitter to indicate a response to a message (0 to 4294967295); 4 bytes transmitted
- `DATA`  | (varying)| Message Data, varying data types and length depending on message
- `SymbolID` | uint | Symbol ID number
- `SymbolName` |String0 | Symbol Name - Null Terminated String
- `DTYPE` | byte | DataType  0=bool, 1=byte, 2=short, 3=ushort, 4=int, 5=uint, 6=long, 7=ulong, 8=float, 9=double
-  `MasterSlaveConfig`     | byte | always 0: Single device (no master/slave support in this library)
-   `SlaveID`              | byte |             Slave Address, always 0 (no master/slave support in this library)
-   `DeviceName`           | String0 |          set with public variable `DeviceName`
-   `DeviceHWVersion`      | String0 |          set with public variable `DeviceHWVersion`
-   `DeviceFWVersion`      | String0 |          set with public variable `DeviceFWVersion`
-   `LibraryVersion`       | String0 |          set with public const `LIBRARY_VERSION`
-   `LibraryName`          | String0 |          set with public const `LIBRARY_NAME`
-   `Client#`              | String0 |          Client number of the connected client
-    `ClientDataEnabled`    | String0 |          0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `B1`); Set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
-    `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
-   `DeviceType`           | String0 |          always `server` (single-device setup)
-   `Parent`               | String0 |          always `0` (no parent in single-device setup)
-   `StatusByte`           | byte |             1 byte; Always 0: Normal Transmission (no master/slave support in this library)
-   `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
-   `RestartFlag`          | byte | Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
-   `SchemaHash`           | uint16 | CRC16-CCITT (init=0x0000, poly=0x1021) of signal name bytes + datatype code byte for each signal in order; 2 bytes transmitted (little-endian). Used by hubs and clients to detect signal layout changes at runtime.
-   `TimestampMode`        | byte | Timestamp Mode, 0=No timestamp, 1=Microseconds, 2=Unix time; 1 byte transmitted  
-   `Timestamp`            | uint64 | Timestamp value (only present if TimestampMode > 0); 8 bytes transmitted. Mode 1: microseconds with overflow tracking. Mode 2: Unix epoch microseconds.
+Element|Type|DESCRIPTION
+-------|----|-----------
+`MSGKEY`|byte|Message Key, a unique key for the type of message being sent; 1 byte transmitted
+`MSGID`|ulong|Message ID, a unique message ID which echoes back to transmitter to indicate a response to a message (0 to 4294967295); 4 bytes transmitted
+`DATA`|(varying)|Message Data, varying data types and length depending on message
+`SymbolID`|uint|Symbol ID number
+`SymbolName`|String0|Symbol Name - Null Terminated String
+`DTYPE`|byte|DataType 0=bool, 1=byte, 2=short, 3=ushort, 4=int, 5=uint, 6=long, 7=ulong, 8=float, 9=double
+`MasterSlaveConfig`|byte|always 0: Single device (no master/slave support in this library)
+`SlaveID`|byte|Slave Address, always 0 (no master/slave support in this library)
+`DeviceName`|String0|set with public variable `DeviceName`
+`DeviceHWVersion`|String0|set with public variable `DeviceHWVersion`
+`DeviceFWVersion`|String0|set with public variable `DeviceFWVersion`
+`LibraryVersion`|String0|set with public const `LIBRARY_VERSION`
+`LibraryName`|String0|set with public const `LIBRARY_NAME`
+`Client#`|String0|Client number of the connected client
+`ClientDataEnabled`|String0|0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `B1`); set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
+`ServerRestarted`|String0|0 or 1; first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
+`DeviceType`|String0|always `server` (single-device setup)
+`Parent`|String0|always `0` (no parent in single-device setup)
+`StatusByte`|byte|1 byte; always 0: normal transmission (no master/slave support in this library)
+`CRC32`|byte|4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
+`RestartFlag`|byte|Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
+`SchemaHash`|uint16|CRC16-CCITT (init=0x0000, poly=0x1021) of signal name bytes + datatype code byte for each signal in order; 2 bytes transmitted (little-endian). Used by hubs and clients to detect signal layout changes at runtime.
+`TimestampMode`|byte|Timestamp Mode, 0=No timestamp, 1=Microseconds, 2=Unix time; 1 byte transmitted
+`Timestamp`|uint64|Timestamp value (only present if TimestampMode > 0); 8 bytes transmitted. Mode 1: microseconds with overflow tracking. Mode 2: Unix epoch microseconds.
          
    
  
