@@ -99,7 +99,7 @@ Type| MSGKEY | Elements| Description
 Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up to n symbols.** Response to request for available symbols `<BLAECK.WRITE_SYMBOLS>`
 ~~Data~~ | ~~B1~~ | ~~**`<SymbolID><DATA>`**`<StatusByte><CRC32>`~~ |  Deprecated (Used in BlaeckTCP version 4.0.1 or older)
 ~~Data~~ | ~~D1~~ | ~~`<RestartFlag>:<TimestampMode><Timestamp(4)>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>`~~ | Deprecated (Used in BlaeckTCP version 5.x)
-Data | D2 | `<RestartFlag>:<SchemaHash>:<TimestampMode><Timestamp(8)>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
+Data | D2 | `<RestartFlag>:<SchemaHash>:<TimestampMode><Timestamp(8)>:`**`<SymbolID><DATA>`**`<StatusByte><StatusPayload(4)>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
 ~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP v1)
 ~~Devices~~ | ~~B4~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>`~~ | Deprecated (Used in BlaeckTCP v2)
 ~~Devices~~ | ~~B5~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted>`~~ | Deprecated (Used in BlaeckTCP v3-v5)
@@ -126,8 +126,9 @@ Element|Type|DESCRIPTION
 `ServerRestarted`|String0|0 or 1; first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
 `DeviceType`|String0|always `server` (single-device setup)
 `Parent`|String0|always `0` (no parent in single-device setup)
-`StatusByte`|byte|1 byte; always 0: normal transmission (no master/slave support in this library)
-`CRC32`|byte|4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
+`StatusByte`|byte|1 byte; 0: normal transmission, 1: reserved for non-CRC status payload
+`StatusPayload` (StatusByte=0)|byte|4 bytes; CRC32. CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
+`StatusPayload` (StatusByte=1)|byte|4 bytes; reserved for future status details in BlaeckTCP
 `RestartFlag`|byte|Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
 `SchemaHash`|uint16|CRC16-CCITT (init=0x0000, poly=0x1021) of signal name bytes + datatype code byte for each signal in order; 2 bytes transmitted (little-endian). Used by hubs and clients to detect signal layout changes at runtime.
 `TimestampMode`|byte|Timestamp Mode, 0=No timestamp, 1=Microseconds, 2=Unix time; 1 byte transmitted
@@ -191,7 +192,7 @@ Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 2
 28-29| `SymbolID`: Hex: 01 00 -> Decimal: 1
 30-33| `DATA`: Long  -> 4 Bytes; Hex: D8 E6 32 7C -> Long: 2083710680
 34   | `StatusByte`: 0 -> Normal Transmission
-35-38| `CRC32`: 4 Bytes (Calculated from bytes 8-34)
+35-38| `StatusPayload`: 4 Bytes (CRC32 when `StatusByte` is 0; calculated from bytes 8-34)
 
 ## Data Types
 
