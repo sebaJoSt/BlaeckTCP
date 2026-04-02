@@ -268,6 +268,8 @@ private:
 
   void writeSymbols(unsigned long messageID, byte client);
 
+  uint16_t _computeSchemaHash();
+
   static void validatePlatformSizes();
 
   Stream *StreamRef;
@@ -278,6 +280,7 @@ private:
 
   Signal *Signals;
   int _signalIndex = 0;
+  uint16_t _schemaHash = 0;
 
   bool _serverRestarted = true;
   bool _sendRestartFlag = true;

@@ -195,6 +195,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, byte *value)
@@ -204,6 +205,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, short *value)
@@ -213,6 +215,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
@@ -222,6 +225,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, int *value)
@@ -235,6 +239,7 @@ void BlaeckTCP::addSignal(String signalName, int *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
@@ -248,6 +253,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, long *value)
@@ -257,6 +263,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
@@ -266,6 +273,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, float *value)
@@ -275,6 +283,7 @@ void BlaeckTCP::addSignal(String signalName, float *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::addSignal(String signalName, double *value)
@@ -290,12 +299,49 @@ void BlaeckTCP::addSignal(String signalName, double *value)
   Signals[_signalIndex].Address = value;
   _signalIndex++;
   SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
 }
 
 void BlaeckTCP::deleteSignals()
 {
   _signalIndex = 0;
   SignalCount = _signalIndex;
+  _schemaHash = 0;
+}
+
+uint16_t BlaeckTCP::_computeSchemaHash()
+{
+  // CRC16-CCITT (init=0x0000, poly=0x1021) over signal names + datatype codes.
+  // Must match Python: binascii.crc_hqx(data, 0) & 0xFFFF
+  uint16_t crc = 0x0000;
+  for (int j = 0; j < _signalIndex; j++)
+  {
+    // Feed signal name bytes (UTF-8 / ASCII)
+    const char *name = Signals[j].SignalName.c_str();
+    while (*name)
+    {
+      byte b = (byte)*name++;
+      crc ^= ((uint16_t)b << 8);
+      for (byte k = 0; k < 8; k++)
+      {
+        if (crc & 0x8000)
+          crc = (crc << 1) ^ 0x1021;
+        else
+          crc <<= 1;
+      }
+    }
+    // Feed datatype code byte
+    byte code = (byte)Signals[j].DataType;
+    crc ^= ((uint16_t)code << 8);
+    for (byte k = 0; k < 8; k++)
+    {
+      if (crc & 0x8000)
+        crc = (crc << 1) ^ 0x1021;
+      else
+        crc <<= 1;
+    }
+  }
+  return crc & 0xFFFF;
 }
 
 void BlaeckTCP::read()
@@ -1479,6 +1525,17 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
   Clients[i].write(restart_flag);
   _crc.add(restart_flag);
   _sendRestartFlag = false; // Clear the flag after first transmission
+
+  Clients[i].write(":");
+  _crc.add(':');
+
+  // Schema hash (2 bytes, CRC16-CCITT, little-endian)
+  byte hash_lo = (byte)(_schemaHash & 0xFF);
+  byte hash_hi = (byte)((_schemaHash >> 8) & 0xFF);
+  Clients[i].write(hash_lo);
+  Clients[i].write(hash_hi);
+  _crc.add(hash_lo);
+  _crc.add(hash_hi);
 
   Clients[i].write(":");
   _crc.add(':');
