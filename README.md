@@ -47,6 +47,15 @@ BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
 BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 ```
 
+If more signals are added than configured in `begin(...)`, additional `addSignal(...)`
+calls are ignored. You can inspect this with:
+```CPP
+if (BlaeckTCP.hasSignalOverflow()) {
+  Serial.print("Dropped addSignal calls: ");
+  Serial.println(BlaeckTCP.getSignalOverflowCount());
+}
+```
+
 ### Start TCP-Server and listen for clients
 ```CPP
 TelnetPrint = NetServer(SERVER_PORT);
@@ -93,7 +102,7 @@ Symbol List | B0 | **`<MasterSlaveConfig><SlaveID><SymbolName><DTYPE>`** | **Up 
 Data | D2 | `<RestartFlag>:<SchemaHash>:<TimestampMode><Timestamp(8)>:`**`<SymbolID><DATA>`**`<StatusByte><CRC32>` | **Up to n data items.** Response to request for data `<BLAECK.WRITE_DATA>`
 ~~Devices~~ | ~~B3~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName>`~~ | Deprecated (Used in BlaeckTCP v1)
 ~~Devices~~ | ~~B4~~ | ~~`<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled>`~~ | Deprecated (Used in BlaeckTCP v2)
-Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
+Devices | B6 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><DeviceFWVersion><LibraryVersion><LibraryName><Client#><ClientDataEnabled><ServerRestarted><DeviceType><Parent>` | Only one device (No master/slave support). Response to request for device information `<BLAECK.GET_DEVICES>`
   
 
  Element|Type    |  DESCRIPTION:
@@ -112,8 +121,10 @@ Devices | B5 | `<MasterSlaveConfig><SlaveID><DeviceName><DeviceHWVersion><Device
    `LibraryVersion`       | String0 |          set with public const `LIBRARY_VERSION`
    `LibraryName`          | String0 |          set with public const `LIBRARY_NAME`
    `Client#`              | String0 |          Client number of the connected client
-   `ClientDataEnabled`    | String0 |          0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `B1`); Set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
-   `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
+    `ClientDataEnabled`    | String0 |          0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `B1`); Set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
+    `ServerRestarted`      | String0 |          0 or 1;  first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
+   `DeviceType`           | String0 |          always `server` (single-device setup)
+   `Parent`               | String0 |          always `0` (no parent in single-device setup)
    `StatusByte`           | byte |             1 byte; Always 0: Normal Transmission (no master/slave support in this library)
    `CRC32`                | byte |             4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
    `RestartFlag`          | byte | Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted

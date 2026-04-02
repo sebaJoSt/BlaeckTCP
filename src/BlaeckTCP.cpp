@@ -14,8 +14,10 @@ BlaeckTCP::BlaeckTCP()
 
 BlaeckTCP::~BlaeckTCP()
 {
-  delete Signals;
-  delete Clients;
+  delete[] Signals;
+  Signals = nullptr;
+  delete[] Clients;
+  Clients = nullptr;
 }
 
 void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
@@ -26,13 +28,29 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
 
   _blaeckWriteDataClientMask = 1;
 
+  _signalCapacity = maximumSignalCount;
+  if (Signals != nullptr)
+  {
+    delete[] Signals;
+    Signals = nullptr;
+  }
   Signals = new Signal[maximumSignalCount];
+  _signalIndex = 0;
+  SignalCount = 0;
+  _schemaHash = 0;
+  _signalOverflowOccurred = false;
+  _signalOverflowCount = 0;
 
   StreamRef->print("BlaeckTCP Version: ");
   StreamRef->println(LIBRARY_VERSION);
 
   StreamRef->println("Only one client (= Client 0) can connect simultaneously!");
 
+  if (Clients != nullptr)
+  {
+    delete[] Clients;
+    Clients = nullptr;
+  }
   Clients = new NetClient[_maxClients];
 }
 
@@ -50,7 +68,18 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   _maxClients = maxClients;
   _blaeckWriteDataClientMask = blaeckWriteDataClientMask;
 
+  _signalCapacity = maximumSignalCount;
+  if (Signals != nullptr)
+  {
+    delete[] Signals;
+    Signals = nullptr;
+  }
   Signals = new Signal[maximumSignalCount];
+  _signalIndex = 0;
+  SignalCount = 0;
+  _schemaHash = 0;
+  _signalOverflowOccurred = false;
+  _signalOverflowCount = 0;
 
   StreamRef->print("BlaeckTCP Version: ");
   StreamRef->println(LIBRARY_VERSION);
@@ -83,6 +112,11 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   }
   StreamRef->println();
 
+  if (Clients != nullptr)
+  {
+    delete[] Clients;
+    Clients = nullptr;
+  }
   Clients = new NetClient[maxClients];
 }
 
@@ -100,6 +134,11 @@ void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeSt
   StreamRef->print("Max Clients allowed: ");
   StreamRef->println(maxClients);
 
+  if (Clients != nullptr)
+  {
+    delete[] Clients;
+    Clients = nullptr;
+  }
   Clients = new NetClient[maxClients];
 }
 
@@ -190,7 +229,13 @@ void BlaeckTCP::bridgePoll()
 
 void BlaeckTCP::addSignal(String signalName, bool *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_bool;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -200,7 +245,13 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
 
 void BlaeckTCP::addSignal(String signalName, byte *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_byte;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -210,7 +261,13 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
 
 void BlaeckTCP::addSignal(String signalName, short *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_short;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -220,7 +277,13 @@ void BlaeckTCP::addSignal(String signalName, short *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_ushort;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -230,7 +293,13 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 
 void BlaeckTCP::addSignal(String signalName, int *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
 #ifdef __AVR__
   Signals[_signalIndex].DataType = Blaeck_int; // 2 bytes
 #else
@@ -244,7 +313,13 @@ void BlaeckTCP::addSignal(String signalName, int *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
 #ifdef __AVR__
   Signals[_signalIndex].DataType = Blaeck_uint; // 2 bytes
 #else
@@ -258,7 +333,13 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 
 void BlaeckTCP::addSignal(String signalName, long *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_long;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -268,7 +349,13 @@ void BlaeckTCP::addSignal(String signalName, long *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_ulong;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -278,7 +365,13 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 
 void BlaeckTCP::addSignal(String signalName, float *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
   Signals[_signalIndex].DataType = Blaeck_float;
   Signals[_signalIndex].Address = value;
   _signalIndex++;
@@ -288,7 +381,13 @@ void BlaeckTCP::addSignal(String signalName, float *value)
 
 void BlaeckTCP::addSignal(String signalName, double *value)
 {
-  Signals[_signalIndex].SignalName = signalName;
+  if (_signalIndex >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
 #ifdef __AVR__
   /*On the Uno and other ATMEGA based boards, the double implementation occupies 4 bytes
   and is exactly the same as the float, with no gain in precision.*/
@@ -307,6 +406,8 @@ void BlaeckTCP::deleteSignals()
   _signalIndex = 0;
   SignalCount = _signalIndex;
   _schemaHash = 0;
+  _signalOverflowOccurred = false;
+  _signalOverflowCount = 0;
 }
 
 uint16_t BlaeckTCP::_computeSchemaHash()
@@ -342,6 +443,16 @@ uint16_t BlaeckTCP::_computeSchemaHash()
     }
   }
   return crc & 0xFFFF;
+}
+
+void BlaeckTCP::setSignalName(int signalIndex, String signalName)
+{
+  if (signalIndex < 0 || signalIndex >= (int)_signalCapacity)
+    return;
+
+  Signals[signalIndex].SignalName = "";
+  Signals[signalIndex].SignalName.reserve(signalName.length() + 1);
+  Signals[signalIndex].SignalName += signalName;
 }
 
 void BlaeckTCP::read()
@@ -501,10 +612,19 @@ void BlaeckTCP::parseData()
 {
   // split the data into its parts
   char tempChars[sizeof(receivedChars)];
-  strcpy(tempChars, receivedChars);
+  strncpy(tempChars, receivedChars, sizeof(tempChars) - 1);
+  tempChars[sizeof(tempChars) - 1] = '\0';
   char *strtokIndx;
   strtokIndx = strtok(tempChars, ",");
-  strcpy(COMMAND, strtokIndx);
+  if (strtokIndx != NULL)
+  {
+    strncpy(COMMAND, strtokIndx, sizeof(COMMAND) - 1);
+    COMMAND[sizeof(COMMAND) - 1] = '\0';
+  }
+  else
+  {
+    COMMAND[0] = '\0';
+  }
 
   strtokIndx = strtok(NULL, ",");
   if (strtokIndx != NULL)
@@ -1751,7 +1871,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, clientNo);
 
   Clients[i].write("<BLAECK:");
-  byte msg_key = 0xB5;
+  byte msg_key = 0xB6;
   Clients[i].write(msg_key);
   Clients[i].write(":");
   ulngCvt.val = msg_id;
@@ -1774,6 +1894,10 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].print(clientDataEnabled);
   Clients[i].print('\0');
   Clients[i].print(_serverRestarted);
+  Clients[i].print('\0');
+  Clients[i].print("server");
+  Clients[i].print('\0');
+  Clients[i].print("0");
   Clients[i].print('\0');
   Clients[i].write("/BLAECK>");
   Clients[i].write("\r\n");

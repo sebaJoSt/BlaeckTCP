@@ -74,7 +74,7 @@ public:
   const String LIBRARY_NAME = "BlaeckTCP";
   const String LIBRARY_VERSION = "6.0.0";
 
-  NetClient *Clients;
+  NetClient *Clients = nullptr;
   // ActiveClient is the client, which sent the command
   NetClient ActiveClient;
 
@@ -93,6 +93,8 @@ public:
 
   // Delete all Signals
   void deleteSignals();
+  bool hasSignalOverflow() const { return _signalOverflowOccurred; }
+  uint16_t getSignalOverflowCount() const { return _signalOverflowCount; }
 
   // Signal Count
   int SignalCount;
@@ -258,6 +260,7 @@ public:
 private:
   unsigned long long getTimeStamp();
   int findSignalIndex(String signalName);
+  void setSignalName(int signalIndex, String signalName);
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);
@@ -272,14 +275,17 @@ private:
 
   static void validatePlatformSizes();
 
-  Stream *StreamRef;
+  Stream *StreamRef = nullptr;
   int _blaeckWriteDataClientMask;
   byte _maxClients = 0;
-  Stream *BridgeStreamRef;
-  bool _bridgeMode;
+  Stream *BridgeStreamRef = nullptr;
+  bool _bridgeMode = false;
 
-  Signal *Signals;
+  Signal *Signals = nullptr;
   int _signalIndex = 0;
+  unsigned int _signalCapacity = 0;
+  bool _signalOverflowOccurred = false;
+  uint16_t _signalOverflowCount = 0;
   uint16_t _schemaHash = 0;
 
   bool _serverRestarted = true;
