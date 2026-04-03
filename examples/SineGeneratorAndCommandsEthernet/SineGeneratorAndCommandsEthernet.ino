@@ -28,6 +28,10 @@ float sine;
 // Sets the LED pin number
 const int ledPin = LED_BUILTIN;
 
+bool onSwitchLED(const char *command, const char *const *params, byte paramCount);
+bool onSomeCommand(const char *command, const char *const *params, byte paramCount);
+bool onPrint(const char *command, const char *const *params, byte paramCount);
+
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
@@ -98,8 +102,10 @@ void setup()
     BlaeckTCP.addSignal(signalName + i, &sine);
   }
 
-  // Setup command callback function by passing a function
-  BlaeckTCP.setCommandCallback(startCommand);
+  // Register command handlers (new style)
+  BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
+  BlaeckTCP.onCommand("SomeCommand", onSomeCommand);
+  BlaeckTCP.onCommand("Print", onPrint);
 
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);
@@ -121,74 +127,81 @@ void UpdateSineNumbers()
   sine = sin(millis() * 0.00005);
 }
 
-// Implement the function, don't forget the arguments
-void startCommand(char *command, int *parameter, char *string01)
+bool onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {
+  (void)command;
   // Setup the clients, you want to print to
   // From right to left: client #0, #1, .. , #7
   // 1: Print enabled
   // 0: Print disabled
   int clientMask = 0b11111011; // client #2: Print disabled
 
-  if (strcmp(command, "SwitchLED") == 0)
+  if (paramCount < 1)
   {
-    // parameter[0] is the first parameter after the command: PARAMETER01
-    if (parameter[0] == 1)
+    return false;
+  }
+  int state = atoi(params[0]);
+  if (state == 1)
+  {
+    digitalWrite(ledPin, HIGH);
+    for (byte i = 0; i < MAX_CLIENTS; i++)
     {
-      // Turns on the LED
-      digitalWrite(ledPin, HIGH);
-
-      for (byte i = 0; i < MAX_CLIENTS; i++)
+      if (BlaeckTCP.Clients[i].connection.connected() && bitRead(clientMask, i) == 1)
       {
-        if (BlaeckTCP.Clients[i].connected() && bitRead(clientMask, i) == 1)
-        {
-          // Print to clients connected and enabled in clientMask
-          BlaeckTCP.Clients[i].println("LED is ON.");
-        }
+        BlaeckTCP.Clients[i].connection.println("LED is ON.");
       }
     }
-
-    if (parameter[0] == 0)
+    return true;
+  }
+  if (state == 0)
+  {
+    digitalWrite(ledPin, LOW);
+    for (byte i = 0; i < MAX_CLIENTS; i++)
     {
-      // Turns off the LED
-      digitalWrite(ledPin, LOW);
-
-      for (byte i = 0; i < MAX_CLIENTS; i++)
+      if (BlaeckTCP.Clients[i].connection.connected() && bitRead(clientMask, i) == 1)
       {
-        if (BlaeckTCP.Clients[i].connected() && bitRead(clientMask, i) == 1)
-        {
-          // Print to clients connected and enabled in clientMask
-          BlaeckTCP.Clients[i].println("LED is OFF.");
-        }
+        BlaeckTCP.Clients[i].connection.println("LED is OFF.");
       }
     }
+    return true;
   }
+  return false;
+}
 
-  /* Here you can add more commands:*/
-  if (strcmp(command, "SomeCommand") == 0)
-  {
-    // Do something
-  }
+bool onSomeCommand(const char *command, const char *const *params, byte paramCount)
+{
+  (void)command;
+  (void)params;
+  (void)paramCount;
+  // Do something
+  return true;
+}
 
-  /* Exemplary command using the string parameter STRING01:
-     Example: <Print,Bye Bye,1>
-  */
-  if (strcmp(command, "Print") == 0)
+/* Exemplary command using string parameters:
+   Example: <Print,Bye Bye,1>
+*/
+bool onPrint(const char *command, const char *const *params, byte paramCount)
+{
+  (void)command;
+  if (paramCount < 2)
   {
-    if (parameter[1] == 0)
-    {
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.println(string01);
-    }
-    if (parameter[1] == 1)
-    {
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.print(string01);
-      BlaeckTCP.ActiveClient.println(" Miss American Pie");
-      BlaeckTCP.ActiveClient.println("Drove my Chevy to the levee but the levee was dry");
-      BlaeckTCP.ActiveClient.println("And them good ole boys were drinking whiskey and rye");
-      BlaeckTCP.ActiveClient.println("Singin' this'll be the day that I die");
-      BlaeckTCP.ActiveClient.println("This'll be the day that I die");
-    }
+    return false;
   }
+  int mode = atoi(params[1]);
+  if (mode == 0)
+  {
+    BlaeckTCP.CommandingClient.println(params[0]);
+    return true;
+  }
+  if (mode == 1)
+  {
+    BlaeckTCP.CommandingClient.print(params[0]);
+    BlaeckTCP.CommandingClient.println(" Miss American Pie");
+    BlaeckTCP.CommandingClient.println("Drove my Chevy to the levee but the levee was dry");
+    BlaeckTCP.CommandingClient.println("And them good ole boys were drinking whiskey and rye");
+    BlaeckTCP.CommandingClient.println("Singin' this'll be the day that I die");
+    BlaeckTCP.CommandingClient.println("This'll be the day that I die");
+    return true;
+  }
+  return false;
 }

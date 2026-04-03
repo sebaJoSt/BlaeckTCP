@@ -17,6 +17,18 @@ All notable changes to this project will be documented in this file.
 - Added interval lock API aligned with blaecktcpy: `setIntervalMs(...)` with `BLAECK_INTERVAL_CLIENT`, `BLAECK_INTERVAL_OFF`, or fixed millisecond values.
   - When locked to fixed/off mode, incoming `BLAECK.ACTIVATE`/`BLAECK.DEACTIVATE` commands are ignored.
   - Removed public `setTimedData(...)`; use `setIntervalMs(...)` for timed-data configuration.
+- Added client connection callbacks:
+  - `setClientConnectedCallback(void (*)(byte clientNo))`
+  - `setClientDisconnectedCallback(void (*)(byte clientNo))`
+- Added command registration API:
+  - `onCommand(const char* command, bool (*handler)(const char*, const char* const*, byte))`
+  - `onAnyCommand(void (*handler)(const char*, const char* const*, byte))`
+  - `clearCommandHandlers()` and `setCommandHandlerCapacity(byte)`
+- **Breaking change:** Renamed public command-source client handle from `ActiveClient` to `CommandingClient`.
+- Added architecture-based command parser defaults:
+  - AVR: smaller defaults for command length/handler table/command name length
+  - non-AVR: larger defaults (96 chars, 12 handlers, 40 command-name chars)
+- Deprecated `setCommandCallback(...)` in favor of `onCommand(...)` / `onAnyCommand(...)` (legacy callback remains supported with runtime warning).
 
 ### Fixed
 - Fixed timer burst issue: when the main loop is delayed beyond the timed interval, `timedWriteData` no longer fires multiple times in rapid succession to catch up. It now skips missed intervals and resumes at the next boundary.

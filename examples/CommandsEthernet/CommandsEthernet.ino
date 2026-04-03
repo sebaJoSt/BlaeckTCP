@@ -9,21 +9,20 @@
   The command syntax for implementing your own commands:
 
     Command:         <COMMAND,PARAMETER01,PARAMETER02,...,PARAMETER10>
-    StringCommand:   <COMMAND, STRING01  ,PARAMETER02,...,PARAMETER10>
-                     <-           --  max. 64 chars ---             ->
-                     <-         --  max. 10 Parameters ---          ->
+                     <-  full payload size is architecture-dependent ->
+                     AVR: up to 48 chars, non-AVR: up to 96 chars
+                     <-         --  max. 10 parameters ---          ->
 
-    COMMAND:         String
-    PARAMETER01..10  Int 16 Bit
-    STRING01:        max. 15 chars
+    COMMAND:         String token (handler key used in onCommand)
+    PARAMETER01..10  String tokens (convert with atoi/atol/atof as needed)
     Start Marker*:    <
     End Marker*:      >
     Separation*:      ,
 
-      * Not allowed in COMMAND, PARAMETER & STRING01
+      * Not allowed in COMMAND or parameter tokens
 
-    Empty PARAMETER are not allowed,
-    e.g. don't do: <COMMAND,,PARAMETER02>   <- PARAMETER02 will be stored in PARAMETER01
+    Empty parameters are not allowed,
+    e.g. don't do: <COMMAND,,PARAMETER02>   <- PARAMETER02 shifts into PARAMETER01
                do: <COMMAND,PARAMETER01,PARAMETER02>
 
   Circuit:
@@ -56,6 +55,10 @@ BlaeckTCP BlaeckTCP;
 
 // Sets the pin number:
 const int ledPin = LED_BUILTIN;
+
+bool onSwitchLED(const char *command, const char *const *params, byte paramCount);
+bool onSomeCommand(const char *command, const char *const *params, byte paramCount);
+bool onPrint(const char *command, const char *const *params, byte paramCount);
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
@@ -117,8 +120,10 @@ void setup()
       0            // Maximal signal count used;
   );
 
-  // Setup command callback function by passing a function
-  BlaeckTCP.setCommandCallback(startCommand);
+  // Register command handlers (new style)
+  BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
+  BlaeckTCP.onCommand("SomeCommand", onSomeCommand);
+  BlaeckTCP.onCommand("Print", onPrint);
 
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);
@@ -127,67 +132,71 @@ void setup()
 
 void loop()
 {
-  /* Keeps watching for TCP input and fires the callback function
-     startCommand when a input with the correct syntax is detected.
+  /* Keeps watching for TCP input and dispatches registered handlers
+     when input with the correct syntax is detected.
      Instead of BlaeckTCP.read you can use BlaeckTCP.tick
      if you want to add signals and write them in a user-set interval.
   */
   BlaeckTCP.read();
 }
 
-// Implement the function, don't forget the arguments
-void startCommand(char *command, int *parameter, char *string01)
+bool onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {
-  /* Compares the user input to the string "SwitchLED"
-     strcmp takes the two strings to be compared as parameters
-     and returns 0 if the strings are equal*/
-  if (strcmp(command, "SwitchLED") == 0)
+  if (paramCount < 1)
   {
-    // parameter[0] is the first parameter after the command: PARAMETER01
-    if (parameter[0] == 1)
-    {
-      // Turns on the LED
-      digitalWrite(ledPin, HIGH);
+    return false;
+  }
+  int state = atoi(params[0]);
+  if (state == 1)
+  {
+    digitalWrite(ledPin, HIGH);
+    BlaeckTCP.CommandingClient.println("LED is ON.");
+    return true;
+  }
+  if (state == 0)
+  {
+    digitalWrite(ledPin, LOW);
+    BlaeckTCP.CommandingClient.println("LED is OFF.");
+    return true;
+  }
+  return false;
+}
 
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.println("LED is ON.");
-    }
+bool onSomeCommand(const char *command, const char *const *params, byte paramCount)
+{
+  (void)command;
+  (void)params;
+  (void)paramCount;
+  // Do something
+  return true;
+}
 
-    if (parameter[0] == 0)
-    {
-      // Turns off the LED
-      digitalWrite(ledPin, LOW);
-
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.println("LED is OFF.");
-    }
+/* Exemplary command using string parameters:
+   Example: <Print,Bye Bye,1>
+*/
+bool onPrint(const char *command, const char *const *params, byte paramCount)
+{
+  (void)command;
+  if (paramCount < 2)
+  {
+    return false;
   }
 
-  /* Here you can add more commands:*/
-  if (strcmp(command, "SomeCommand") == 0)
+  int mode = atoi(params[1]);
+  if (mode == 0)
   {
-    // Do something
+    BlaeckTCP.CommandingClient.println(params[0]);
+    return true;
   }
-
-  /* Exemplary command using the string parameter STRING01:
-     Example: <Print,Bye Bye,1>
-  */
-  if (strcmp(command, "Print") == 0)
+  if (mode == 1)
   {
-    if (parameter[1] == 0)
-    {
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.println(string01);
-    }
-    if (parameter[1] == 1)
-    {
-      // Print to active client (= client, which sent the command)
-      BlaeckTCP.ActiveClient.print(string01);
-      BlaeckTCP.ActiveClient.println(" Miss American Pie");
-      BlaeckTCP.ActiveClient.println("Drove my Chevy to the levee but the levee was dry");
-      BlaeckTCP.ActiveClient.println("And them good ole boys were drinking whiskey and rye");
-      BlaeckTCP.ActiveClient.println("Singin' this'll be the day that I die");
-      BlaeckTCP.ActiveClient.println("This'll be the day that I die");
-    }
+    BlaeckTCP.CommandingClient.print(params[0]);
+    BlaeckTCP.CommandingClient.println(" Miss American Pie");
+    BlaeckTCP.CommandingClient.println("Drove my Chevy to the levee but the levee was dry");
+    BlaeckTCP.CommandingClient.println("And them good ole boys were drinking whiskey and rye");
+    BlaeckTCP.CommandingClient.println("Singin' this'll be the day that I die");
+    BlaeckTCP.CommandingClient.println("This'll be the day that I die");
+    return true;
   }
+  return false;
 }

@@ -16,6 +16,17 @@
 #endif
 #endif
 
+#if defined(__AVR__)
+#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 48
+#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 4
+#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 24
+#else
+#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 96
+#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
+#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 40
+#endif
+#define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
+
 #include <Arduino.h>
 #include <Ethernet.h>
 #include <TelnetPrint.h>
@@ -63,6 +74,9 @@ struct BlaeckClient {
     char type[8];
 };
 
+typedef bool (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
+typedef void (*BlaeckAnyCommandHandler)(const char *command, const char *const *params, byte paramCount);
+
 class BlaeckTCP
 {
 public:
@@ -87,8 +101,8 @@ public:
   const String LIBRARY_VERSION = "6.0.0";
 
   BlaeckClient *Clients = nullptr;
-  // ActiveClient is the client, which sent the command
-  NetClient ActiveClient;
+  // CommandingClient is the client which sent the parsed command
+  NetClient CommandingClient;
 
   // ----- Signals -----
   // Add a Signal
@@ -257,10 +271,18 @@ public:
   void read();
 
   // ----- Command callback  -----
+  // Deprecated: use onCommand(...) / onAnyCommand(...)
   void setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01));
+  bool onCommand(const char *command, BlaeckCommandHandler handler);
+  void onAnyCommand(BlaeckAnyCommandHandler handler);
+  void clearCommandHandlers();
+  void setCommandHandlerCapacity(byte capacity);
 
   // ----- Before data write callback  -----
   void setBeforeWriteCallback(void (*callback)());
+  void setClientConnectedCallback(void (*callback)(byte clientNo));
+  void setClientDisconnectedCallback(void (*callback)(byte clientNo));
+  bool isClientDataEnabled(byte clientNo) const;
 
   /**
   Handles bidirectional data transfer between TCP and UART interface. This function
@@ -280,6 +302,8 @@ private:
   int findSignalIndex(String signalName);
   void setSignalName(int signalIndex, String signalName);
   void _setTimedDataState(bool timedActivated, unsigned long timedInterval_ms);
+  void _parseCommandTokens(const char *raw);
+  void _dispatchRegisteredHandlers();
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);
@@ -324,7 +348,10 @@ private:
   unsigned long _timedInterval_ms = 1000;
   long _fixedInterval_ms = BLAECK_INTERVAL_CLIENT;
 
-  static const int MAXIMUM_CHAR_COUNT = 64;
+  static const int MAXIMUM_CHAR_COUNT = BLAECK_COMMAND_MAX_CHARS_DEFAULT;
+  static const byte MAX_COMMAND_HANDLERS = BLAECK_COMMAND_MAX_HANDLERS_DEFAULT;
+  static const byte MAX_COMMAND_PARAM_COUNT = BLAECK_COMMAND_MAX_PARAMS_DEFAULT;
+  static const byte MAX_COMMAND_NAME_COUNT = BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT;
   char receivedChars[MAXIMUM_CHAR_COUNT];
   char COMMAND[MAXIMUM_CHAR_COUNT] = {0};
   int PARAMETER[10];
@@ -335,10 +362,26 @@ private:
   CRC32 _crc;
 
   void (*_commandCallback)(char *command, int *parameter, char *string01) = nullptr;
+  bool _commandCallbackDeprecationWarned = false;
+  byte _commandHandlerCapacity = MAX_COMMAND_HANDLERS;
+  struct CommandHandlerEntry
+  {
+    char command[MAX_COMMAND_NAME_COUNT];
+    BlaeckCommandHandler handler = nullptr;
+    bool inUse = false;
+  };
+  CommandHandlerEntry _commandHandlers[MAX_COMMAND_HANDLERS];
+  BlaeckAnyCommandHandler _anyCommandHandler = nullptr;
+  char _parsedTokenBuffer[MAXIMUM_CHAR_COUNT] = {0};
+  char _parsedCommand[MAX_COMMAND_NAME_COUNT] = {0};
+  const char *_parsedParamPtrs[MAX_COMMAND_PARAM_COUNT] = {0};
+  byte _parsedParamCount = 0;
   bool recvWithStartEndMarkers();
   void parseData();
 
   void (*_beforeWriteCallback)() = nullptr;
+  void (*_clientConnectedCallback)(byte clientNo) = nullptr;
+  void (*_clientDisconnectedCallback)(byte clientNo) = nullptr;
 
   static unsigned long long _microsWrapper()
   {

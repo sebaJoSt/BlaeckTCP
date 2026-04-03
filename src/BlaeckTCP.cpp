@@ -55,10 +55,10 @@ void BlaeckTCP::_parseClientIdentity(const char *raw)
   if (nameStart == NULL)
     return;
 
-  // Find client index for ActiveClient
+  // Find client index for CommandingClient
   for (byte c = 0; c < _maxClients; c++)
   {
-    if (Clients[c].connection == ActiveClient)
+    if (Clients[c].connection == CommandingClient)
     {
       // Extract name (up to next comma or end)
       int len = 0;
@@ -250,6 +250,8 @@ void BlaeckTCP::bridgePoll()
         Clients[i].name[0] = '\0';
         strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
         Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+        if (_clientConnectedCallback != NULL)
+          _clientConnectedCallback(i);
         break;
       }
     }
@@ -303,6 +305,8 @@ void BlaeckTCP::bridgePoll()
       Clients[i].name[0] = '\0';
       strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
       Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+      if (_clientDisconnectedCallback != NULL)
+        _clientDisconnectedCallback(i);
     }
   }
 
@@ -608,18 +612,197 @@ void BlaeckTCP::read()
     }
 
     if (_commandCallback != NULL)
+    {
+      if (!_commandCallbackDeprecationWarned && StreamRef != nullptr)
+      {
+        StreamRef->println("WARNING: setCommandCallback(...) is deprecated; use onCommand(...) / onAnyCommand(...)");
+        _commandCallbackDeprecationWarned = true;
+      }
       _commandCallback(COMMAND, PARAMETER, STRING_01);
+    }
+    _dispatchRegisteredHandlers();
   }
 }
 
 void BlaeckTCP::setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01))
 {
   _commandCallback = callback;
+  if (_commandCallback != NULL && !_commandCallbackDeprecationWarned && StreamRef != nullptr)
+  {
+    StreamRef->println("WARNING: setCommandCallback(...) is deprecated; use onCommand(...) / onAnyCommand(...)");
+    _commandCallbackDeprecationWarned = true;
+  }
 }
 
 void BlaeckTCP::setBeforeWriteCallback(void (*callback)())
 {
   _beforeWriteCallback = callback;
+}
+
+bool BlaeckTCP::onCommand(const char *command, BlaeckCommandHandler handler)
+{
+  if (command == nullptr || handler == nullptr || command[0] == '\0')
+  {
+    return false;
+  }
+  if (strlen(command) >= MAX_COMMAND_NAME_COUNT)
+  {
+    if (StreamRef != nullptr)
+    {
+      StreamRef->print("Command name too long for handler table: ");
+      StreamRef->println(command);
+    }
+    return false;
+  }
+
+  // Update existing handler
+  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  {
+    if (_commandHandlers[i].inUse && strcmp(_commandHandlers[i].command, command) == 0)
+    {
+      _commandHandlers[i].handler = handler;
+      return true;
+    }
+  }
+
+  // Insert new handler
+  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  {
+    if (!_commandHandlers[i].inUse)
+    {
+      strncpy(_commandHandlers[i].command, command, MAX_COMMAND_NAME_COUNT - 1);
+      _commandHandlers[i].command[MAX_COMMAND_NAME_COUNT - 1] = '\0';
+      _commandHandlers[i].handler = handler;
+      _commandHandlers[i].inUse = true;
+      return true;
+    }
+  }
+
+  if (StreamRef != nullptr)
+  {
+    StreamRef->print("Command handler table full for: ");
+    StreamRef->println(command);
+  }
+  return false;
+}
+
+void BlaeckTCP::onAnyCommand(BlaeckAnyCommandHandler handler)
+{
+  _anyCommandHandler = handler;
+}
+
+void BlaeckTCP::clearCommandHandlers()
+{
+  for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
+  {
+    _commandHandlers[i].inUse = false;
+    _commandHandlers[i].handler = nullptr;
+    _commandHandlers[i].command[0] = '\0';
+  }
+  _anyCommandHandler = nullptr;
+}
+
+void BlaeckTCP::setCommandHandlerCapacity(byte capacity)
+{
+  if (capacity == 0)
+  {
+    capacity = 1;
+  }
+  if (capacity > MAX_COMMAND_HANDLERS)
+  {
+    capacity = MAX_COMMAND_HANDLERS;
+  }
+  _commandHandlerCapacity = capacity;
+}
+
+void BlaeckTCP::setClientConnectedCallback(void (*callback)(byte clientNo))
+{
+  _clientConnectedCallback = callback;
+}
+
+void BlaeckTCP::setClientDisconnectedCallback(void (*callback)(byte clientNo))
+{
+  _clientDisconnectedCallback = callback;
+}
+
+bool BlaeckTCP::isClientDataEnabled(byte clientNo) const
+{
+  if (clientNo >= _maxClients)
+  {
+    return false;
+  }
+  return bitRead(_blaeckWriteDataClientMask, clientNo) == 1;
+}
+
+void BlaeckTCP::_parseCommandTokens(const char *raw)
+{
+  _parsedCommand[0] = '\0';
+  _parsedParamCount = 0;
+  for (byte i = 0; i < MAX_COMMAND_PARAM_COUNT; i++)
+  {
+    _parsedParamPtrs[i] = nullptr;
+  }
+
+  if (raw == nullptr || raw[0] == '\0')
+  {
+    return;
+  }
+
+  strncpy(_parsedTokenBuffer, raw, sizeof(_parsedTokenBuffer) - 1);
+  _parsedTokenBuffer[sizeof(_parsedTokenBuffer) - 1] = '\0';
+
+  char *token = strtok(_parsedTokenBuffer, ",");
+  if (token == nullptr)
+  {
+    return;
+  }
+
+  while (*token == ' ')
+    token++;
+  strncpy(_parsedCommand, token, MAX_COMMAND_NAME_COUNT - 1);
+  _parsedCommand[MAX_COMMAND_NAME_COUNT - 1] = '\0';
+
+  while (_parsedParamCount < MAX_COMMAND_PARAM_COUNT)
+  {
+    token = strtok(NULL, ",");
+    if (token == nullptr)
+      break;
+    while (*token == ' ')
+      token++;
+    _parsedParamPtrs[_parsedParamCount] = token;
+    _parsedParamCount++;
+  }
+}
+
+void BlaeckTCP::_dispatchRegisteredHandlers()
+{
+  _parseCommandTokens(receivedChars);
+  if (_parsedCommand[0] == '\0')
+  {
+    return;
+  }
+
+  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  {
+    if (_commandHandlers[i].inUse &&
+        _commandHandlers[i].handler != nullptr &&
+        strcmp(_commandHandlers[i].command, _parsedCommand) == 0)
+    {
+      _commandHandlers[i].handler(
+          _parsedCommand,
+          (const char *const *)_parsedParamPtrs,
+          _parsedParamCount);
+      break;
+    }
+  }
+
+  if (_anyCommandHandler != nullptr)
+  {
+    _anyCommandHandler(
+        _parsedCommand,
+        (const char *const *)_parsedParamPtrs,
+        _parsedParamCount);
+  }
 }
 
 bool BlaeckTCP::recvWithStartEndMarkers()
@@ -668,6 +851,8 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         Clients[i].name[0] = '\0';
         strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
         Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+        if (_clientConnectedCallback != NULL)
+          _clientConnectedCallback(i);
 
         break;
       }
@@ -708,7 +893,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
               recvInProgress = false;
               ndx = 0;
               newData = true;
-              ActiveClient = Clients[i].connection;
+              CommandingClient = Clients[i].connection;
             }
           }
           else if (rc == startMarker)
@@ -741,6 +926,8 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       Clients[i].name[0] = '\0';
       strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
       Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+      if (_clientDisconnectedCallback != NULL)
+        _clientDisconnectedCallback(i);
     }
   }
 
