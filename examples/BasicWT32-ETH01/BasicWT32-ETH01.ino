@@ -123,10 +123,9 @@ void setup()
   BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
   BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 
-  /*Uncomment this function for initial settings
-    first parameter: timedActivated
-    second parameter: timedInterval_ms */
-  // BlaeckTCP.setTimedData(true, 60000);
+  /*Uncomment for fixed interval lock (ms)
+    - ignores ACTIVATE/DEACTIVATE while locked */
+  // BlaeckTCP.setIntervalMs(60000);
 
   // Start listening for clients
   TelnetPrint = NetServer(SERVER_PORT);

@@ -593,12 +593,18 @@ void BlaeckTCP::read()
     }
     else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
     {
-      unsigned long timedInterval_ms = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
-      this->setTimedData(true, timedInterval_ms);
+      if (_fixedInterval_ms == BLAECK_INTERVAL_CLIENT)
+      {
+        unsigned long timedInterval_ms = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+        this->_setTimedDataState(true, timedInterval_ms);
+      }
     }
     else if (strcmp(COMMAND, "BLAECK.DEACTIVATE") == 0)
     {
-      this->setTimedData(false, _timedInterval_ms);
+      if (_fixedInterval_ms == BLAECK_INTERVAL_CLIENT)
+      {
+        this->_setTimedDataState(false, _timedInterval_ms);
+      }
     }
 
     if (_commandCallback != NULL)
@@ -867,7 +873,7 @@ void BlaeckTCP::parseData()
   }
 }
 
-void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms)
+void BlaeckTCP::_setTimedDataState(bool timedActivated, unsigned long timedInterval_ms)
 {
   _timedActivated = timedActivated;
 
@@ -876,6 +882,29 @@ void BlaeckTCP::setTimedData(bool timedActivated, unsigned long timedInterval_ms
     _timedSetPoint_ms = timedInterval_ms;
     _timedInterval_ms = timedInterval_ms;
     _timedFirstTime = true;
+  }
+}
+
+void BlaeckTCP::setIntervalMs(long interval_ms)
+{
+  if (interval_ms >= 0)
+  {
+    _fixedInterval_ms = interval_ms;
+    this->_setTimedDataState(true, (unsigned long)interval_ms);
+  }
+  else if (interval_ms == BLAECK_INTERVAL_OFF)
+  {
+    _fixedInterval_ms = BLAECK_INTERVAL_OFF;
+    this->_setTimedDataState(false, _timedInterval_ms);
+  }
+  else if (interval_ms == BLAECK_INTERVAL_CLIENT)
+  {
+    _fixedInterval_ms = BLAECK_INTERVAL_CLIENT;
+  }
+  else if (StreamRef != nullptr)
+  {
+    StreamRef->print("Invalid interval mode: ");
+    StreamRef->println(interval_ms);
   }
 }
 

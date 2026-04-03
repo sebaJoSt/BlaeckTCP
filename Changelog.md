@@ -14,6 +14,9 @@ All notable changes to this project will be documented in this file.
 - Renamed `BLAECK_RTC` to `BLAECK_UNIX` (`BLAECK_RTC` kept as deprecated alias)
 - **Breaking change:** Device message key updated from `B5` to `B6` and device payload extended with `<DeviceType><Parent>` to align with current hub/server decoder format.
 - D2 frame tail updated to `<StatusByte><StatusPayload><CRC32>` (CRC32 is now always present as a separate field).
+- Added interval lock API aligned with blaecktcpy: `setIntervalMs(...)` with `BLAECK_INTERVAL_CLIENT`, `BLAECK_INTERVAL_OFF`, or fixed millisecond values.
+  - When locked to fixed/off mode, incoming `BLAECK.ACTIVATE`/`BLAECK.DEACTIVATE` commands are ignored.
+  - Removed public `setTimedData(...)`; use `setIntervalMs(...)` for timed-data configuration.
 
 ### Fixed
 - Fixed timer burst issue: when the main loop is delayed beyond the timed interval, `timedWriteData` no longer fires multiple times in rapid succession to catch up. It now skips missed intervals and resumes at the next boundary.

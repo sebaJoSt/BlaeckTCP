@@ -51,6 +51,12 @@ enum BlaeckTimestampMode
   BLAECK_RTC = BLAECK_UNIX // Deprecated alias
 };
 
+enum BlaeckIntervalMode
+{
+  BLAECK_INTERVAL_CLIENT = -1,
+  BLAECK_INTERVAL_OFF = -2
+};
+
 struct BlaeckClient {
     NetClient connection;
     char name[20];
@@ -239,7 +245,13 @@ public:
   void tickUpdated(unsigned long messageID);
 
   // ----- Timed Data configuruation -----
-  void setTimedData(bool timedActivated, unsigned long timedInterval_ms);
+  // interval_ms semantics:
+  //   >= 0                    fixed interval lock in ms (ACTIVATE/DEACTIVATE ignored)
+  //   BLAECK_INTERVAL_OFF     timed data locked off (ACTIVATE ignored)
+  //   BLAECK_INTERVAL_CLIENT  client-controlled mode (default)
+  // Invalid values are rejected and the previous mode remains active.
+  void setIntervalMs(long interval_ms);
+  long getIntervalMs() const { return _fixedInterval_ms; }
 
   // ----- Read  -----
   void read();
@@ -267,6 +279,7 @@ private:
   unsigned long long getTimeStamp();
   int findSignalIndex(String signalName);
   void setSignalName(int signalIndex, String signalName);
+  void _setTimedDataState(bool timedActivated, unsigned long timedInterval_ms);
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);
@@ -309,6 +322,7 @@ private:
   unsigned long _timedFirstTimeDone_ms = 0;
   unsigned long _timedSetPoint_ms = 0;
   unsigned long _timedInterval_ms = 1000;
+  long _fixedInterval_ms = BLAECK_INTERVAL_CLIENT;
 
   static const int MAXIMUM_CHAR_COUNT = 64;
   char receivedChars[MAXIMUM_CHAR_COUNT];
