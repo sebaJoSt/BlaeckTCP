@@ -240,6 +240,8 @@ void BlaeckTCP::bridgePoll()
         {
           StreamRef->print(": ");
           StreamRef->print(ip);
+          StreamRef->print(":");
+          StreamRef->print(newClient.remotePort());
         }
         StreamRef->println();
         newClient.print("Hello, client number: ");
@@ -639,11 +641,13 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         {
           StreamRef->print(": ");
           StreamRef->print(ip);
+          StreamRef->print(":");
+          StreamRef->print(newClient.remotePort());
         }
         StreamRef->println();
         newClient.print("Hello, client number: ");
         newClient.println(i);
-        bool blaeckDataEnabled = bitRead(_blaeckWriteDataClientMask, i);
+        bool blaeckDataEnabled= bitRead(_blaeckWriteDataClientMask, i);
         if (blaeckDataEnabled)
         {
           newClient.println("You are enabled to receive data messages.");
