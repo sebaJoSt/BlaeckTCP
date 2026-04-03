@@ -20,6 +20,83 @@ BlaeckTCP::~BlaeckTCP()
   Clients = nullptr;
 }
 
+void BlaeckTCP::_initClientMeta()
+{
+  for (byte i = 0; i < _maxClients; i++)
+  {
+    Clients[i].name[0] = '\0';
+    strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+    Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+  }
+}
+
+void BlaeckTCP::_parseClientIdentity(const char *raw)
+{
+  // Parse identity from: BLAECK.GET_DEVICES,0,0,0,0,Name,Type
+  // Skip 5 comma-separated fields (command + 4 msg_id bytes) to reach Name and Type
+  const char *p = raw;
+  int commaCount = 0;
+  const char *nameStart = NULL;
+  const char *typeStart = NULL;
+
+  while (*p)
+  {
+    if (*p == ',')
+    {
+      commaCount++;
+      if (commaCount == 5)
+        nameStart = p + 1;
+      else if (commaCount == 6)
+        typeStart = p + 1;
+    }
+    p++;
+  }
+
+  if (nameStart == NULL)
+    return;
+
+  // Find client index for ActiveClient
+  for (byte c = 0; c < _maxClients; c++)
+  {
+    if (Clients[c].connection == ActiveClient)
+    {
+      // Extract name (up to next comma or end)
+      int len = 0;
+      if (typeStart != NULL)
+        len = (typeStart - 1) - nameStart;
+      else
+        len = strlen(nameStart);
+      if (len > (int)(sizeof(Clients[c].name) - 1))
+        len = sizeof(Clients[c].name) - 1;
+      if (len > 0)
+      {
+        strncpy(Clients[c].name, nameStart, len);
+        Clients[c].name[len] = '\0';
+      }
+
+      // Extract type
+      if (typeStart != NULL && *typeStart != '\0')
+      {
+        strncpy(Clients[c].type, typeStart, sizeof(Clients[c].type) - 1);
+        Clients[c].type[sizeof(Clients[c].type) - 1] = '\0';
+      }
+
+      // Log identity
+      if (Clients[c].name[0] != '\0')
+      {
+        StreamRef->print("Client #");
+        StreamRef->print(c);
+        StreamRef->print(" identified: (");
+        StreamRef->print(Clients[c].type);
+        StreamRef->print(": ");
+        StreamRef->print(Clients[c].name);
+        StreamRef->println(")");
+      }
+      break;
+    }
+  }
+}
+
 void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
 {
   StreamRef = (Stream *)streamRef;
@@ -51,7 +128,8 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
     delete[] Clients;
     Clients = nullptr;
   }
-  Clients = new NetClient[_maxClients];
+  Clients = new BlaeckClient[_maxClients];
+  _initClientMeta();
 }
 
 void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
@@ -117,7 +195,8 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
     delete[] Clients;
     Clients = nullptr;
   }
-  Clients = new NetClient[maxClients];
+  Clients = new BlaeckClient[maxClients];
+  _initClientMeta();
 }
 
 void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream)
@@ -139,7 +218,8 @@ void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeSt
     delete[] Clients;
     Clients = nullptr;
   }
-  Clients = new NetClient[maxClients];
+  Clients = new BlaeckClient[maxClients];
+  _initClientMeta();
 }
 
 void BlaeckTCP::bridgePoll()
@@ -150,13 +230,16 @@ void BlaeckTCP::bridgePoll()
   {
     for (byte i = 0; i < _maxClients; i++)
     {
-      if (!Clients[i])
+      if (!Clients[i].connection)
       {
         StreamRef->print("We have a new client #");
         StreamRef->println(i);
         newClient.print("Hello, client number: ");
         newClient.println(i);
-        Clients[i] = newClient;
+        Clients[i].connection = newClient;
+        Clients[i].name[0] = '\0';
+        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
         break;
       }
     }
@@ -167,12 +250,12 @@ void BlaeckTCP::bridgePoll()
 
   for (byte i = 0; i < _maxClients; i++)
   {
-    if (Clients[i] && Clients[i].connected())
+    if (Clients[i].connection && Clients[i].connection.connected())
     {
-      while (Clients[i].available() > 0)
+      while (Clients[i].connection.available() > 0)
       {
-        int bytesAvailable = min(Clients[i].available(), BLAECK_BUFFER_SIZE);
-        int bytesRead = Clients[i].read(buffer, bytesAvailable);
+        int bytesAvailable = min(Clients[i].connection.available(), BLAECK_BUFFER_SIZE);
+        int bytesRead = Clients[i].connection.read(buffer, bytesAvailable);
 
         if (bytesRead > 0)
         {
@@ -192,12 +275,23 @@ void BlaeckTCP::bridgePoll()
   // Handle disconnected clients
   for (byte i = 0; i < _maxClients; i++)
   {
-    if (Clients[i] && !Clients[i].connected())
+    if (Clients[i].connection && !Clients[i].connection.connected())
     {
-      Clients[i].stop();
+      Clients[i].connection.stop();
       StreamRef->print("Client #");
       StreamRef->print(i);
+      if (Clients[i].name[0] != '\0')
+      {
+        StreamRef->print(" (");
+        StreamRef->print(Clients[i].type);
+        StreamRef->print(": ");
+        StreamRef->print(Clients[i].name);
+        StreamRef->print(")");
+      }
       StreamRef->println(" disconnected");
+      Clients[i].name[0] = '\0';
+      strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+      Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
     }
   }
 
@@ -212,13 +306,13 @@ void BlaeckTCP::bridgePoll()
       // Send to all connected clients
       for (byte client = 0; client < _maxClients; client++)
       {
-        if (Clients[client].connected())
+        if (Clients[client].connection.connected())
         {
           int written = 0;
           while (written < bytesRead)
           {
             int toWrite = min(64, bytesRead - written);
-            Clients[client].write(&buffer[written], toWrite);
+            Clients[client].connection.write(&buffer[written], toWrite);
             written += toWrite;
           }
         }
@@ -481,6 +575,9 @@ void BlaeckTCP::read()
     {
       unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
 
+      // Parse optional identity: <BLAECK.GET_DEVICES,0,0,0,0,Name,Type>
+      _parseClientIdentity(receivedChars);
+
       this->writeDevices(msg_id);
     }
     else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
@@ -523,7 +620,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
 
     for (byte i = 0; i < _maxClients; i++)
     {
-      if (!Clients[i])
+      if (!Clients[i].connection)
       {
         StreamRef->print("We have a new client #");
         StreamRef->println(i);
@@ -540,7 +637,13 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         }
         // Once we "accept", the client is no longer tracked by the server
         // so we must store it into our list of clients
-        Clients[i] = newClient;
+        Clients[i].connection = newClient;
+        Clients[i].name[0] = '\0';
+        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+        Clients[i].name[0] = '\0';
+        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
 
         break;
       }
@@ -552,13 +655,13 @@ bool BlaeckTCP::recvWithStartEndMarkers()
 
   for (byte i = 0; i < _maxClients; i++)
   {
-    if (Clients[i] && Clients[i].connected())
+    if (Clients[i].connection && Clients[i].connection.connected())
     {
-      while (Clients[i].available() > 0 && !newData)
+      while (Clients[i].connection.available() > 0 && !newData)
       {
         // Read data in chunks
-        int bytesToRead = min(Clients[i].available(), BLAECK_BUFFER_SIZE);
-        int bytesRead = Clients[i].read((uint8_t *)tempBuffer, bytesToRead);
+        int bytesToRead = min(Clients[i].connection.available(), BLAECK_BUFFER_SIZE);
+        int bytesRead = Clients[i].connection.read((uint8_t *)tempBuffer, bytesToRead);
 
         // Process each character in the buffer
         for (int j = 0; j < bytesRead && !newData; j++)
@@ -581,7 +684,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
               recvInProgress = false;
               ndx = 0;
               newData = true;
-              ActiveClient = Clients[i];
+              ActiveClient = Clients[i].connection;
             }
           }
           else if (rc == startMarker)
@@ -596,12 +699,23 @@ bool BlaeckTCP::recvWithStartEndMarkers()
   // stop any clients which disconnect
   for (byte i = 0; i < _maxClients; i++)
   {
-    if (Clients[i] && !Clients[i].connected())
+    if (Clients[i].connection && !Clients[i].connection.connected())
     {
-      Clients[i].stop();
+      Clients[i].connection.stop();
       StreamRef->print("Client #");
       StreamRef->print(i);
+      if (Clients[i].name[0] != '\0')
+      {
+        StreamRef->print(" (");
+        StreamRef->print(Clients[i].type);
+        StreamRef->print(": ");
+        StreamRef->print(Clients[i].name);
+        StreamRef->print(")");
+      }
       StreamRef->println(" disconnected");
+      Clients[i].name[0] = '\0';
+      strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
+      Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
     }
   }
 
@@ -750,7 +864,7 @@ void BlaeckTCP::writeSymbols()
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected())
+    if (Clients[client].connection.connected())
     {
       this->writeSymbols(1, client);
     }
@@ -761,7 +875,7 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id)
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected())
+    if (Clients[client].connection.connected())
     {
       this->writeSymbols(msg_id, client);
     }
@@ -770,80 +884,80 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id)
 
 void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
 {
-  Clients[i].write("<BLAECK:");
+  Clients[i].connection.write("<BLAECK:");
   byte msg_key = 0xB0;
-  Clients[i].write(msg_key);
-  Clients[i].write(":");
+  Clients[i].connection.write(msg_key);
+  Clients[i].connection.write(":");
   ulngCvt.val = msg_id;
-  Clients[i].write(ulngCvt.bval, 4);
-  Clients[i].write(":");
+  Clients[i].connection.write(ulngCvt.bval, 4);
+  Clients[i].connection.write(":");
 
   for (int j = 0; j < _signalIndex; j++)
   {
-    Clients[i].write((byte)0);
-    Clients[i].write((byte)0);
+    Clients[i].connection.write((byte)0);
+    Clients[i].connection.write((byte)0);
 
     Signal signal = Signals[j];
-    Clients[i].print(signal.SignalName);
-    Clients[i].print('\0');
+    Clients[i].connection.print(signal.SignalName);
+    Clients[i].connection.print('\0');
 
     switch (signal.DataType)
     {
     case (Blaeck_bool):
     {
-      Clients[i].write((byte)0x0);
+      Clients[i].connection.write((byte)0x0);
       break;
     }
     case (Blaeck_byte):
     {
-      Clients[i].write(0x1);
+      Clients[i].connection.write(0x1);
       break;
     }
     case (Blaeck_short):
     {
-      Clients[i].write(0x2);
+      Clients[i].connection.write(0x2);
       break;
     }
     case (Blaeck_ushort):
     {
-      Clients[i].write(0x3);
+      Clients[i].connection.write(0x3);
       break;
     }
     case (Blaeck_int):
     {
-      Clients[i].write(0x4);
+      Clients[i].connection.write(0x4);
       break;
     }
     case (Blaeck_uint):
     {
-      Clients[i].write(0x5);
+      Clients[i].connection.write(0x5);
       break;
     }
     case (Blaeck_long):
     {
-      Clients[i].write(0x6);
+      Clients[i].connection.write(0x6);
       break;
     }
     case (Blaeck_ulong):
     {
-      Clients[i].write(0x7);
+      Clients[i].connection.write(0x7);
       break;
     }
     case (Blaeck_float):
     {
-      Clients[i].write(0x8);
+      Clients[i].connection.write(0x8);
       break;
     }
     case (Blaeck_double):
     {
-      Clients[i].write(0x9);
+      Clients[i].connection.write(0x9);
       break;
     }
     }
   }
 
-  Clients[i].write("/BLAECK>");
-  Clients[i].write("\r\n");
+  Clients[i].connection.write("/BLAECK>");
+  Clients[i].connection.write("\r\n");
 }
 
 void BlaeckTCP::update(int signalIndex, bool value)
@@ -1344,7 +1458,7 @@ void BlaeckTCP::write(int signalIndex, bool value, unsigned long messageID, unsi
       *((bool *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1361,7 +1475,7 @@ void BlaeckTCP::write(int signalIndex, byte value, unsigned long messageID, unsi
       *((byte *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1378,7 +1492,7 @@ void BlaeckTCP::write(int signalIndex, short value, unsigned long messageID, uns
       *((short *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1395,7 +1509,7 @@ void BlaeckTCP::write(int signalIndex, unsigned short value, unsigned long messa
       *((unsigned short *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1414,7 +1528,7 @@ void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID, unsig
       *((int *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1426,7 +1540,7 @@ void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID, unsig
       *((int *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1446,7 +1560,7 @@ void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long message
       *((unsigned int *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1458,7 +1572,7 @@ void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long message
       *((unsigned int *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1476,7 +1590,7 @@ void BlaeckTCP::write(int signalIndex, long value, unsigned long messageID, unsi
       *((long *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1493,7 +1607,7 @@ void BlaeckTCP::write(int signalIndex, unsigned long value, unsigned long messag
       *((unsigned long *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1510,7 +1624,7 @@ void BlaeckTCP::write(int signalIndex, float value, unsigned long messageID, uns
       *((float *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1529,7 +1643,7 @@ void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, un
       *((float *)Signals[signalIndex].Address) = (float)value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1540,7 +1654,7 @@ void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, un
       *((double *)Signals[signalIndex].Address) = value;
 
       for (byte client = 0; client < _maxClients; client++)
-        if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
@@ -1574,7 +1688,7 @@ void BlaeckTCP::writeAllData(unsigned long msg_id)
 void BlaeckTCP::writeAllData(unsigned long msg_id, unsigned long long timestamp)
 {
   for (byte client = 0; client < _maxClients; client++)
-    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+    if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(msg_id, client, 0, _signalIndex - 1, false, timestamp);
     }
@@ -1593,7 +1707,7 @@ void BlaeckTCP::writeUpdatedData(unsigned long msg_id)
 void BlaeckTCP::writeUpdatedData(unsigned long messageID, unsigned long long timestamp)
 {
   for (byte client = 0; client < _maxClients; client++)
-    if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+    if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(messageID, client, 0, _signalIndex - 1, true, timestamp);
     }
@@ -1622,58 +1736,58 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
   _crc.setReverseOut(true);
   _crc.restart();
 
-  Clients[i].write("<BLAECK:");
+  Clients[i].connection.write("<BLAECK:");
 
   // Message Key
   byte msg_key = 0xD2;
-  Clients[i].write(msg_key);
+  Clients[i].connection.write(msg_key);
   _crc.add(msg_key);
 
-  Clients[i].write(":");
+  Clients[i].connection.write(":");
   _crc.add(':');
 
   // Message Id
   ulngCvt.val = msg_id;
-  Clients[i].write(ulngCvt.bval, 4);
+  Clients[i].connection.write(ulngCvt.bval, 4);
   _crc.add(ulngCvt.bval, 4);
 
-  Clients[i].write(":");
+  Clients[i].connection.write(":");
   _crc.add(':');
 
   // Restart flag
   byte restart_flag = _sendRestartFlag ? 1 : 0;
-  Clients[i].write(restart_flag);
+  Clients[i].connection.write(restart_flag);
   _crc.add(restart_flag);
   _sendRestartFlag = false; // Clear the flag after first transmission
 
-  Clients[i].write(":");
+  Clients[i].connection.write(":");
   _crc.add(':');
 
   // Schema hash (2 bytes, CRC16-CCITT, little-endian)
   byte hash_lo = (byte)(_schemaHash & 0xFF);
   byte hash_hi = (byte)((_schemaHash >> 8) & 0xFF);
-  Clients[i].write(hash_lo);
-  Clients[i].write(hash_hi);
+  Clients[i].connection.write(hash_lo);
+  Clients[i].connection.write(hash_hi);
   _crc.add(hash_lo);
   _crc.add(hash_hi);
 
-  Clients[i].write(":");
+  Clients[i].connection.write(":");
   _crc.add(':');
 
   // Timestamp mode
   byte timestamp_mode = (byte)_timestampMode;
-  Clients[i].write(timestamp_mode);
+  Clients[i].connection.write(timestamp_mode);
   _crc.add(timestamp_mode);
 
   // Add timestamp data if mode is not NO_TIMESTAMP
   if (_timestampMode != BLAECK_NO_TIMESTAMP && hasValidTimestampCallback())
   {
     ullCvt.val = timestamp;
-    Clients[i].write(ullCvt.bval, 8);
+    Clients[i].connection.write(ullCvt.bval, 8);
     _crc.add(ullCvt.bval, 8);
   }
 
-  Clients[i].write(":");
+  Clients[i].connection.write(":");
   _crc.add(':');
 
   for (int j = signalIndex_start; j <= signalIndex_end; j++)
@@ -1683,7 +1797,7 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
       continue;
 
     intCvt.val = j;
-    Clients[i].write(intCvt.bval, 2);
+    Clients[i].connection.write(intCvt.bval, 2);
     _crc.add(intCvt.bval, 2);
 
     Signal signal = Signals[j];
@@ -1692,69 +1806,69 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
     case (Blaeck_bool):
     {
       boolCvt.val = *((bool *)signal.Address);
-      Clients[i].write(boolCvt.bval, 1);
+      Clients[i].connection.write(boolCvt.bval, 1);
       _crc.add(boolCvt.bval, 1);
     }
     break;
     case (Blaeck_byte):
     {
-      Clients[i].write(*((byte *)signal.Address));
+      Clients[i].connection.write(*((byte *)signal.Address));
       _crc.add(*((byte *)signal.Address));
     }
     break;
     case (Blaeck_short):
     {
       shortCvt.val = *((short *)signal.Address);
-      Clients[i].write(shortCvt.bval, 2);
+      Clients[i].connection.write(shortCvt.bval, 2);
       _crc.add(shortCvt.bval, 2);
     }
     break;
     case (Blaeck_ushort):
     {
       ushortCvt.val = *((unsigned short *)signal.Address);
-      Clients[i].write(ushortCvt.bval, 2);
+      Clients[i].connection.write(ushortCvt.bval, 2);
       _crc.add(ushortCvt.bval, 2);
     }
     break;
     case (Blaeck_int):
     {
       intCvt.val = *((int *)signal.Address);
-      Clients[i].write(intCvt.bval, 2);
+      Clients[i].connection.write(intCvt.bval, 2);
       _crc.add(intCvt.bval, 2);
     }
     break;
     case (Blaeck_uint):
     {
       uintCvt.val = *((unsigned int *)signal.Address);
-      Clients[i].write(uintCvt.bval, 2);
+      Clients[i].connection.write(uintCvt.bval, 2);
       _crc.add(uintCvt.bval, 2);
     }
     break;
     case (Blaeck_long):
     {
       lngCvt.val = *((long *)signal.Address);
-      Clients[i].write(lngCvt.bval, 4);
+      Clients[i].connection.write(lngCvt.bval, 4);
       _crc.add(lngCvt.bval, 4);
     }
     break;
     case (Blaeck_ulong):
     {
       ulngCvt.val = *((unsigned long *)signal.Address);
-      Clients[i].write(ulngCvt.bval, 4);
+      Clients[i].connection.write(ulngCvt.bval, 4);
       _crc.add(ulngCvt.bval, 4);
     }
     break;
     case (Blaeck_float):
     {
       fltCvt.val = *((float *)signal.Address);
-      Clients[i].write(fltCvt.bval, 4);
+      Clients[i].connection.write(fltCvt.bval, 4);
       _crc.add(fltCvt.bval, 4);
     }
     break;
     case (Blaeck_double):
     {
       dblCvt.val = *((double *)signal.Address);
-      Clients[i].write(dblCvt.bval, 8);
+      Clients[i].connection.write(dblCvt.bval, 8);
       _crc.add(dblCvt.bval, 8);
     }
     break;
@@ -1770,16 +1884,16 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
   // D2 tail: StatusByte + StatusPayload(4) + CRC32(4)
   byte statusByte = 0;
   byte statusPayload[4] = {0, 0, 0, 0};
-  Clients[i].write(statusByte);
-  Clients[i].write(statusPayload, 4);
+  Clients[i].connection.write(statusByte);
+  Clients[i].connection.write(statusPayload, 4);
   _crc.add(statusByte);
   _crc.add(statusPayload, 4);
 
   uint32_t crc_value = _crc.calc();
-  Clients[i].write((byte *)&crc_value, 4);
+  Clients[i].connection.write((byte *)&crc_value, 4);
 
-  Clients[i].write("/BLAECK>");
-  Clients[i].write("\r\n");
+  Clients[i].connection.write("/BLAECK>");
+  Clients[i].connection.write("\r\n");
 }
 
 void BlaeckTCP::timedWriteAllData()
@@ -1828,7 +1942,7 @@ void BlaeckTCP::timedWriteData(unsigned long msg_id, int signalIndex_start, int 
     _timedFirstTime = false;
 
     for (byte client = 0; client < _maxClients; client++)
-      if (Clients[client].connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+      if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
       {
         this->writeData(msg_id, client, signalIndex_start, signalIndex_end, onlyUpdated, timestamp);
       }
@@ -1839,7 +1953,7 @@ void BlaeckTCP::writeDevices()
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected())
+    if (Clients[client].connection.connected())
     {
       this->writeDevices(1, client);
     }
@@ -1850,7 +1964,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
 {
   for (byte client = 0; client < _maxClients; client++)
   {
-    if (Clients[client].connected())
+    if (Clients[client].connection.connected())
     {
       this->writeDevices(msg_id, client);
     }
@@ -1874,37 +1988,37 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   byte clientNo = i;
   byte clientDataEnabled = bitRead(_blaeckWriteDataClientMask, clientNo);
 
-  Clients[i].write("<BLAECK:");
+  Clients[i].connection.write("<BLAECK:");
   byte msg_key = 0xB6;
-  Clients[i].write(msg_key);
-  Clients[i].write(":");
+  Clients[i].connection.write(msg_key);
+  Clients[i].connection.write(":");
   ulngCvt.val = msg_id;
-  Clients[i].write(ulngCvt.bval, 4);
-  Clients[i].write(":");
-  Clients[i].write((byte)0);
-  Clients[i].write((byte)0);
-  Clients[i].print(deviceName);
-  Clients[i].print('\0');
-  Clients[i].print(deviceHWVersion);
-  Clients[i].print('\0');
-  Clients[i].print(deviceFWVersion);
-  Clients[i].print('\0');
-  Clients[i].print(LIBRARY_VERSION);
-  Clients[i].print('\0');
-  Clients[i].print(LIBRARY_NAME);
-  Clients[i].print('\0');
-  Clients[i].print(clientNo);
-  Clients[i].print('\0');
-  Clients[i].print(clientDataEnabled);
-  Clients[i].print('\0');
-  Clients[i].print(_serverRestarted);
-  Clients[i].print('\0');
-  Clients[i].print("server");
-  Clients[i].print('\0');
-  Clients[i].print("0");
-  Clients[i].print('\0');
-  Clients[i].write("/BLAECK>");
-  Clients[i].write("\r\n");
+  Clients[i].connection.write(ulngCvt.bval, 4);
+  Clients[i].connection.write(":");
+  Clients[i].connection.write((byte)0);
+  Clients[i].connection.write((byte)0);
+  Clients[i].connection.print(deviceName);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(deviceHWVersion);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(deviceFWVersion);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(LIBRARY_VERSION);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(LIBRARY_NAME);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(clientNo);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(clientDataEnabled);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(_serverRestarted);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print("server");
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print("0");
+  Clients[i].connection.print('\0');
+  Clients[i].connection.write("/BLAECK>");
+  Clients[i].connection.write("\r\n");
 
   if (_serverRestarted)
   {

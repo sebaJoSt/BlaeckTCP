@@ -51,6 +51,12 @@ enum BlaeckTimestampMode
   BLAECK_RTC = BLAECK_UNIX // Deprecated alias
 };
 
+struct BlaeckClient {
+    NetClient connection;
+    char name[20];
+    char type[8];
+};
+
 class BlaeckTCP
 {
 public:
@@ -74,7 +80,7 @@ public:
   const String LIBRARY_NAME = "BlaeckTCP";
   const String LIBRARY_VERSION = "6.0.0";
 
-  NetClient *Clients = nullptr;
+  BlaeckClient *Clients = nullptr;
   // ActiveClient is the client, which sent the command
   NetClient ActiveClient;
 
@@ -274,6 +280,9 @@ private:
   uint16_t _computeSchemaHash();
 
   static void validatePlatformSizes();
+
+  void _initClientMeta();
+  void _parseClientIdentity(const char *raw);
 
   Stream *StreamRef = nullptr;
   int _blaeckWriteDataClientMask;
