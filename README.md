@@ -16,35 +16,6 @@ Available callbacks:
 
 When handling commands, use `CommandingClient` to reply to the sender of the current command.
 
-Command parser defaults are architecture-aware:
-- AVR (`__AVR__`): 48 command chars, 4 registered handlers, 24 command-name chars, 10 params
-- Non-AVR: 96 command chars, 12 registered handlers, 40 command-name chars, 10 params
-
-### Command handler API
-
-```CPP
-bool onSwitchLED(const char *command, const char *const *params, byte paramCount)
-{
-  if (paramCount < 1) return false;
-  int state = atoi(params[0]);
-  digitalWrite(LED_BUILTIN, state == 1 ? HIGH : LOW);
-  return true;
-}
-
-void onAny(const char *command, const char *const *params, byte paramCount)
-{
-  // Optional catch-all hook
-}
-
-void setup()
-{
-  // ...
-  BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
-  BlaeckTCP.onAnyCommand(onAny);
-}
-```
-
-
 ## Getting Started
 
 Clone this repository into `Arduino/Libraries` or use the built-in Arduino IDE Library manager to install
@@ -140,6 +111,34 @@ BlaeckTCP.setIntervalMs(BLAECK_INTERVAL_CLIENT);
 ```
 
 `setTimedData(...)` has been removed. Use `setIntervalMs(...)` instead.
+
+### Command handler API
+
+Command parser defaults are architecture-aware:
+- AVR (`__AVR__`): 48 command chars, 4 registered handlers, 24 command-name chars, 10 params
+- Non-AVR: 96 command chars, 12 registered handlers, 40 command-name chars, 10 params
+
+```CPP
+bool onSwitchLED(const char *command, const char *const *params, byte paramCount)
+{
+  if (paramCount < 1) return false;
+  int state = atoi(params[0]);
+  digitalWrite(LED_BUILTIN, state == 1 ? HIGH : LOW);
+  return true;
+}
+
+void onAny(const char *command, const char *const *params, byte paramCount)
+{
+  // Optional catch-all hook
+}
+
+void setup()
+{
+  // ...
+  BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
+  BlaeckTCP.onAnyCommand(onAny);
+}
+```
 
 ## Messages
 
