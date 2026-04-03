@@ -80,7 +80,7 @@ Here's a full list of the commands handled by this library:
 
 | Command                      | Description                                                                      |
 | ---------------------------- | -------------------------------------------------------------------------------- |
-| `<BLAECK.GET_DEVICES>`       | Writes the device information including the device name, hardware version, firmware version and library version |
+| `<BLAECK.GET_DEVICES>`       | Writes the device information. Optionally accepts client identity params (see [Client identity](#client-identity)). |
 | `<BLAECK.WRITE_SYMBOLS> `    | Writes symbol list including datatype information.                               |
 | `<BLAECK.WRITE_DATA> `       | Writes the binary data.                                                          |
 | `<BLAECK.ACTIVATE,first,second,third,fourth byte>`| Activates writing the binary data in user-set interval [ms]<br />Min: 0ms  Max: 4294967295ms<br /> e.g. `<BLAECK.ACTIVATE,96,234>` The data is written every 60 seconds (60 000ms)<br />first Byte: 0b01100000 = 96 DEC<br />second Byte: 0b11101010 = 234 DEC|
@@ -142,6 +142,39 @@ Element|Type|DESCRIPTION
  <BLAECK.WRITE_SYMBOLS, firstByteMSGID, secondByteMSGID, thirdByteMSGID, fourthByteMSGID>
  <BLAECK.WRITE_DATA, firstByteMSGID, secondByteMSGID, thirdByteMSGID, fourthByteMSGID>
  ````
+
+### Client identity
+
+When a client sends `<BLAECK.GET_DEVICES>`, it may include two optional parameters after the 4-byte message ID to identify itself:
+
+````
+<BLAECK.GET_DEVICES,B1,B2,B3,B4,RequesterDeviceName,RequesterType>
+````
+
+Parameter|Description
+---------|----------
+`RequesterDeviceName`|Device name of the requesting client (e.g. `Basic Hub`). Stored in `Clients[i].name` (max 19 chars).
+`RequesterType`|Role of the requesting client: `hub`, `app`, or `unknown`. Stored in `Clients[i].type` (max 7 chars).
+
+The server binds the identity to the client connection and uses it in log messages:
+
+````
+Client #0 connected: 192.168.1.50:51478
+Client #0 identified (hub: Basic Hub)
+Client #0 disconnected (hub: Basic Hub)
+````
+
+Both parameters are optional — older clients that omit them still work. Each client connection is tracked via the `BlaeckClient` struct:
+
+```cpp
+struct BlaeckClient {
+    NetClient connection;  // the TCP socket
+    char name[20];         // RequesterDeviceName (empty until identified)
+    char type[8];          // RequesterType (defaults to "unknown")
+};
+```
+
+Access via `blaeckTCP.Clients[i].connection`, `blaeckTCP.Clients[i].name`, etc.
  
  ## Decoding Examples
  
