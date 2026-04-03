@@ -86,7 +86,7 @@ void BlaeckTCP::_parseClientIdentity(const char *raw)
       {
         StreamRef->print("Client #");
         StreamRef->print(c);
-        StreamRef->print(" identified: (");
+        StreamRef->print(" identified (");
         StreamRef->print(Clients[c].type);
         StreamRef->print(": ");
         StreamRef->print(Clients[c].name);
@@ -232,8 +232,16 @@ void BlaeckTCP::bridgePoll()
     {
       if (!Clients[i].connection)
       {
-        StreamRef->print("We have a new client #");
-        StreamRef->println(i);
+        StreamRef->print("Client #");
+        StreamRef->print(i);
+        StreamRef->print(" connected");
+        IPAddress ip = newClient.remoteIP();
+        if (ip != IPAddress(0, 0, 0, 0))
+        {
+          StreamRef->print(": ");
+          StreamRef->print(ip);
+        }
+        StreamRef->println();
         newClient.print("Hello, client number: ");
         newClient.println(i);
         Clients[i].connection = newClient;
@@ -280,6 +288,7 @@ void BlaeckTCP::bridgePoll()
       Clients[i].connection.stop();
       StreamRef->print("Client #");
       StreamRef->print(i);
+      StreamRef->print(" disconnected");
       if (Clients[i].name[0] != '\0')
       {
         StreamRef->print(" (");
@@ -288,7 +297,7 @@ void BlaeckTCP::bridgePoll()
         StreamRef->print(Clients[i].name);
         StreamRef->print(")");
       }
-      StreamRef->println(" disconnected");
+      StreamRef->println();
       Clients[i].name[0] = '\0';
       strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
       Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
@@ -622,8 +631,16 @@ bool BlaeckTCP::recvWithStartEndMarkers()
     {
       if (!Clients[i].connection)
       {
-        StreamRef->print("We have a new client #");
-        StreamRef->println(i);
+        StreamRef->print("Client #");
+        StreamRef->print(i);
+        StreamRef->print(" connected");
+        IPAddress ip = newClient.remoteIP();
+        if (ip != IPAddress(0, 0, 0, 0))
+        {
+          StreamRef->print(": ");
+          StreamRef->print(ip);
+        }
+        StreamRef->println();
         newClient.print("Hello, client number: ");
         newClient.println(i);
         bool blaeckDataEnabled = bitRead(_blaeckWriteDataClientMask, i);
@@ -638,9 +655,6 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         // Once we "accept", the client is no longer tracked by the server
         // so we must store it into our list of clients
         Clients[i].connection = newClient;
-        Clients[i].name[0] = '\0';
-        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
         Clients[i].name[0] = '\0';
         strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
         Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
@@ -704,6 +718,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       Clients[i].connection.stop();
       StreamRef->print("Client #");
       StreamRef->print(i);
+      StreamRef->print(" disconnected");
       if (Clients[i].name[0] != '\0')
       {
         StreamRef->print(" (");
@@ -712,7 +727,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         StreamRef->print(Clients[i].name);
         StreamRef->print(")");
       }
-      StreamRef->println(" disconnected");
+      StreamRef->println();
       Clients[i].name[0] = '\0';
       strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
       Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
