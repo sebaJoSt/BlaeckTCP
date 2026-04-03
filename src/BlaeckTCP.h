@@ -275,7 +275,7 @@ public:
   void setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01));
   bool onCommand(const char *command, BlaeckCommandHandler handler);
   void onAnyCommand(BlaeckAnyCommandHandler handler);
-  void clearCommandHandlers();
+  void clearAllCommandHandlers();
   void setCommandHandlerCapacity(byte capacity);
 
   // ----- Before data write callback  -----

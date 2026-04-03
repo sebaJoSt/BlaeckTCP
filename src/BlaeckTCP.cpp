@@ -691,7 +691,7 @@ void BlaeckTCP::onAnyCommand(BlaeckAnyCommandHandler handler)
   _anyCommandHandler = handler;
 }
 
-void BlaeckTCP::clearCommandHandlers()
+void BlaeckTCP::clearAllCommandHandlers()
 {
   for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
   {

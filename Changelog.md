@@ -23,7 +23,7 @@ All notable changes to this project will be documented in this file.
 - Added command registration API:
   - `onCommand(const char* command, bool (*handler)(const char*, const char* const*, byte))`
   - `onAnyCommand(void (*handler)(const char*, const char* const*, byte))`
-  - `clearCommandHandlers()` and `setCommandHandlerCapacity(byte)`
+  - `clearAllCommandHandlers()` and `setCommandHandlerCapacity(byte)`
 - **Breaking change:** Renamed public command-source client handle from `ActiveClient` to `CommandingClient`.
 - Added architecture-based command parser defaults:
   - AVR: smaller defaults for command length/handler table/command name length
