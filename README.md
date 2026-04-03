@@ -7,15 +7,6 @@
 BlaeckTCP is a simple Arduino library to send binary (sensor) data via Ethernet/WiFi to your PC. The data can be sent periodically or requested on demand with [commands](#blaecktcp-commands).
 Also included is a message parser which reads input in the syntax of `<HelloWorld, 12, 47>`. You can register exact command handlers (`onCommand`) and a catch-all handler (`onAnyCommand`) in your sketch.
 
-Available callbacks:
-- `onCommand(...)` and `onAnyCommand(...)` for parsed incoming commands
-- `setCommandCallback(...)` (deprecated, still supported with runtime warning)
-- `setBeforeWriteCallback(...)` before data is written
-- `setClientConnectedCallback(...)` / `setClientDisconnectedCallback(...)` for client connection events
-- `isClientDataEnabled(clientNo)` to query whether a client is allowed to receive data frames
-
-When handling commands, use `CommandingClient` to reply to the sender of the current command.
-
 ## Getting Started
 
 Clone this repository into `Arduino/Libraries` or use the built-in Arduino IDE Library manager to install
@@ -113,6 +104,15 @@ BlaeckTCP.setIntervalMs(BLAECK_INTERVAL_CLIENT);
 `setTimedData(...)` has been removed. Use `setIntervalMs(...)` instead.
 
 ### Command handler API
+
+Available callbacks:
+- `onCommand(...)` and `onAnyCommand(...)` for parsed incoming commands
+- `setCommandCallback(...)` (deprecated, still supported with runtime warning)
+- `setBeforeWriteCallback(...)` before data is written
+- `setClientConnectedCallback(...)` / `setClientDisconnectedCallback(...)` for client connection events
+- `isClientDataEnabled(clientNo)` to query whether a client is allowed to receive data frames
+
+When handling commands, use `CommandingClient` to reply to the sender of the current command.
 
 Command parser defaults are architecture-aware:
 - AVR (`__AVR__`): 48 command chars, 4 registered handlers, 24 command-name chars, 10 params
