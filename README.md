@@ -154,7 +154,7 @@ When a client sends `<BLAECK.GET_DEVICES>`, it may include two optional paramete
 Parameter|Description
 ---------|----------
 `RequesterDeviceName`|Device name of the requesting client (e.g. `Basic Hub`). Stored in `Clients[i].name` (max 19 chars).
-`RequesterType`|Role of the requesting client: `hub`, `app`, or `unknown`. Stored in `Clients[i].type` (max 7 chars).
+`RequesterType`|Free-form string identifying the client role (e.g. `hub`, `app`, `logger`). Defaults to `unknown` if omitted. Stored in `Clients[i].type` (max 7 chars).
 
 The server binds the identity to the client connection and uses it in log messages:
 
