@@ -2133,7 +2133,8 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
 
 void BlaeckTCP::timedWriteAllData()
 {
-  this->timedWriteAllData(185273099);
+  unsigned long id = (_fixedInterval_ms >= 0) ? 185273100 : 185273099;
+  this->timedWriteAllData(id);
 }
 
 void BlaeckTCP::timedWriteAllData(unsigned long msg_id)
@@ -2148,12 +2149,13 @@ void BlaeckTCP::timedWriteAllData(unsigned long msg_id, unsigned long long times
 
 void BlaeckTCP::timedWriteUpdatedData()
 {
-  this->timedWriteUpdatedData(185273099);
+  unsigned long id = (_fixedInterval_ms >= 0) ? 185273100 : 185273099;
+  this->timedWriteUpdatedData(id);
 }
 
 void BlaeckTCP::timedWriteUpdatedData(unsigned long msg_id)
 {
-  this->timedWriteUpdatedData(185273099, getTimeStamp());
+  this->timedWriteUpdatedData(msg_id, getTimeStamp());
 }
 
 void BlaeckTCP::timedWriteUpdatedData(unsigned long msg_id, unsigned long long timestamp)
@@ -2266,7 +2268,8 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
 
 void BlaeckTCP::tickUpdated()
 {
-  this->tickUpdated(185273099);
+  unsigned long id = (_fixedInterval_ms >= 0) ? 185273100 : 185273099;
+  this->tickUpdated(id);
 }
 
 void BlaeckTCP::tickUpdated(unsigned long msg_id)
@@ -2276,7 +2279,8 @@ void BlaeckTCP::tickUpdated(unsigned long msg_id)
 
 void BlaeckTCP::tick()
 {
-  this->tick(185273099);
+  unsigned long id = (_fixedInterval_ms >= 0) ? 185273100 : 185273099;
+  this->tick(id);
 }
 
 void BlaeckTCP::tick(unsigned long msg_id)
