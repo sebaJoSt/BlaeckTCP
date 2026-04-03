@@ -74,7 +74,7 @@ struct BlaeckClient {
     char type[8];
 };
 
-typedef bool (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
+typedef void (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
 typedef void (*BlaeckAnyCommandHandler)(const char *command, const char *const *params, byte paramCount);
 
 class BlaeckTCP

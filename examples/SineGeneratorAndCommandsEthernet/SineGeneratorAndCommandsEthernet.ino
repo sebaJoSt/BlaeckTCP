@@ -28,9 +28,9 @@ float sine;
 // Sets the LED pin number
 const int ledPin = LED_BUILTIN;
 
-bool onSwitchLED(const char *command, const char *const *params, byte paramCount);
-bool onSomeCommand(const char *command, const char *const *params, byte paramCount);
-bool onPrint(const char *command, const char *const *params, byte paramCount);
+void onSwitchLED(const char *command, const char *const *params, byte paramCount);
+void onSomeCommand(const char *command, const char *const *params, byte paramCount);
+void onPrint(const char *command, const char *const *params, byte paramCount);
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
@@ -127,7 +127,7 @@ void UpdateSineNumbers()
   sine = sin(millis() * 0.00005);
 }
 
-bool onSwitchLED(const char *command, const char *const *params, byte paramCount)
+void onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
   // Setup the clients, you want to print to
@@ -138,7 +138,7 @@ bool onSwitchLED(const char *command, const char *const *params, byte paramCount
 
   if (paramCount < 1)
   {
-    return false;
+    return;
   }
   int state = atoi(params[0]);
   if (state == 1)
@@ -151,7 +151,7 @@ bool onSwitchLED(const char *command, const char *const *params, byte paramCount
         BlaeckTCP.Clients[i].connection.println("LED is ON.");
       }
     }
-    return true;
+    return;
   }
   if (state == 0)
   {
@@ -163,35 +163,33 @@ bool onSwitchLED(const char *command, const char *const *params, byte paramCount
         BlaeckTCP.Clients[i].connection.println("LED is OFF.");
       }
     }
-    return true;
+    return;
   }
-  return false;
 }
 
-bool onSomeCommand(const char *command, const char *const *params, byte paramCount)
+void onSomeCommand(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
   (void)params;
   (void)paramCount;
   // Do something
-  return true;
 }
 
 /* Exemplary command using string parameters:
    Example: <Print,Bye Bye,1>
 */
-bool onPrint(const char *command, const char *const *params, byte paramCount)
+void onPrint(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
   if (paramCount < 2)
   {
-    return false;
+    return;
   }
   int mode = atoi(params[1]);
   if (mode == 0)
   {
     BlaeckTCP.CommandingClient.println(params[0]);
-    return true;
+    return;
   }
   if (mode == 1)
   {
@@ -201,7 +199,6 @@ bool onPrint(const char *command, const char *const *params, byte paramCount)
     BlaeckTCP.CommandingClient.println("And them good ole boys were drinking whiskey and rye");
     BlaeckTCP.CommandingClient.println("Singin' this'll be the day that I die");
     BlaeckTCP.CommandingClient.println("This'll be the day that I die");
-    return true;
+    return;
   }
-  return false;
 }

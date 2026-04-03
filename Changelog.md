@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
   - `setClientConnectedCallback(void (*)(byte clientNo))`
   - `setClientDisconnectedCallback(void (*)(byte clientNo))`
 - Added command registration API:
-  - `onCommand(const char* command, bool (*handler)(const char*, const char* const*, byte))`
+  - `onCommand(const char* command, void (*handler)(const char*, const char* const*, byte))`
   - `onAnyCommand(void (*handler)(const char*, const char* const*, byte))`
   - `clearAllCommandHandlers()` and `setCommandHandlerCapacity(byte)`
 - **Breaking change:** Renamed public command-source client handle from `ActiveClient` to `CommandingClient`.
