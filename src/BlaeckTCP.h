@@ -6,26 +6,60 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#ifndef BLAECK_BUFFER_SIZE
-#if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-#define BLAECK_BUFFER_SIZE 1024
-#elif defined(ARDUINO_ARCH_AVR)
-#define BLAECK_BUFFER_SIZE 32
-#else
-#define BLAECK_BUFFER_SIZE 64
-#endif
+#define BLAECKTCP_VERSION "6.0.0"
+#define BLAECKTCP_VERSION_MAJOR 6
+#define BLAECKTCP_VERSION_MINOR 0
+#define BLAECKTCP_VERSION_PATCH 0
+#define BLAECKTCP_NAME "BlaeckTCP"
+
+// Allow user overrides via a config file in the sketch folder.
+// Create BlaeckTCPConfig.h in your sketch to override defaults, e.g.:
+//   #define BLAECK_BUFFER_SIZE 512
+//   #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 128
+// PlatformIO users can also use build_flags = -DBLAECK_BUFFER_SIZE=512
+#if defined __has_include
+  #if __has_include(<BlaeckTCPConfig.h>)
+    #include <BlaeckTCPConfig.h>
+  #endif
 #endif
 
-#if defined(__AVR__)
-#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 48
-#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 4
-#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 24
-#else
-#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 96
-#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
-#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 40
+#ifndef BLAECK_BUFFER_SIZE
+  #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
+    #define BLAECK_BUFFER_SIZE 1024
+  #elif defined(ARDUINO_ARCH_AVR)
+    #define BLAECK_BUFFER_SIZE 32
+  #else
+    #define BLAECK_BUFFER_SIZE 64
+  #endif
 #endif
-#define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
+
+#ifndef BLAECK_COMMAND_MAX_CHARS_DEFAULT
+  #if defined(__AVR__)
+    #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 48
+  #else
+    #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 96
+  #endif
+#endif
+
+#ifndef BLAECK_COMMAND_MAX_HANDLERS_DEFAULT
+  #if defined(__AVR__)
+    #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 4
+  #else
+    #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
+  #endif
+#endif
+
+#ifndef BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT
+  #if defined(__AVR__)
+    #define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 24
+  #else
+    #define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 40
+  #endif
+#endif
+
+#ifndef BLAECK_COMMAND_MAX_PARAMS_DEFAULT
+  #define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
+#endif
 
 #include <Arduino.h>
 #include <Ethernet.h>
@@ -96,9 +130,6 @@ public:
   String DeviceName;
   String DeviceHWVersion;
   String DeviceFWVersion;
-
-  const String LIBRARY_NAME = "BlaeckTCP";
-  const String LIBRARY_VERSION = "6.0.0";
 
   BlaeckClient *Clients = nullptr;
   // CommandingClient is the client which sent the parsed command
@@ -276,7 +307,6 @@ public:
   bool onCommand(const char *command, BlaeckCommandHandler handler);
   void onAnyCommand(BlaeckAnyCommandHandler handler);
   void clearAllCommandHandlers();
-  void setCommandHandlerCapacity(byte capacity);
 
   // ----- Before data write callback  -----
   void setBeforeWriteCallback(void (*callback)());
@@ -363,7 +393,6 @@ private:
 
   void (*_commandCallback)(char *command, int *parameter, char *string01) = nullptr;
   bool _commandCallbackDeprecationWarned = false;
-  byte _commandHandlerCapacity = MAX_COMMAND_HANDLERS;
   struct CommandHandlerEntry
   {
     char command[MAX_COMMAND_NAME_COUNT];

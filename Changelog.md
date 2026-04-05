@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.0.1] - 2025-07-14
+
+### Added
+- Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO)
+- `#ifndef` guards on all `#define` defaults (`BLAECK_BUFFER_SIZE`, `BLAECK_COMMAND_MAX_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT`, `BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_PARAMS_DEFAULT`)
+- Version preprocessor macros: `BLAECKTCP_VERSION`, `BLAECKTCP_VERSION_MAJOR`, `BLAECKTCP_VERSION_MINOR`, `BLAECKTCP_VERSION_PATCH`, `BLAECKTCP_NAME`
+- CI workflow: compile all examples against multiple boards on push/PR
+
+### Removed
+- **Breaking change:** Removed `LIBRARY_NAME` and `LIBRARY_VERSION` public String members; use `BLAECKTCP_NAME` and `BLAECKTCP_VERSION` macros instead
+- **Breaking change:** Removed `setCommandHandlerCapacity(byte)` — the handler array is always allocated at full `MAX_COMMAND_HANDLERS` size; use `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT` at compile time instead
+
 ## [6.0.0] - 2026-04-01
 
 ### Changed
@@ -23,7 +35,7 @@ All notable changes to this project will be documented in this file.
 - Added command registration API:
   - `onCommand(const char* command, void (*handler)(const char*, const char* const*, byte))`
   - `onAnyCommand(void (*handler)(const char*, const char* const*, byte))`
-  - `clearAllCommandHandlers()` and `setCommandHandlerCapacity(byte)`
+  - `clearAllCommandHandlers()`
 - **Breaking change:** Renamed public command-source client handle from `ActiveClient` to `CommandingClient`.
 - Added architecture-based command parser defaults:
   - AVR: smaller defaults for command length/handler table/command name length

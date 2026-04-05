@@ -118,6 +118,21 @@ Command parser defaults are architecture-aware:
 - AVR (`__AVR__`): 48 command chars, 4 registered handlers, 24 command-name chars, 10 params
 - Non-AVR: 96 command chars, 12 registered handlers, 40 command-name chars, 10 params
 
+These defaults can be overridden by placing a `BlaeckTCPConfig.h` file in your sketch folder:
+```CPP
+// BlaeckTCPConfig.h
+#define BLAECK_BUFFER_SIZE 512
+#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 128
+#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 8
+#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 48
+#define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 16
+```
+
+PlatformIO users can also use compiler flags in `platformio.ini`:
+```ini
+build_flags = -DBLAECK_BUFFER_SIZE=512
+```
+
 ```CPP
 void onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {

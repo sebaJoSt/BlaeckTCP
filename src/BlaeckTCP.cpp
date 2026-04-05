@@ -119,7 +119,7 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
   _signalOverflowCount = 0;
 
   StreamRef->print("BlaeckTCP Version: ");
-  StreamRef->println(LIBRARY_VERSION);
+  StreamRef->println(BLAECKTCP_VERSION);
 
   StreamRef->println("Only one client (= Client 0) can connect simultaneously!");
 
@@ -160,7 +160,7 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   _signalOverflowCount = 0;
 
   StreamRef->print("BlaeckTCP Version: ");
-  StreamRef->println(LIBRARY_VERSION);
+  StreamRef->println(BLAECKTCP_VERSION);
 
   StreamRef->print("Max Clients allowed: ");
   StreamRef->println(maxClients);
@@ -207,7 +207,7 @@ void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeSt
   BridgeStreamRef = bridgeStream;
 
   StreamRef->print("BlaeckTCP Version: ");
-  StreamRef->println(LIBRARY_VERSION);
+  StreamRef->println(BLAECKTCP_VERSION);
   StreamRef->println("Running in Bridge Mode");
 
   StreamRef->print("Max Clients allowed: ");
@@ -656,7 +656,7 @@ bool BlaeckTCP::onCommand(const char *command, BlaeckCommandHandler handler)
   }
 
   // Update existing handler
-  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
   {
     if (_commandHandlers[i].inUse && strcmp(_commandHandlers[i].command, command) == 0)
     {
@@ -666,7 +666,7 @@ bool BlaeckTCP::onCommand(const char *command, BlaeckCommandHandler handler)
   }
 
   // Insert new handler
-  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
   {
     if (!_commandHandlers[i].inUse)
     {
@@ -700,19 +700,6 @@ void BlaeckTCP::clearAllCommandHandlers()
     _commandHandlers[i].command[0] = '\0';
   }
   _anyCommandHandler = nullptr;
-}
-
-void BlaeckTCP::setCommandHandlerCapacity(byte capacity)
-{
-  if (capacity == 0)
-  {
-    capacity = 1;
-  }
-  if (capacity > MAX_COMMAND_HANDLERS)
-  {
-    capacity = MAX_COMMAND_HANDLERS;
-  }
-  _commandHandlerCapacity = capacity;
 }
 
 void BlaeckTCP::setClientConnectedCallback(void (*callback)(byte clientNo))
@@ -782,7 +769,7 @@ void BlaeckTCP::_dispatchRegisteredHandlers()
     return;
   }
 
-  for (byte i = 0; i < _commandHandlerCapacity; i++)
+  for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
   {
     if (_commandHandlers[i].inUse &&
         _commandHandlers[i].handler != nullptr &&
@@ -2243,9 +2230,9 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].connection.print('\0');
   Clients[i].connection.print(deviceFWVersion);
   Clients[i].connection.print('\0');
-  Clients[i].connection.print(LIBRARY_VERSION);
+  Clients[i].connection.print(BLAECKTCP_VERSION);
   Clients[i].connection.print('\0');
-  Clients[i].connection.print(LIBRARY_NAME);
+  Clients[i].connection.print(BLAECKTCP_NAME);
   Clients[i].connection.print('\0');
   Clients[i].connection.print(clientNo);
   Clients[i].connection.print('\0');
