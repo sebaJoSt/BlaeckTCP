@@ -50,7 +50,6 @@ jobs:
               - source-path: ./
               - name: CRC
               - name: TelnetStream
-              - name: Ethernet
             sketch-paths: |
               - examples/SineGeneratorWiFi
             artifact-name-suffix: arduino-esp32-nano_nora
@@ -61,7 +60,6 @@ jobs:
               - source-path: ./
               - name: CRC
               - name: TelnetStream
-              - name: Ethernet
             sketch-paths: |
               - examples/SineGeneratorWiFiS3
               - examples/TimeStampModesWiFiS3

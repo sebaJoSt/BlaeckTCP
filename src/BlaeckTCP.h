@@ -62,7 +62,6 @@
 #endif
 
 #include <Arduino.h>
-#include <Ethernet.h>
 #include <TelnetPrint.h>
 #include <CRC32.h>
 
