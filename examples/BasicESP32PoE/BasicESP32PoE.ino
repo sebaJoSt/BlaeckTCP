@@ -124,7 +124,8 @@ void setup()
       &Serial,
       2,
       0b11111101,
-      SERVER_PORT);
+      SERVER_PORT  // TCP server port
+  );
 
   BlaeckTCP.DeviceName = "Random Number Generator";
   BlaeckTCP.DeviceHWVersion = "ESP32-PoE-ISO Rev.L";

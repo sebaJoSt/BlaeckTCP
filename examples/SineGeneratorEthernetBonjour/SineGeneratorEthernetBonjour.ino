@@ -75,7 +75,8 @@ void setup()
       &Serial,
       MAX_SIGNALS,
       0b11111101,
-      SERVER_PORT);
+      SERVER_PORT  // TCP server port
+  );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";

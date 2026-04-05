@@ -117,7 +117,8 @@ void setup()
       &Serial,
       2,
       0b11111101,
-      SERVER_PORT);
+      SERVER_PORT  // TCP server port
+  );
 
   BlaeckTCP.DeviceName = "Random Number Generator";
   BlaeckTCP.DeviceHWVersion = "ESP32-C6-Bug V2.1.0";

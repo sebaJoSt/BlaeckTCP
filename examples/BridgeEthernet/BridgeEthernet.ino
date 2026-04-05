@@ -121,7 +121,7 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, only used for debugging
       &Serial1,    // Bridge Serial reference; connects to the BlaeckSerial device
-      SERVER_PORT
+      SERVER_PORT  // TCP server port
   );
 }
 

@@ -84,7 +84,7 @@ void setup()
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
       0b11111101,  // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
-      SERVER_PORT
+      SERVER_PORT  // TCP server port
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";

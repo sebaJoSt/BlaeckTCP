@@ -119,7 +119,7 @@ void setup()
       &Serial,     // Serial reference, used for debugging
       0,           // Maximal signal count used;
       0b11111111,  // Default: all clients permitted
-      SERVER_PORT
+      SERVER_PORT  // TCP server port
   );
 
   // Register command handlers (new style)
