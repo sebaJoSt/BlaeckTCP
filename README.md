@@ -183,10 +183,10 @@ Element|Type|DESCRIPTION
 `DeviceName`|String0|set with public variable `DeviceName`
 `DeviceHWVersion`|String0|set with public variable `DeviceHWVersion`
 `DeviceFWVersion`|String0|set with public variable `DeviceFWVersion`
-`LibraryVersion`|String0|set with public const `LIBRARY_VERSION`
-`LibraryName`|String0|set with public const `LIBRARY_NAME`
+`LibraryVersion`|String0|set with preprocessor macro `BLAECKTCP_VERSION`
+`LibraryName`|String0|set with preprocessor macro `BLAECKTCP_NAME`
 `Client#`|String0|Client number of the connected client
-`ClientDataEnabled`|String0|0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `B1`); set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
+`ClientDataEnabled`|String0|0 or 1; Client is not allowed/allowed to receive Data (`MSGKEY`: `D2`); set with `blaeckWriteDataClientMask` in `BlaeckTCP::begin`
 `ServerRestarted`|String0|0 or 1; first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
 `DeviceType`|String0|always `server` (single-device setup)
 `Parent`|String0|always `0` (no parent in single-device setup)
@@ -252,7 +252,7 @@ Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 2
 -----------------------------------------------------------------------------------
 ASCII: e  r  °  °  °  °  B  i  g     N  u  m  b  e  r  °  °  /  B  L  A  E  C  K  >
 HEX:   65 72 00 08 00 00 42 69 67 20 4E 75 6D 62 65 72 00 06 2F 42 4C 41 45 43 4B 3E
-Byte:  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 56 47 48 49 50 51 52
+Byte:  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52
  ````
  
  Byte | DESCRIPTION:
@@ -272,9 +272,9 @@ Byte:  27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 56 47 48 49 50 5
  Example from `BasicEthernet.ino`:
  `<BLAECK.WRITE_DATA, 255, 255, 255, 255>`:
  ````
-ASCII: <  B  L  A  E  C  K  :  °  :  °  °  °  °  :  °  :  °  °  :  °  :  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  /  B  L  A  E  C  K  >  \r \n
-HEX:   3C 42 4C 41 45 43 4B 3A D2 3A FF FF FF FF 3A 00 3A C8 29 3A 00 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 XX XX XX XX 2F 42 4C 41 45 43 4B 3E 0D 0A
-Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48
+ASCII: <  B  L  A  E  C  K  :  °  :  °  °  °  °  :  °  :  °  °  :  °  :  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  °  /  B  L  A  E  C  K  >  \r \n
+HEX:   3C 42 4C 41 45 43 4B 3A D2 3A FF FF FF FF 3A 00 3A C8 29 3A 00 3A 00 00 B8 1E FD 40 01 00 D8 E6 32 7C 00 00 00 00 00 XX XX XX XX 2F 42 4C 41 45 43 4B 3E 0D 0A
+Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52
 ````
  
  Byte | DESCRIPTION:
@@ -291,6 +291,7 @@ Byte:  0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 18 19 20 21 22 23 2
 34   | `StatusByte`: 0 -> Normal Transmission
 35-38| `StatusPayload`: 4 Bytes (all `0x00` when `StatusByte=0`)
 39-42| `CRC32`: 4 Bytes (calculated from bytes 8-38)
+43-52| Footer: `/BLAECK>\r\n`
 
 ## Data Types
 

@@ -5,17 +5,17 @@
 
   1. Direct Write (Sine_1):
      - Data is immediately transmitted after updating
-     - Updates every 100ms using BlaeckSerial.write()
+     - Updates every 100ms using BlaeckTCP.write()
 
   2. Interval Mode (Sine_2 & Sine_3):
      - Data is marked as updated but transmitted only when tickUpdated() is called
      - Sine_2:
         - updates every 2 seconds
         - Data is calculated and stored in the signal variable
-        - Signal is marked as updated using BlaeckSerial.markSignalUpdated()
+        - Signal is marked as updated using BlaeckTCP.markSignalUpdated()
      - Sine_3
         - updates every 10 seconds
-        - Sames as Sine_2, but BlaeckSerial.update() combines updating and marking in a single function call
+        - Sames as Sine_2, but BlaeckTCP.update() combines updating and marking in a single function call
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP

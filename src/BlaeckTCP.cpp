@@ -1694,6 +1694,7 @@ void BlaeckTCP::write(int signalIndex, bool value, unsigned long messageID, unsi
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1711,6 +1712,7 @@ void BlaeckTCP::write(int signalIndex, byte value, unsigned long messageID, unsi
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1728,6 +1730,7 @@ void BlaeckTCP::write(int signalIndex, short value, unsigned long messageID, uns
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1745,6 +1748,7 @@ void BlaeckTCP::write(int signalIndex, unsigned short value, unsigned long messa
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1764,6 +1768,7 @@ void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID, unsig
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #else
     // On 32-bit platforms, int is mapped to Blaeck_long (4 bytes)
@@ -1776,6 +1781,7 @@ void BlaeckTCP::write(int signalIndex, int value, unsigned long messageID, unsig
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #endif
   }
@@ -1796,6 +1802,7 @@ void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long message
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #else
     // On 32-bit platforms, int is mapped to Blaeck_long (4 bytes)
@@ -1808,6 +1815,7 @@ void BlaeckTCP::write(int signalIndex, unsigned int value, unsigned long message
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #endif
   }
@@ -1826,6 +1834,7 @@ void BlaeckTCP::write(int signalIndex, long value, unsigned long messageID, unsi
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1843,6 +1852,7 @@ void BlaeckTCP::write(int signalIndex, unsigned long value, unsigned long messag
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1860,6 +1870,7 @@ void BlaeckTCP::write(int signalIndex, float value, unsigned long messageID, uns
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
   }
 }
@@ -1879,6 +1890,7 @@ void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, un
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #else
     if (Signals[signalIndex].DataType == Blaeck_double)
@@ -1890,6 +1902,7 @@ void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, un
         {
           this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
         }
+      _sendRestartFlag = false;
     }
 #endif
   }
@@ -1919,11 +1932,15 @@ void BlaeckTCP::writeAllData(unsigned long msg_id)
 
 void BlaeckTCP::writeAllData(unsigned long msg_id, unsigned long long timestamp)
 {
+  bool dataSent = false;
   for (byte client = 0; client < _maxClients; client++)
     if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(msg_id, client, 0, _signalIndex - 1, false, timestamp);
+      dataSent = true;
     }
+  if (dataSent)
+    _sendRestartFlag = false;
 }
 
 void BlaeckTCP::writeUpdatedData()
@@ -1938,11 +1955,18 @@ void BlaeckTCP::writeUpdatedData(unsigned long msg_id)
 
 void BlaeckTCP::writeUpdatedData(unsigned long messageID, unsigned long long timestamp)
 {
+  bool dataSent = false;
   for (byte client = 0; client < _maxClients; client++)
     if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
     {
       this->writeData(messageID, client, 0, _signalIndex - 1, true, timestamp);
+      dataSent = true;
     }
+  if (dataSent)
+  {
+    _sendRestartFlag = false;
+    clearAllUpdateFlags();
+  }
 }
 
 void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp)
@@ -1990,7 +2014,6 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
   byte restart_flag = _sendRestartFlag ? 1 : 0;
   Clients[i].connection.write(restart_flag);
   _crc.add(restart_flag);
-  _sendRestartFlag = false; // Clear the flag after first transmission
 
   Clients[i].connection.write(":");
   _crc.add(':');
@@ -2106,11 +2129,7 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
     break;
     }
 
-    // Clear the updated flag after transmission if we're only sending updated signals (onlyUpdated)
-    if (onlyUpdated)
-    {
-      Signals[j].Updated = false;
-    }
+    // Updated flags are cleared by the caller after all clients are served
   }
 
   // D2 tail: StatusByte + StatusPayload(4) + CRC32(4)
@@ -2178,11 +2197,19 @@ void BlaeckTCP::timedWriteData(unsigned long msg_id, int signalIndex_start, int 
     }
     _timedFirstTime = false;
 
+    bool dataSent = false;
     for (byte client = 0; client < _maxClients; client++)
       if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
       {
         this->writeData(msg_id, client, signalIndex_start, signalIndex_end, onlyUpdated, timestamp);
+        dataSent = true;
       }
+    if (dataSent)
+    {
+      _sendRestartFlag = false;
+      if (onlyUpdated)
+        clearAllUpdateFlags();
+    }
   }
 }
 
@@ -2195,6 +2222,7 @@ void BlaeckTCP::writeDevices()
       this->writeDevices(1, client);
     }
   }
+  _serverRestarted = false;
 }
 
 void BlaeckTCP::writeDevices(unsigned long msg_id)
@@ -2206,6 +2234,7 @@ void BlaeckTCP::writeDevices(unsigned long msg_id)
       this->writeDevices(msg_id, client);
     }
   }
+  _serverRestarted = false;
 }
 
 void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
@@ -2256,11 +2285,6 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].connection.print('\0');
   Clients[i].connection.write("/BLAECK>");
   Clients[i].connection.write("\r\n");
-
-  if (_serverRestarted)
-  {
-    _serverRestarted = false;
-  }
 }
 
 void BlaeckTCP::tickUpdated()
