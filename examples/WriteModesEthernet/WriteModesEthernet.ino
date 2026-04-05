@@ -106,7 +106,8 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
-      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
+      0b11111101,  // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
+      SERVER_PORT
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
@@ -117,10 +118,6 @@ void setup()
   BlaeckTCP.addSignal(F("Sine_1"), &sine_1);
   BlaeckTCP.addSignal(F("Sine_2"), &sine_2);
   BlaeckTCP.addSignal(F("Sine_3"), &sine_3);
-
-  // Start listening for clients
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

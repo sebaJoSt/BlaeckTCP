@@ -12,7 +12,6 @@
  */
 
 #include <WiFiS3.h>
-#include <TelnetPrint.h>
 #include "RTC.h"
 #include "arduino_secrets.h"
 #include "BlaeckTCP.h"
@@ -91,7 +90,8 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
-      0b11111101   // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
+      0b11111101,  // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
+      SERVER_PORT
   );
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
@@ -109,10 +109,6 @@ void setup()
 
   // default mode, no time information transmitted with the data
   // BlaeckTCP.setTimestampMode(BLAECK_NO_TIMESTAMP);
-
-  // Start listening for clients
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

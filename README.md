@@ -32,10 +32,11 @@ void setup()
   Serial.begin(9600);
 
    BlaeckTCP.begin(
-      MAX_CLIENTS, // Maximal number of allowed clients
-      &Serial,     // Serial reference, used for debugging
-      2,           // Maximal signal count used;
-      0b11111101   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
+      MAX_CLIENTS,  // Maximal number of allowed clients
+      &Serial,      // Serial reference, used for debugging
+      2,            // Maximal signal count used;
+      0b11111101,   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
+      SERVER_PORT   // TCP server port
   );
 }
 ```
@@ -53,12 +54,6 @@ if (BlaeckTCP.hasSignalOverflow()) {
   Serial.print("Dropped addSignal calls: ");
   Serial.println(BlaeckTCP.getSignalOverflowCount());
 }
-```
-
-### Start TCP-Server and listen for clients
-```CPP
-TelnetPrint = NetServer(SERVER_PORT);
-TelnetPrint.begin();
 ```
 
 ### Update your variables and don't forget to `tick()`!
@@ -126,6 +121,7 @@ These defaults can be overridden by placing a `BlaeckTCPConfig.h` file in your s
 #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 8
 #define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 48
 #define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 16
+#define BLAECK_TCP_NO_DELAY_DEFAULT false  // disable Nagle optimization
 ```
 
 PlatformIO users can also use compiler flags in `platformio.ini`:

@@ -74,7 +74,8 @@ void setup()
       MAX_CLIENTS,
       &Serial,
       MAX_SIGNALS,
-      0b11111101);
+      0b11111101,
+      SERVER_PORT);
 
   BlaeckTCP.DeviceName = "Basic Sine Number Generator";
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
@@ -85,9 +86,6 @@ void setup()
     String signalName = "Sine_";
     BlaeckTCP.addSignal(signalName + i, &sine);
   }
-
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

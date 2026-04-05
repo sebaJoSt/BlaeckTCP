@@ -97,7 +97,7 @@ void BlaeckTCP::_parseClientIdentity(const char *raw)
   }
 }
 
-void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
+void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount, uint16_t port)
 {
   StreamRef = (Stream *)streamRef;
 
@@ -130,16 +130,17 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount)
   }
   Clients = new BlaeckClient[_maxClients];
   _initClientMeta();
+  _startServer(port);
 }
 
-void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount)
+void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, uint16_t port)
 {
   int blaeckWriteDataClientMask = pow(2, maxClients) - 1;
 
-  begin(maxClients, streamRef, maximumSignalCount, blaeckWriteDataClientMask);
+  begin(maxClients, streamRef, maximumSignalCount, blaeckWriteDataClientMask, port);
 }
 
-void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteDataClientMask)
+void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSignalCount, int blaeckWriteDataClientMask, uint16_t port)
 {
   StreamRef = (Stream *)streamRef;
 
@@ -197,9 +198,10 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
   }
   Clients = new BlaeckClient[maxClients];
   _initClientMeta();
+  _startServer(port);
 }
 
-void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream)
+void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream, uint16_t port)
 {
   _maxClients = maxClients;
   StreamRef = streamRef;
@@ -220,6 +222,16 @@ void BlaeckTCP::beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeSt
   }
   Clients = new BlaeckClient[maxClients];
   _initClientMeta();
+  _startServer(port);
+}
+
+void BlaeckTCP::_startServer(uint16_t port)
+{
+  TelnetPrint = NetServer(port);
+  TelnetPrint.begin();
+#if defined(ESP32) || defined(ESP8266)
+  TelnetPrint.setNoDelay(BLAECK_TCP_NO_DELAY_DEFAULT);
+#endif
 }
 
 void BlaeckTCP::bridgePoll()

@@ -142,12 +142,9 @@ void setup()
   BlaeckTCP.beginBridge(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, only used for debugging
-      &Serial      // Bridge Serial reference; connects to the BlaeckSerial device
+      &Serial,     // Bridge Serial reference; connects to the BlaeckSerial device
+      SERVER_PORT
   );
-
-  // Start listening for clients
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

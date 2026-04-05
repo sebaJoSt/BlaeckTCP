@@ -2,19 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-## [6.0.1] - 2025-07-14
+## [6.0.0] - 2026-04-01
 
 ### Added
 - Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO)
-- `#ifndef` guards on all `#define` defaults (`BLAECK_BUFFER_SIZE`, `BLAECK_COMMAND_MAX_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT`, `BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_PARAMS_DEFAULT`)
+- `#ifndef` guards on all `#define` defaults (`BLAECK_BUFFER_SIZE`, `BLAECK_COMMAND_MAX_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT`, `BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_PARAMS_DEFAULT`, `BLAECK_TCP_NO_DELAY_DEFAULT`)
 - Version preprocessor macros: `BLAECKTCP_VERSION`, `BLAECKTCP_VERSION_MAJOR`, `BLAECKTCP_VERSION_MINOR`, `BLAECKTCP_VERSION_PATCH`, `BLAECKTCP_NAME`
+- **Breaking change:** `begin()` and `beginBridge()` now accept a `port` parameter and start the TCP server internally. Manual `TelnetPrint = NetServer(port); TelnetPrint.begin();` in sketches is no longer needed.
+- `setNoDelay(true)` is now called automatically on ESP32/ESP8266 (configurable via `BLAECK_TCP_NO_DELAY_DEFAULT`)
+- Removed redundant `#include <Ethernet.h>` — TelnetStream's `NetTypes.h` handles transport auto-detection
 - CI workflow: compile all examples against multiple boards on push/PR
 
 ### Removed
 - **Breaking change:** Removed `LIBRARY_NAME` and `LIBRARY_VERSION` public String members; use `BLAECKTCP_NAME` and `BLAECKTCP_VERSION` macros instead
 - **Breaking change:** Removed `setCommandHandlerCapacity(byte)` — the handler array is always allocated at full `MAX_COMMAND_HANDLERS` size; use `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT` at compile time instead
-
-## [6.0.0] - 2026-04-01
 
 ### Changed
 - **Breaking change:** Data message format updated from `D1` (0xD1) to `D2` (0xD2)

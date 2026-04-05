@@ -116,7 +116,8 @@ void setup()
       MAX_CLIENTS,
       &Serial,
       2,
-      0b11111101);
+      0b11111101,
+      SERVER_PORT);
 
   BlaeckTCP.DeviceName = "Random Number Generator";
   BlaeckTCP.DeviceHWVersion = "ESP32-C6-Bug V2.1.0";
@@ -129,10 +130,6 @@ void setup()
   /*Uncomment for fixed interval lock (ms)
     - ignores ACTIVATE/DEACTIVATE while locked */
   // BlaeckTCP.setIntervalMs(60000);
-
-  // Start listening for clients
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

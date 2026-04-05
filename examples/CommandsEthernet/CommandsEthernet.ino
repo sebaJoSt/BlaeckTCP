@@ -117,17 +117,15 @@ void setup()
   BlaeckTCP.begin(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
-      0            // Maximal signal count used;
+      0,           // Maximal signal count used;
+      0b11111111,  // Default: all clients permitted
+      SERVER_PORT
   );
 
   // Register command handlers (new style)
   BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
   BlaeckTCP.onCommand("SomeCommand", onSomeCommand);
   BlaeckTCP.onCommand("Print", onPrint);
-
-  // Start listening for clients
-  TelnetPrint = NetServer(SERVER_PORT);
-  TelnetPrint.begin();
 }
 
 void loop()

@@ -61,6 +61,12 @@
   #define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
 #endif
 
+// Disable Nagle's algorithm for lower latency on ESP32/ESP8266.
+// Set to false in BlaeckTCPConfig.h if you prefer throughput over latency.
+#ifndef BLAECK_TCP_NO_DELAY_DEFAULT
+  #define BLAECK_TCP_NO_DELAY_DEFAULT true
+#endif
+
 #include <Arduino.h>
 #include <TelnetPrint.h>
 #include <CRC32.h>
@@ -120,10 +126,10 @@ public:
   ~BlaeckTCP();
 
   // ----- Initialize ----
-  void begin(Stream *streamRef, unsigned int size);
-  void begin(byte maxClients, Stream *streamRef, unsigned int size);
-  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask);
-  void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream);
+  void begin(Stream *streamRef, unsigned int size, uint16_t port);
+  void begin(byte maxClients, Stream *streamRef, unsigned int size, uint16_t port);
+  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask, uint16_t port);
+  void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream, uint16_t port);
 
   // Set these variables in your Arduino sketch
   String DeviceName;
@@ -349,6 +355,7 @@ private:
 
   void _initClientMeta();
   void _parseClientIdentity(const char *raw);
+  void _startServer(uint16_t port);
 
   Stream *StreamRef = nullptr;
   int _blaeckWriteDataClientMask;
