@@ -4,7 +4,7 @@
 
 
 
-BlaeckTCP is a simple Arduino library to send binary (sensor) data via Ethernet/WiFi to your PC. The data can be sent periodically or requested on demand with [commands](#blaecktcp-commands).
+BlaeckTCP is a simple Arduino library to send binary (sensor) data via Ethernet/WiFi to your PC using the [Blaeck protocol](https://sebajost.github.io/blaeck-protocol/). The data can be sent periodically or requested on demand with [commands](#blaecktcp-commands).
 Also included is a message parser which reads input in the syntax of `<HelloWorld, 12, 47>`. You can register exact command handlers (`onCommand`) and a catch-all handler (`onAnyCommand`) in your sketch.
 
 ## Getting Started
