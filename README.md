@@ -190,8 +190,8 @@ Element|Type|DESCRIPTION
 `ServerRestarted`|String0|0 or 1; first time sending `<BLAECK.GET_DEVICES>` after a restart `ServerRestarted` is set to 1 (at other times: 0)
 `DeviceType`|String0|always `server` (single-device setup)
 `Parent`|String0|always `0` (no parent in single-device setup)
-`StatusByte`|byte|1 byte; always 0: normal transmission
-`StatusPayload` (StatusByte=0)|byte|4 bytes; Reserved (`0x00 0x00 0x00 0x00`)
+`StatusByte`|byte|Status code (see [Status codes](#status-codes) below)
+`StatusPayload`|byte|4 bytes, interpretation depends on `StatusByte` (see [Status codes](#status-codes) below)
 `CRC32`|byte|4 bytes; CRC order: 32; CRC Polynom (hex): 4C11DB7; Initial value (hex): FFFFFFFF; Final XOR value (hex): FFFFFFFF; reverse data bytes: true; reverse CRC result before Final XOR: true; (http://zorc.breitbandkatze.de/crc.html)
 `RestartFlag`|byte|Restart Flag, 1 if device restarted since last transmission, 0 otherwise; 1 byte transmitted
 `SchemaHash`|uint16|CRC16-CCITT (init=0x0000, poly=0x1021) of signal name bytes + datatype code byte for each signal in order; 2 bytes transmitted (little-endian). Used by hubs and clients to detect signal layout changes at runtime.
@@ -206,6 +206,14 @@ Element|Type|DESCRIPTION
  <BLAECK.WRITE_SYMBOLS, firstByteMSGID, secondByteMSGID, thirdByteMSGID, fourthByteMSGID>
  <BLAECK.WRITE_DATA, firstByteMSGID, secondByteMSGID, thirdByteMSGID, fourthByteMSGID>
  ````
+
+ ### Status codes
+
+BlaeckTCP is a single-device library (no I2C), so only the normal status code is used.
+
+| StatusByte | Name | StatusPayload (4 bytes) |
+|------------|------|-------------------------|
+| `0x00` | Normal | Reserved (`0x00 0x00 0x00 0x00`) |
 
 ### Client identity
 
