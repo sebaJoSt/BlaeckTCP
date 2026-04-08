@@ -10,14 +10,13 @@ All notable changes to this project will be documented in this file.
 - Version preprocessor macros: `BLAECKTCP_VERSION`, `BLAECKTCP_VERSION_MAJOR`, `BLAECKTCP_VERSION_MINOR`, `BLAECKTCP_VERSION_PATCH`, `BLAECKTCP_NAME`
 - **Breaking change:** `begin()` and `beginBridge()` now accept a `port` parameter and start the TCP server internally. Manual `TelnetPrint = NetServer(port); TelnetPrint.begin();` in sketches is no longer needed.
 - `setNoDelay(true)` is now called automatically on ESP32/ESP8266 (configurable via `BLAECK_TCP_NO_DELAY_DEFAULT`)
-- Removed redundant `#include <Ethernet.h>` — TelnetStream's `NetTypes.h` handles transport auto-detection
 - CI workflow: compile all examples against multiple boards on push/PR
 
 ### Removed
 - **Breaking change:** Removed `LIBRARY_NAME` and `LIBRARY_VERSION` public String members; use `BLAECKTCP_NAME` and `BLAECKTCP_VERSION` macros instead
-- **Breaking change:** Removed `setCommandHandlerCapacity(byte)` — the handler array is always allocated at full `MAX_COMMAND_HANDLERS` size; use `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT` at compile time instead
 
 ### Changed
+- Removed redundant `#include <Ethernet.h>` — TelnetStream's `NetTypes.h` handles transport auto-detection
 - **Breaking change:** Data message format updated from `D1` (0xD1) to `D2` (0xD2)
 - **Breaking change:** Timestamps are now 8 bytes (uint64) instead of 4 bytes (uint32)
   - `BLAECK_MICROS` mode: tracks `micros()` overflow internally, produces monotonic uint64 (no more ~71 minute wrap)
@@ -45,6 +44,10 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - Fixed timer burst issue: when the main loop is delayed beyond the timed interval, `timedWriteData` no longer fires multiple times in rapid succession to catch up. It now skips missed intervals and resumes at the next boundary.
+- Fixed `timedWriteUpdatedData(unsigned long msg_id)` ignoring the `msg_id` parameter and always using the hardcoded default.
+- Fixed multi-client `_sendRestartFlag` bug: restart flag was cleared after the first client, so subsequent clients received `restart_flag=0`.
+- Fixed multi-client `_serverRestarted` bug: server-restarted flag in `writeDevices()` was cleared after the first client, so subsequent clients missed the restart notification.
+- Fixed multi-client updated-data bug: per-signal `Updated` flags were cleared inside `writeData()` per-client, so the second and subsequent clients received no updated data.
 
 
 ## [5.0.2] - 2025-12-18
