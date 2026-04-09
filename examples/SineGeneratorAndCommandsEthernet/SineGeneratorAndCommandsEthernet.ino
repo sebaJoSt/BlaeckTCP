@@ -3,8 +3,35 @@
 
   This is a sample sketch combining SineGeneratorEthernet.ino and CommandsEthernet.ino
 
+  The command syntax for implementing your own commands:
+
+    Command:         <COMMAND,PARAMETER01,PARAMETER02,...,PARAMETER10>
+                     <-  full payload size is architecture-dependent ->
+                     AVR: up to 48 chars, non-AVR: up to 96 chars
+                     <-         --  max. 10 parameters ---          ->
+
+    COMMAND:         String token (handler key used in onCommand)
+    PARAMETER01..10  String tokens (convert with atoi/atol/atof as needed)
+    Start Marker*:    <
+    End Marker*:      >
+    Separation*:      ,
+
+      * Not allowed in COMMAND or parameter tokens
+
+    Empty parameters are preserved positionally and default to empty string / 0,
+    e.g. <COMMAND,,PARAMETER02>      <- PARAMETER01 is empty, PARAMETER02 stays in its slot
+    To check if a parameter was provided: params[i][0] == '\0' means empty
+
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
+
+  Usage:
+    - Upload the sketch to your Arduino.
+    - Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    - Type the following command and press enter:
+        <SwitchLED,1>    Turn on the LED
+        <SwitchLED,0>    Turn off the LED
+        <SwitchLED,>     Empty param → uses default (OFF)
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -135,6 +162,19 @@ void onSwitchLED(const char *command, const char *const *params, byte paramCount
 
   if (paramCount < 1)
   {
+    return;
+  }
+  // Detect empty parameter: <SwitchLED,> sends an empty field
+  if (params[0][0] == '\0')
+  {
+    for (byte i = 0; i < MAX_CLIENTS; i++)
+    {
+      if (BlaeckTCP.Clients[i].connection.connected() && bitRead(clientMask, i) == 1)
+      {
+        BlaeckTCP.Clients[i].connection.println("No state given, using default (OFF).");
+      }
+    }
+    digitalWrite(ledPin, LOW);
     return;
   }
   int state = atoi(params[0]);
