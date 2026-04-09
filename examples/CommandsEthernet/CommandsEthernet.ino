@@ -21,9 +21,9 @@
 
       * Not allowed in COMMAND or parameter tokens
 
-    Empty parameters are not allowed,
-    e.g. don't do: <COMMAND,,PARAMETER02>   <- PARAMETER02 shifts into PARAMETER01
-               do: <COMMAND,PARAMETER01,PARAMETER02>
+    Empty parameters are preserved positionally and default to empty string / 0,
+    e.g. <COMMAND,,PARAMETER02>      <- PARAMETER01 is empty, PARAMETER02 stays in its slot
+    To check if a parameter was provided: params[i][0] == '\0' means empty
 
   Circuit:
     - Ethernet shield attached to pins 10, 11, 12, 13
@@ -38,6 +38,7 @@
     - Type the following command and press enter:
         <SwitchLED,1>    Turn on the LED
         <SwitchLED,0>    Turn off the LED
+        <SwitchLED,>     Empty param → uses default (OFF)
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -142,6 +143,13 @@ void onSwitchLED(const char *command, const char *const *params, byte paramCount
 {
   if (paramCount < 1)
   {
+    return;
+  }
+  // Detect empty parameter: <SwitchLED,> sends an empty field
+  if (params[0][0] == '\0')
+  {
+    BlaeckTCP.CommandingClient.println("No state given, using default (OFF).");
+    digitalWrite(ledPin, LOW);
     return;
   }
   int state = atoi(params[0]);

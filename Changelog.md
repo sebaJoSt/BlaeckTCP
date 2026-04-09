@@ -41,6 +41,11 @@ All notable changes to this project will be documented in this file.
   - AVR: smaller defaults for command length/handler table/command name length
   - non-AVR: larger defaults (96 chars, 12 handlers, 40 command-name chars)
 - Deprecated `setCommandCallback(...)` in favor of `onCommand(...)` / `onAnyCommand(...)` (legacy callback remains supported with runtime warning).
+- Command parser now preserves empty fields between consecutive commas instead
+  of collapsing them (`strtok` replaced with manual comma-scanner). For example,
+  `<CMD,,42>` now correctly places `42` in parameter slot 1 instead of shifting
+  it into slot 0. Empty fields default to `0` (legacy `PARAMETER[]`) or empty
+  string (`onCommand` handlers — detectable via `params[i][0] == '\0'`).
 
 ### Fixed
 - Fixed timer burst issue: when the main loop is delayed beyond the timed interval, `timedWriteData` no longer fires multiple times in rapid succession to catch up. It now skips missed intervals and resumes at the next boundary.
