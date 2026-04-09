@@ -2283,6 +2283,10 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].connection.print('\0');
   Clients[i].connection.print("0");
   Clients[i].connection.print('\0');
+  Clients[i].connection.print(Clients[i].name);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print(Clients[i].type);
+  Clients[i].connection.print('\0');
   Clients[i].connection.write("/BLAECK>");
   Clients[i].connection.write("\r\n");
 }
