@@ -2233,6 +2233,9 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   ulngCvt.val = msg_id;
   Clients[i].connection.write(ulngCvt.bval, 4);
   Clients[i].connection.write(":");
+  // DeviceCount = 1
+  Clients[i].connection.write((byte)1);
+  // Device entry
   Clients[i].connection.write((byte)0);
   Clients[i].connection.write((byte)0);
   Clients[i].connection.print(deviceName);
@@ -2245,6 +2248,13 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].connection.print('\0');
   Clients[i].connection.print(BLAECKTCP_NAME);
   Clients[i].connection.print('\0');
+  Clients[i].connection.print(_serverRestarted);
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print("server");
+  Clients[i].connection.print('\0');
+  Clients[i].connection.print("0");
+  Clients[i].connection.print('\0');
+  // Client trailer
   Clients[i].connection.print(clientNo);
   Clients[i].connection.print('\0');
   Clients[i].connection.print(clientDataEnabled);
@@ -2252,12 +2262,6 @@ void BlaeckTCP::writeDevices(unsigned long msg_id, byte i)
   Clients[i].connection.print(Clients[i].name);
   Clients[i].connection.print('\0');
   Clients[i].connection.print(Clients[i].type);
-  Clients[i].connection.print('\0');
-  Clients[i].connection.print(_serverRestarted);
-  Clients[i].connection.print('\0');
-  Clients[i].connection.print("server");
-  Clients[i].connection.print('\0');
-  Clients[i].connection.print("0");
   Clients[i].connection.print('\0');
   Clients[i].connection.write("/BLAECK>");
   Clients[i].connection.write("\r\n");
