@@ -119,7 +119,6 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       0,           // Maximal signal count used;
-      0b11111111,  // Default: all clients permitted
       SERVER_PORT  // TCP server port
   );
 

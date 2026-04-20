@@ -35,7 +35,6 @@ void setup()
       MAX_CLIENTS,  // Maximal number of allowed clients
       &Serial,      // Serial reference, used for debugging
       2,            // Maximal signal count used;
-      0b11111101,   // Clients allowed to receive Blaeck Data; from right to left: client #0, #1, .. , #7
       SERVER_PORT   // TCP server port
   );
 }

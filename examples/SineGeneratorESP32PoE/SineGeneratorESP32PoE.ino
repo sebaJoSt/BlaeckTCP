@@ -125,7 +125,6 @@ void setup()
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
       MAX_SIGNALS, // Maximal signal count used;
-      0b11111101,  // Clients permitted to receive data messages; from right to left: client #0, #1, .. , #7
       SERVER_PORT  // TCP server port
   );
 
@@ -146,8 +145,8 @@ void loop()
   UpdateSineNumbers();
 
   /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
-      connected clients (data messages only to permitted)
-    - Sends data messages to permitted clients (0b11111101) at the user-set interval (<BlAECK.ACTIVATE,..>) */
+      connected clients
+    - Sends data messages to all clients at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();
 }
 

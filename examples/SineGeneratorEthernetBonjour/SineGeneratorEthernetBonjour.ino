@@ -74,7 +74,6 @@ void setup()
       MAX_CLIENTS,
       &Serial,
       MAX_SIGNALS,
-      0b11111101,
       SERVER_PORT  // TCP server port
   );
 
