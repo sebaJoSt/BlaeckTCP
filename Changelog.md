@@ -24,7 +24,7 @@ All notable changes to this project will be documented in this file.
 - **Breaking change:** Timestamp parameter type changed from `unsigned long` to `unsigned long long` in all public write methods
 - **Breaking change:** Timestamp callback signature changed from `unsigned long (*)()` to `unsigned long long (*)()`. For `BLAECK_UNIX` mode, the callback must now return microseconds since epoch instead of seconds.
 - Renamed `BLAECK_RTC` to `BLAECK_UNIX` (`BLAECK_RTC` kept as deprecated alias)
-- **Breaking change:** Device message key updated from `B5` to `B6` and device payload extended with `<DeviceType><Parent>` to align with current hub/server decoder format.
+- **Breaking change:** Device message key updated from `B5` to `B6` with new `DeviceCount`, `DeviceType`, `Parent`, `ClientName` and `ClientType` fields.
 - D2 frame tail updated to `<StatusByte><StatusPayload><CRC32>` (CRC32 is now always present as a separate field).
 - Added interval lock API aligned with blaecktcpy: `setIntervalMs(...)` with `BLAECK_INTERVAL_CLIENT`, `BLAECK_INTERVAL_OFF`, or fixed millisecond values.
   - When locked to fixed/off mode, incoming `BLAECK.ACTIVATE`/`BLAECK.DEACTIVATE` commands are ignored.
