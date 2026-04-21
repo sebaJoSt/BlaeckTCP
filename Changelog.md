@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [6.0.0] - 2026-04-01
+## [6.0.0] - 2026-04-21
 
 ### Added
 - Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO)
