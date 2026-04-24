@@ -6,10 +6,10 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#define BLAECKTCP_VERSION "6.0.0"
+#define BLAECKTCP_VERSION "6.0.1"
 #define BLAECKTCP_VERSION_MAJOR 6
 #define BLAECKTCP_VERSION_MINOR 0
-#define BLAECKTCP_VERSION_PATCH 0
+#define BLAECKTCP_VERSION_PATCH 1
 #define BLAECKTCP_NAME "BlaeckTCP"
 
 // Allow user overrides via a config file in the sketch folder.

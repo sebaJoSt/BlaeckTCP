@@ -23,8 +23,7 @@ void BlaeckTCP::_initClientMeta()
   for (byte i = 0; i < _maxClients; i++)
   {
     Clients[i].name[0] = '\0';
-    strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-    Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+    strcpy(Clients[i].type, "unknown");
   }
 }
 
@@ -258,8 +257,7 @@ void BlaeckTCP::bridgePoll()
         newClient.println(i);
         Clients[i].connection = newClient;
         Clients[i].name[0] = '\0';
-        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+        strcpy(Clients[i].type, "unknown");
         if (_clientConnectedCallback != NULL)
           _clientConnectedCallback(i);
         break;
@@ -313,8 +311,7 @@ void BlaeckTCP::bridgePoll()
       }
       StreamRef->println();
       Clients[i].name[0] = '\0';
-      strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-      Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+      strcpy(Clients[i].type, "unknown");
       if (_clientDisconnectedCallback != NULL)
         _clientDisconnectedCallback(i);
     }
@@ -348,7 +345,7 @@ void BlaeckTCP::bridgePoll()
 
 void BlaeckTCP::addSignal(String signalName, bool *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -364,7 +361,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
 
 void BlaeckTCP::addSignal(String signalName, byte *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -380,7 +377,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
 
 void BlaeckTCP::addSignal(String signalName, short *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -396,7 +393,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -412,7 +409,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 
 void BlaeckTCP::addSignal(String signalName, int *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -432,7 +429,7 @@ void BlaeckTCP::addSignal(String signalName, int *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -452,7 +449,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 
 void BlaeckTCP::addSignal(String signalName, long *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -468,7 +465,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -484,7 +481,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 
 void BlaeckTCP::addSignal(String signalName, float *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -500,7 +497,7 @@ void BlaeckTCP::addSignal(String signalName, float *value)
 
 void BlaeckTCP::addSignal(String signalName, double *value)
 {
-  if (_signalIndex >= _signalCapacity)
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -871,8 +868,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
         // so we must store it into our list of clients
         Clients[i].connection = newClient;
         Clients[i].name[0] = '\0';
-        strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-        Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+        strcpy(Clients[i].type, "unknown");
         if (_clientConnectedCallback != NULL)
           _clientConnectedCallback(i);
 
@@ -946,8 +942,7 @@ bool BlaeckTCP::recvWithStartEndMarkers()
       }
       StreamRef->println();
       Clients[i].name[0] = '\0';
-      strncpy(Clients[i].type, "unknown", sizeof(Clients[i].type) - 1);
-      Clients[i].type[sizeof(Clients[i].type) - 1] = '\0';
+      strcpy(Clients[i].type, "unknown");
       if (_clientDisconnectedCallback != NULL)
         _clientDisconnectedCallback(i);
     }

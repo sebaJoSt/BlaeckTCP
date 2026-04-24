@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.0.1] - 2026-04-24
+
+### Fixed
+- Reduced PlatformIO warning noise in library code:
+  - Replaced repeated `strncpy(..., "unknown", sizeof(...) - 1)` patterns with direct `strcpy(..., "unknown")` in fixed-size `type[8]` fields to avoid `-Wstringop-truncation`.
+  - Added explicit signed/unsigned comparison handling in `addSignal(...)` capacity checks to avoid repeated signedness warnings.
+
 ## [6.0.0] - 2026-04-21
 
 ### Added
@@ -188,6 +195,7 @@ When upgrading from 1.0.0 no changes in the sketches are required. Just update B
 
 Initial release.
 
+[6.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/6.0.0...6.0.1
 [6.0.0]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.2...6.0.0
 [5.0.2]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.1...5.0.2
 [5.0.1]: https://github.com/sebaJoSt/BlaeckTCP/compare/5.0.0...5.0.1
