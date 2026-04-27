@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## [6.0.1] - 2026-04-24
 
 ### Fixed
+- Fixed `CRC32` compilation error on `mbed_giga` architecture by changing `#include <CRC32.h>` to `#include "CRC.h"`
+- Added `mbed_giga` to supported architectures in `library.properties`
 - Reduced PlatformIO warning noise in library code:
   - Replaced repeated `strncpy(..., "unknown", sizeof(...) - 1)` patterns with direct `strcpy(..., "unknown")` in fixed-size `type[8]` fields to avoid `-Wstringop-truncation`.
   - Added explicit signed/unsigned comparison handling in `addSignal(...)` capacity checks to avoid repeated signedness warnings.
