@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [6.0.1] - 2026-04-24
+## [6.0.1] - 2026-04-27
 
 ### Fixed
 - Fixed `CRC32` compilation error on `mbed_giga` architecture by changing `#include <CRC32.h>` to `#include "CRC.h"`
