@@ -69,7 +69,7 @@
 
 #include <Arduino.h>
 #include <TelnetPrint.h>
-#include "CRC.h"
+#include <CRC.h>
 
 typedef enum DataType
 {
