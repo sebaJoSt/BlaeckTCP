@@ -6,10 +6,10 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#define BLAECKTCP_VERSION "6.0.1"
+#define BLAECKTCP_VERSION "6.0.2"
 #define BLAECKTCP_VERSION_MAJOR 6
 #define BLAECKTCP_VERSION_MINOR 0
-#define BLAECKTCP_VERSION_PATCH 1
+#define BLAECKTCP_VERSION_PATCH 2
 #define BLAECKTCP_NAME "BlaeckTCP"
 
 // Allow user overrides via a config file in the sketch folder.
@@ -43,7 +43,15 @@
 
 #ifndef BLAECK_COMMAND_MAX_HANDLERS_DEFAULT
   #if defined(__AVR__)
-    #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 4
+    // Scale with available SRAM: each handler entry costs roughly
+    // MAX_COMMAND_NAME_COUNT + a function pointer (~28 bytes on AVR).
+    // Larger-SRAM AVRs (Mega 2560, ATmega1284, ...) get a generous limit;
+    // small ones (Uno/Nano/Leonardo) get a modest one to conserve SRAM.
+    #if defined(RAMEND) && (RAMEND >= 0x10FF)
+      #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
+    #else
+      #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 6
+    #endif
   #else
     #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
   #endif

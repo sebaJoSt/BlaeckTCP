@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [6.0.2] - 2026-07-14
+
+### Added
+- Added the `WaveformGeneratorESP32PoE` example: a dashboard-friendly waveform generator (frequency, amplitude, offset, waveform shape) controllable live over MQTT commands via Loggbok, for the Olimex ESP32-PoE-ISO board.
+
+### Changed
+- Increased the default AVR command-handler limit on larger-SRAM AVR boards (for example Arduino Mega 2560) from 4 to 12 handlers, while keeping smaller AVR boards conservative at 6 handlers.
+
 ## [6.0.1] - 2026-04-27
 
 ### Fixed
