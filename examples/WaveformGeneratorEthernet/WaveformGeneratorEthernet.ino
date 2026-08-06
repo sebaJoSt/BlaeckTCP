@@ -1,8 +1,9 @@
 /*
-  WaveformGeneratorESP32PoE.ino
+  WaveformGeneratorEthernet.ino
 
-  A dashboard-friendly demo for the BlaeckTCP -> Loggbok -> MQTT bridge, running on the
-  Olimex ESP32-PoE-ISO Rev.L board (Server) and streamed to your PC (Client) over Ethernet.
+  A dashboard-friendly demo for the BlaeckTCP -> Loggbok -> MQTT bridge, running on an
+  Arduino with an Ethernet Shield (W5100/W5500, Server) and streamed to your PC (Client)
+  over Ethernet.
 
   It generates one fully controllable waveform. Frequency, amplitude, offset and waveform
   shape are all set over MQTT commands. The commands are registered with typed helpers
@@ -16,6 +17,9 @@
   Home Assistant text entity round-tripping an arbitrary string via onTextCommand.
 
   Author: Sebastian Strobl, https://github.com/sebaJoSt/BlaeckTCP
+
+  Circuit:
+    Ethernet shield attached to pins 10, 11, 12, 13
 
   --- DASHBOARD MAPPING (Loggbok topic prefix: "loggbok" table name: "wave") ---
     Topic                       Widget          Meaning
@@ -38,11 +42,10 @@
     STATUS                  print info to serial                    (HA button)
 
   Setup:
-    Upload the sketch to your board. By default, DHCP is used.
-    For a static IP, uncomment ETH.config(ip, gateway, subnet, dns) in setup().
+    Upload the sketch to your board. Adjust the MAC/IP for your local network below.
 
   Loggbok CLI (log fast enough to resolve the wave, e.g. 20 ms):
-    Replace <device-ip> with the IP printed on the serial monitor after ETH gets an IP.
+    Replace <device-ip> with the IP printed on the serial monitor (default 192.168.1.177).
 
     lgbk log --tcp <device-ip>:23 --table wave --signals * --interval 20 \
       --mqtt --mqtt-endpoint mqtt://127.0.0.1:1884
@@ -50,28 +53,8 @@
   More information on: https://github.com/sebaJoSt/BlaeckTCP
 */
 
-// Important to be defined BEFORE including ETH.h for ETH.begin() to work.
-// Example RMII LAN8720 (Olimex, etc.)
-#ifndef ETH_PHY_MDC
-#define ETH_PHY_TYPE ETH_PHY_LAN8720
-#if CONFIG_IDF_TARGET_ESP32
-#define ETH_PHY_ADDR 0
-#define ETH_PHY_MDC 23
-#define ETH_PHY_MDIO 18
-// #define ETH_PHY_POWER -1
-// #define ETH_CLK_MODE  ETH_CLOCK_GPIO0_IN
-#define ETH_PHY_POWER 12
-#define ETH_CLK_MODE ETH_CLOCK_GPIO17_OUT
-#elif CONFIG_IDF_TARGET_ESP32P4
-#define ETH_PHY_ADDR 0
-#define ETH_PHY_MDC 31
-#define ETH_PHY_MDIO 52
-#define ETH_PHY_POWER 51
-#define ETH_CLK_MODE EMAC_CLK_EXT_IN
-#endif
-#endif
-
-#include <ETH.h>
+#include <SPI.h>
+#include <Ethernet.h>
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
@@ -82,11 +65,12 @@
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Enter a static IP address for your controller below.
+// Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 1, 177);
-IPAddress dns(192, 168, 1, 1);
+IPAddress myDns(192, 168, 1, 1);
 IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 0, 0);
 
@@ -117,55 +101,47 @@ void onStatus(const char *command, const char *const *params, byte paramCount);
 double phase = 0.0; // normalized phase 0..1
 unsigned long lastMicros = 0;
 
-void onEvent(arduino_event_id_t event)
-{
-  switch (event)
-  {
-  case ARDUINO_EVENT_ETH_START:
-    Serial.println("ETH Started");
-    ETH.setHostname("WaveformGeneratorESP32_01");
-    break;
-  case ARDUINO_EVENT_ETH_CONNECTED:
-    Serial.println("ETH Connected");
-    break;
-  case ARDUINO_EVENT_ETH_GOT_IP:
-    Serial.print("ETH MAC: ");
-    Serial.print(ETH.macAddress());
-    Serial.print(", IPv4: ");
-    Serial.print(ETH.localIP());
-    Serial.print(", ");
-    Serial.print(ETH.subnetMask());
-    Serial.print(", ");
-    Serial.println(ETH.gatewayIP());
-    Serial.print("BlaeckTCP Server: ");
-    Serial.print(ETH.localIP());
-    Serial.print(":");
-    Serial.println(SERVER_PORT);
-    break;
-  case ARDUINO_EVENT_ETH_DISCONNECTED:
-    Serial.println("ETH Disconnected");
-    break;
-  case ARDUINO_EVENT_ETH_STOP:
-    Serial.println("ETH Stopped");
-    break;
-  default:
-    break;
-  }
-}
-
 void setup()
 {
+  // You can use Ethernet.init(pin) to configure the CS pin
+  // Ethernet.init(10);  // Most Arduino shields
+  // Ethernet.init(5);   // MKR ETH Shield
+  // Ethernet.init(0);   // Teensy 2.0
+  // Ethernet.init(20);  // Teensy++ 2.0
+  // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
+  // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
+
+  // initialize the Ethernet device
+  Ethernet.begin(mac, ip, myDns, gateway, subnet);
+
+  // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  delay(500);
+  while (!Serial)
+  {
+    // wait for serial port to connect. Needed for native USB port only
+  }
 
-  // Register ETH event handler
-  Network.onEvent(onEvent);
+  // Check for Ethernet hardware present
+  if (Ethernet.hardwareStatus() == EthernetNoHardware)
+  {
+    Serial.println();
+    Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
+    while (true)
+    {
+      delay(1); // do nothing, no point running without Ethernet hardware
+    }
+  }
 
-  // Initialize ETH
-  ETH.begin();
+  Serial.println();
+  if (Ethernet.linkStatus() == LinkOFF)
+  {
+    Serial.println("Ethernet cable is not connected.");
+  }
 
-  // Configure static IP
-  // ETH.config(ip, gateway, subnet, dns);
+  Serial.print("BlaeckTCP Server: ");
+  Serial.print(Ethernet.localIP());
+  Serial.print(":");
+  Serial.println(SERVER_PORT);
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(
@@ -176,7 +152,7 @@ void setup()
   );
 
   BlaeckTCP.DeviceName = "Waveform Generator Demo TCP";
-  BlaeckTCP.DeviceHWVersion = "ESP32-PoE-ISO Rev.L";
+  BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
   BlaeckTCP.addSignal("Output", &Output);

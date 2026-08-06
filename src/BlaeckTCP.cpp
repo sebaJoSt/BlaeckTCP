@@ -517,6 +517,22 @@ void BlaeckTCP::addSignal(String signalName, double *value)
   _schemaHash = _computeSchemaHash();
 }
 
+void BlaeckTCP::addSignal(String signalName, char *value)
+{
+  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  {
+    _signalOverflowOccurred = true;
+    _signalOverflowCount++;
+    return;
+  }
+  setSignalName(_signalIndex, signalName);
+  Signals[_signalIndex].DataType = Blaeck_string;
+  Signals[_signalIndex].Address = value;
+  _signalIndex++;
+  SignalCount = _signalIndex;
+  _schemaHash = _computeSchemaHash();
+}
+
 void BlaeckTCP::deleteSignals()
 {
   _signalIndex = 0;
@@ -602,6 +618,14 @@ void BlaeckTCP::read()
 
       this->writeDevices(msg_id);
     }
+#if BLAECK_ENABLE_COMMAND_META
+    else if (strcmp(COMMAND, "BLAECK.WRITE_COMMANDS") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->writeCommands(msg_id);
+    }
+#endif
     else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
     {
       if (_fixedInterval_ms == BLAECK_INTERVAL_CLIENT)
@@ -668,6 +692,12 @@ bool BlaeckTCP::onCommand(const char *command, BlaeckCommandHandler handler)
     if (_commandHandlers[i].inUse && strcmp(_commandHandlers[i].command, command) == 0)
     {
       _commandHandlers[i].handler = handler;
+#if BLAECK_ENABLE_COMMAND_META
+      _commandHandlers[i].kind = BLAECK_CMD_PLAIN;
+      _commandHandlers[i].unit = nullptr;
+      _commandHandlers[i].options = nullptr;
+      _commandHandlers[i].stateSignal = nullptr;
+#endif
       return true;
     }
   }
@@ -681,6 +711,12 @@ bool BlaeckTCP::onCommand(const char *command, BlaeckCommandHandler handler)
       _commandHandlers[i].command[MAX_COMMAND_NAME_COUNT - 1] = '\0';
       _commandHandlers[i].handler = handler;
       _commandHandlers[i].inUse = true;
+#if BLAECK_ENABLE_COMMAND_META
+      _commandHandlers[i].kind = BLAECK_CMD_PLAIN;
+      _commandHandlers[i].unit = nullptr;
+      _commandHandlers[i].options = nullptr;
+      _commandHandlers[i].stateSignal = nullptr;
+#endif
       return true;
     }
   }
@@ -705,9 +741,182 @@ void BlaeckTCP::clearAllCommandHandlers()
     _commandHandlers[i].inUse = false;
     _commandHandlers[i].handler = nullptr;
     _commandHandlers[i].command[0] = '\0';
+#if BLAECK_ENABLE_COMMAND_META
+    _commandHandlers[i].kind = BLAECK_CMD_PLAIN;
+    _commandHandlers[i].unit = nullptr;
+    _commandHandlers[i].options = nullptr;
+    _commandHandlers[i].stateSignal = nullptr;
+#endif
   }
   _anyCommandHandler = nullptr;
 }
+
+#if BLAECK_ENABLE_COMMAND_META
+bool BlaeckTCP::onNumberCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *stateSignal,
+                                float min, float max, float step,
+                                const __FlashStringHelper *unit)
+{
+  bool ok = onCommand(command, handler);
+  if (ok)
+    _annotateCommand(command, BLAECK_CMD_NUMBER, stateSignal, min, max, step, unit, nullptr);
+  return ok;
+}
+
+bool BlaeckTCP::onSwitchCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *stateSignal)
+{
+  bool ok = onCommand(command, handler);
+  if (ok)
+    _annotateCommand(command, BLAECK_CMD_SWITCH, stateSignal, 0.0f, 0.0f, 0.0f, nullptr, nullptr);
+  return ok;
+}
+
+bool BlaeckTCP::onSelectCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *stateSignal,
+                                const __FlashStringHelper *optionsCsv)
+{
+  bool ok = onCommand(command, handler);
+  if (ok)
+    _annotateCommand(command, BLAECK_CMD_SELECT, stateSignal, 0.0f, 0.0f, 0.0f, nullptr, optionsCsv);
+  return ok;
+}
+
+bool BlaeckTCP::onButtonCommand(const char *command, BlaeckCommandHandler handler)
+{
+  bool ok = onCommand(command, handler);
+  if (ok)
+    _annotateCommand(command, BLAECK_CMD_BUTTON, nullptr, 0.0f, 0.0f, 0.0f, nullptr, nullptr);
+  return ok;
+}
+
+bool BlaeckTCP::onTextCommand(const char *command, BlaeckCommandHandler handler,
+                              const __FlashStringHelper *stateSignal,
+                              unsigned int maxLength)
+{
+  bool ok = onCommand(command, handler);
+  if (ok)
+    // maxLength is stored in meta_max (reused as the text length limit).
+    _annotateCommand(command, BLAECK_CMD_TEXT, stateSignal, 0.0f, (float)maxLength, 0.0f, nullptr, nullptr);
+  return ok;
+}
+
+void BlaeckTCP::_annotateCommand(const char *command, uint8_t kind,
+                                 const __FlashStringHelper *stateSignal,
+                                 float mn, float mx, float st,
+                                 const __FlashStringHelper *unit,
+                                 const __FlashStringHelper *options)
+{
+  for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
+  {
+    if (_commandHandlers[i].inUse && strcmp(_commandHandlers[i].command, command) == 0)
+    {
+      _commandHandlers[i].kind = kind;
+      _commandHandlers[i].meta_min = mn;
+      _commandHandlers[i].meta_max = mx;
+      _commandHandlers[i].meta_step = st;
+      _commandHandlers[i].unit = unit;
+      _commandHandlers[i].options = options;
+      _commandHandlers[i].stateSignal = stateSignal;
+      return;
+    }
+  }
+}
+
+byte BlaeckTCP::_flashCsvOptionCount(const __FlashStringHelper *csv)
+{
+  if (csv == nullptr)
+    return 0;
+  PGM_P p = reinterpret_cast<PGM_P>(csv);
+  byte count = 1;
+  bool any = false;
+  byte c;
+  while ((c = pgm_read_byte(p++)) != 0)
+  {
+    any = true;
+    if (c == ',')
+      count++;
+  }
+  return any ? count : 0;
+}
+
+long BlaeckTCP::_flashCsvIndexOf(const __FlashStringHelper *csv, const char *value)
+{
+  if (csv == nullptr || value == nullptr || value[0] == '\0')
+    return -1;
+
+  PGM_P p = reinterpret_cast<PGM_P>(csv);
+  long index = 0;
+  const char *v = value;
+  bool matching = true; // current token still matches value so far
+
+  byte c;
+  while (true)
+  {
+    c = pgm_read_byte(p++);
+    if (c == ',' || c == '\0')
+    {
+      // End of a token: match if value was fully consumed too.
+      if (matching && *v == '\0')
+        return index;
+      if (c == '\0')
+        return -1;
+      // Advance to next token
+      index++;
+      v = value;
+      matching = true;
+    }
+    else
+    {
+      if (matching)
+      {
+        char a = (char)c;
+        char b = *v;
+        // Case-insensitive compare
+        if (a >= 'A' && a <= 'Z') a = (char)(a - 'A' + 'a');
+        if (b >= 'A' && b <= 'Z') b = (char)(b - 'A' + 'a');
+        if (b == '\0' || a != b)
+          matching = false;
+        else
+          v++;
+      }
+    }
+  }
+}
+
+void BlaeckTCP::_percentDecodeInPlace(char *s)
+{
+  if (s == nullptr)
+    return;
+
+  const char *src = s;
+  char *dst = s;
+  while (*src != '\0')
+  {
+    if (*src == '%' && src[1] != '\0' && src[2] != '\0')
+    {
+      char hi = src[1];
+      char lo = src[2];
+      int hiVal = (hi >= '0' && hi <= '9') ? hi - '0'
+                  : (hi >= 'a' && hi <= 'f') ? hi - 'a' + 10
+                  : (hi >= 'A' && hi <= 'F') ? hi - 'A' + 10
+                                             : -1;
+      int loVal = (lo >= '0' && lo <= '9') ? lo - '0'
+                  : (lo >= 'a' && lo <= 'f') ? lo - 'a' + 10
+                  : (lo >= 'A' && lo <= 'F') ? lo - 'A' + 10
+                                             : -1;
+      if (hiVal >= 0 && loVal >= 0)
+      {
+        *dst++ = (char)((hiVal << 4) | loVal);
+        src += 3;
+        continue;
+      }
+    }
+    *dst++ = *src++;
+  }
+  *dst = '\0';
+}
+#endif
 
 void BlaeckTCP::setClientConnectedCallback(void (*callback)(byte clientNo))
 {
@@ -801,16 +1010,30 @@ void BlaeckTCP::_dispatchRegisteredHandlers()
     return;
   }
 
+  byte ackStatus = 1;                  // 0 = accepted, 1 = rejected
+  byte ackReason = BLAECK_ACK_UNKNOWN; // reason reported when rejected
+  bool matched = false;
+
   for (byte i = 0; i < MAX_COMMAND_HANDLERS; i++)
   {
     if (_commandHandlers[i].inUse &&
         _commandHandlers[i].handler != nullptr &&
         strcmp(_commandHandlers[i].command, _parsedCommand) == 0)
     {
-      _commandHandlers[i].handler(
-          _parsedCommand,
-          (const char *const *)_parsedParamPtrs,
-          _parsedParamCount);
+      matched = true;
+#if BLAECK_ENABLE_COMMAND_META
+      ackReason = _validateTypedCommand(i);
+#else
+      ackReason = BLAECK_ACK_OK;
+#endif
+      if (ackReason == BLAECK_ACK_OK)
+      {
+        ackStatus = 0;
+        _commandHandlers[i].handler(
+            _parsedCommand,
+            (const char *const *)_parsedParamPtrs,
+            _parsedParamCount);
+      }
       break;
     }
   }
@@ -821,8 +1044,172 @@ void BlaeckTCP::_dispatchRegisteredHandlers()
         _parsedCommand,
         (const char *const *)_parsedParamPtrs,
         _parsedParamCount);
+
+    if (!matched)
+    {
+      // Delivered to the catch-all handler: acknowledge as accepted.
+      matched = true;
+      ackStatus = 0;
+      ackReason = BLAECK_ACK_OK;
+    }
+  }
+
+  // Acknowledge every non-internal command back to the sender. BLAECK.* frames
+  // are handled in read() and must not be acked here.
+  if (strncmp(_parsedCommand, "BLAECK.", 7) != 0)
+  {
+    _writeCommandAck(receivedChars, ackStatus, ackReason);
   }
 }
+
+uint32_t BlaeckTCP::_fnv1a32(const char *s)
+{
+  uint32_t h = 0x811C9DC5UL; // FNV offset basis
+  if (s != nullptr)
+  {
+    while (*s != '\0')
+    {
+      h ^= (uint8_t)(*s++);
+      h *= 0x01000193UL; // FNV prime
+    }
+  }
+  return h;
+}
+
+void BlaeckTCP::_writeCommandAck(const char *rawCommand, byte status, byte reasonCode)
+{
+  if (!CommandingClient || !CommandingClient.connected())
+    return;
+
+  CommandingClient.write("<BLAECK:");
+  byte msg_key = 0xF0;
+  CommandingClient.write(msg_key);
+  CommandingClient.write(":");
+  ulngCvt.val = _commandAckMsgId++;
+  CommandingClient.write(ulngCvt.bval, 4);
+  CommandingClient.write(":");
+
+  // Payload: command hash (4 bytes, little-endian) + status (1) + reason (1).
+  ulngCvt.val = _fnv1a32(rawCommand);
+  CommandingClient.write(ulngCvt.bval, 4);
+  CommandingClient.write(status);
+  CommandingClient.write(reasonCode);
+
+  // No CRC32 tail: acks mirror the descriptive 0xE0 frame format.
+  CommandingClient.write("/BLAECK>");
+  CommandingClient.write("\r\n");
+}
+
+#if BLAECK_ENABLE_COMMAND_META
+byte BlaeckTCP::_validateTypedCommand(byte handlerIndex)
+{
+  const CommandHandlerEntry &e = _commandHandlers[handlerIndex];
+
+  // Plain and button commands carry no value to validate.
+  if (e.kind == BLAECK_CMD_PLAIN || e.kind == BLAECK_CMD_BUTTON)
+    return BLAECK_ACK_OK;
+
+  // No value supplied -> let the handler decide (e.g. query/toggle usage).
+  if (_parsedParamCount < 1 || _parsedParamPtrs[0] == nullptr || _parsedParamPtrs[0][0] == '\0')
+    return BLAECK_ACK_OK;
+
+  const char *v = _parsedParamPtrs[0];
+
+  if (e.kind == BLAECK_CMD_NUMBER)
+  {
+    float f = (float)atof(v);
+    if (f < e.meta_min || f > e.meta_max)
+    {
+      if (StreamRef != nullptr)
+      {
+        StreamRef->print(F("Command rejected (out of range): "));
+        StreamRef->print(e.command);
+        StreamRef->print('=');
+        StreamRef->print(v);
+        StreamRef->print(F(" allowed ["));
+        StreamRef->print(e.meta_min);
+        StreamRef->print(F(", "));
+        StreamRef->print(e.meta_max);
+        StreamRef->println(F("]"));
+      }
+      return BLAECK_ACK_OUT_OF_RANGE;
+    }
+  }
+  else if (e.kind == BLAECK_CMD_SWITCH)
+  {
+    if (!(strcmp(v, "0") == 0 || strcmp(v, "1") == 0))
+    {
+      if (StreamRef != nullptr)
+      {
+        StreamRef->print(F("Command rejected (switch expects 0/1): "));
+        StreamRef->print(e.command);
+        StreamRef->print('=');
+        StreamRef->println(v);
+      }
+      return BLAECK_ACK_BAD_SWITCH;
+    }
+  }
+  else if (e.kind == BLAECK_CMD_SELECT)
+  {
+    byte count = _flashCsvOptionCount(e.options);
+
+    // Accept either an option name (case-insensitive) or a numeric index.
+    long idx = _flashCsvIndexOf(e.options, v);
+    if (idx < 0)
+    {
+      char *endp = nullptr;
+      long n = strtol(v, &endp, 10);
+      if (endp != v && *endp == '\0')
+        idx = n;
+    }
+
+    if (idx < 0 || idx >= (long)count)
+    {
+      if (StreamRef != nullptr)
+      {
+        StreamRef->print(F("Command rejected (bad select value): "));
+        StreamRef->print(e.command);
+        StreamRef->print('=');
+        StreamRef->print(v);
+        StreamRef->print(F(" allowed [0, "));
+        StreamRef->print((int)count - 1);
+        StreamRef->println(F("] or an option name"));
+      }
+      return BLAECK_ACK_BAD_SELECT;
+    }
+
+    // Normalize to the index string so index-based handlers work whether the
+    // caller sent a name (e.g. HA select) or a raw index.
+    snprintf(_selectIndexScratch, sizeof(_selectIndexScratch), "%ld", idx);
+    _parsedParamPtrs[0] = _selectIndexScratch;
+  }
+  else if (e.kind == BLAECK_CMD_TEXT)
+  {
+    // Percent-decode in place (SELECT-style param normalization) so the handler
+    // receives raw UTF-8. The 0xF0 ack still hashes the encoded receivedChars,
+    // so it keeps matching the host's hash of what it sent.
+    char *decoded = (char *)_parsedParamPtrs[0];
+    _percentDecodeInPlace(decoded);
+
+    unsigned int maxLen = (unsigned int)e.meta_max;
+    if (maxLen > 0 && strlen(decoded) > maxLen)
+    {
+      if (StreamRef != nullptr)
+      {
+        StreamRef->print(F("Command rejected (text too long): "));
+        StreamRef->print(e.command);
+        StreamRef->print(F(" len="));
+        StreamRef->print((unsigned int)strlen(decoded));
+        StreamRef->print(F(" max="));
+        StreamRef->println(maxLen);
+      }
+      return BLAECK_ACK_TOO_LONG;
+    }
+  }
+
+  return BLAECK_ACK_OK;
+}
+#endif
 
 bool BlaeckTCP::recvWithStartEndMarkers()
 {
@@ -1152,12 +1539,119 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
       Clients[i].connection.write(0x9);
       break;
     }
+    case (Blaeck_string):
+    {
+      Clients[i].connection.write(0xA);
+      break;
+    }
     }
   }
 
   Clients[i].connection.write("/BLAECK>");
   Clients[i].connection.write("\r\n");
 }
+
+#if BLAECK_ENABLE_COMMAND_META
+void BlaeckTCP::writeCommands()
+{
+  this->writeCommands(1);
+}
+
+void BlaeckTCP::writeCommands(unsigned long msg_id)
+{
+  for (byte client = 0; client < _maxClients; client++)
+  {
+    if (Clients[client].connection.connected())
+    {
+      this->writeCommands(msg_id, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeCommands(unsigned long msg_id, byte i)
+{
+  // 0xE0 "Command List" frame. Per discovered command entry:
+  //   msConfig(1) slaveID(1) name\0 kind(1) flags(1)
+  //   [min(4) max(4) step(4)]  if flags.hasRange   (LE float)
+  //   [unit\0]                 if flags.hasUnit
+  //   [optionsCsv\0]           if flags.hasOptions
+  //   [stateSignal\0]          if flags.hasStateSignal
+  //   [maxLen(2)]              if flags.hasTextMax    (LE uint16)
+  // flags bits: 0=hasRange 1=hasUnit 2=hasOptions 3=hasStateSignal 4=hasTextMax
+  // All in-use entries are emitted, including plain onCommand() entries
+  // (kind=BLAECK_CMD_PLAIN, flags=0, no trailing metadata). Plain entries carry
+  // no Home Assistant entity, but are listed so a host can build a full command
+  // palette / autocomplete of every command the device accepts.
+  // TCP is always a single server device: msConfig and slaveID are hardcoded 0.
+  Clients[i].connection.write("<BLAECK:");
+  byte msg_key = 0xE0;
+  Clients[i].connection.write(msg_key);
+  Clients[i].connection.write(":");
+  ulngCvt.val = msg_id;
+  Clients[i].connection.write(ulngCvt.bval, 4);
+  Clients[i].connection.write(":");
+
+  for (byte j = 0; j < MAX_COMMAND_HANDLERS; j++)
+  {
+    CommandHandlerEntry &e = _commandHandlers[j];
+    if (!e.inUse)
+      continue;
+
+    byte flags = 0;
+    if (e.kind == BLAECK_CMD_NUMBER)
+      flags |= 0x01;
+    if (e.unit != nullptr)
+      flags |= 0x02;
+    if (e.kind == BLAECK_CMD_SELECT && e.options != nullptr)
+      flags |= 0x04;
+    if (e.stateSignal != nullptr)
+      flags |= 0x08;
+    if (e.kind == BLAECK_CMD_TEXT)
+      flags |= 0x10;
+
+    Clients[i].connection.write((byte)0); // msConfig
+    Clients[i].connection.write((byte)0); // slaveID
+    Clients[i].connection.print(e.command);
+    Clients[i].connection.write((byte)0);
+    Clients[i].connection.write(e.kind);
+    Clients[i].connection.write(flags);
+
+    if (flags & 0x01)
+    {
+      fltCvt.val = e.meta_min;
+      Clients[i].connection.write(fltCvt.bval, 4);
+      fltCvt.val = e.meta_max;
+      Clients[i].connection.write(fltCvt.bval, 4);
+      fltCvt.val = e.meta_step;
+      Clients[i].connection.write(fltCvt.bval, 4);
+    }
+    if (flags & 0x02)
+    {
+      Clients[i].connection.print(e.unit);
+      Clients[i].connection.write((byte)0);
+    }
+    if (flags & 0x04)
+    {
+      Clients[i].connection.print(e.options);
+      Clients[i].connection.write((byte)0);
+    }
+    if (flags & 0x08)
+    {
+      Clients[i].connection.print(e.stateSignal);
+      Clients[i].connection.write((byte)0);
+    }
+    if (flags & 0x10)
+    {
+      uint16_t maxLen = (uint16_t)e.meta_max;
+      Clients[i].connection.write((byte)(maxLen & 0xFF));
+      Clients[i].connection.write((byte)((maxLen >> 8) & 0xFF));
+    }
+  }
+
+  Clients[i].connection.write("/BLAECK>");
+  Clients[i].connection.write("\r\n");
+}
+#endif
 
 void BlaeckTCP::update(int signalIndex, bool value)
 {
@@ -1875,6 +2369,51 @@ void BlaeckTCP::write(int signalIndex, double value, unsigned long messageID, un
   }
 }
 
+// --- String signal (char*) overloads ---
+void BlaeckTCP::write(String signalName, char *value)
+{
+  this->write(signalName, value, 1);
+}
+void BlaeckTCP::write(String signalName, char *value, unsigned long messageID)
+{
+  this->write(signalName, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(String signalName, char *value, unsigned long messageID, unsigned long long timestamp)
+{
+  int index = findSignalIndex(signalName);
+  if (index >= 0)
+  {
+    this->write(index, value, messageID, timestamp);
+  }
+}
+
+void BlaeckTCP::write(int signalIndex, char *value)
+{
+  this->write(signalIndex, value, 1);
+}
+void BlaeckTCP::write(int signalIndex, char *value, unsigned long messageID)
+{
+  this->write(signalIndex, value, messageID, getTimeStamp());
+}
+void BlaeckTCP::write(int signalIndex, char *value, unsigned long messageID, unsigned long long timestamp)
+{
+  if (signalIndex >= 0 && signalIndex < _signalIndex)
+  {
+    if (Signals[signalIndex].DataType == Blaeck_string)
+    {
+      // String values live in a user-owned buffer; repoint Address like addSignal(char*).
+      Signals[signalIndex].Address = value;
+
+      for (byte client = 0; client < _maxClients; client++)
+        if (Clients[client].connection.connected() && bitRead(_blaeckWriteDataClientMask, client) == 1)
+        {
+          this->writeData(messageID, client, signalIndex, signalIndex, false, timestamp);
+        }
+      _sendRestartFlag = false;
+    }
+  }
+}
+
 int BlaeckTCP::findSignalIndex(String signalName)
 {
   for (int i = 0; i < _signalIndex; i++)
@@ -2092,6 +2631,22 @@ void BlaeckTCP::writeData(unsigned long msg_id, byte i, int signalIndex_start, i
       dblCvt.val = *((double *)signal.Address);
       Clients[i].connection.write(dblCvt.bval, 8);
       _crc.add(dblCvt.bval, 8);
+    }
+    break;
+    case (Blaeck_string):
+    {
+      // Wire layout: 1-byte length (capped at 255) followed by that many
+      // characters. A null Address is treated as an empty string.
+      const char *str = (const char *)signal.Address;
+      size_t rawLen = (str != nullptr) ? strlen(str) : 0;
+      byte len = (rawLen > 255) ? 255 : (byte)rawLen;
+      Clients[i].connection.write(len);
+      _crc.add(len);
+      if (len > 0)
+      {
+        Clients[i].connection.write((const uint8_t *)str, len);
+        _crc.add((uint8_t *)str, len);
+      }
     }
     break;
     }

@@ -2,10 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
-## [6.0.2] - 2026-07-14
+## [6.1.0] - 2026-08-06
 
 ### Added
-- Added the `WaveformGeneratorESP32PoE` example: a dashboard-friendly waveform generator (frequency, amplitude, offset, waveform shape) controllable live over MQTT commands via Loggbok, for the Olimex ESP32-PoE-ISO board.
+- Typed command registration for Home Assistant MQTT Discovery:
+  - `onNumberCommand(...)`, `onSwitchCommand(...)`, `onSelectCommand(...)` and `onButtonCommand(...)` register a command together with the metadata a dashboard needs: the command kind, plus where applicable a numeric range/step/unit, select options, and a mirrored state signal.
+  - `onTextCommand(command, handler, stateSignal, maxLength)` registers a free-text command that surfaces as a Home Assistant `text` entity. The value is percent-encoded by the host so an arbitrary string (commas, `<`, `>`, `%`, control/non-ASCII bytes) survives the `<NAME,value>` command frame, and the device percent-decodes it before the handler runs. Values longer than `maxLength` are rejected. The optional maximum length is advertised in the `0xE0` frame.
+  - On `BLAECK.WRITE_COMMANDS` the device now emits a `0xE0` "Command List" frame describing every typed command, so a host can auto-generate Home Assistant MQTT Discovery entities. Plain `onCommand(...)` registrations are not advertised.
+  - Typed values are validated before the handler runs: numbers outside `[min,max]`, non-`0/1` switch payloads and out-of-range select values are rejected and reported on the debug stream. Select payloads accept an option name (case-insensitive) or a numeric index and are normalized to the index before dispatch.
+  - Added `writeCommands()` / `writeCommands(messageID)` and the `BLAECK_ENABLE_COMMAND_META` compile-time switch (default on) to disable the catalog on flash-constrained targets.
+- Command acknowledgement (`0xF0` frame): after dispatching an inbound command the device replies to the sending client with an FNV-1a hash of the received command plus an accept/reject status and reason code, so a host can confirm the command was applied. Like `0xE0`, the frame carries no CRC; hosts that don't recognize the key ignore it.
+- String signals: `addSignal(name, char *value)` registers a text-valued signal (`Blaeck_string`, type code `0xA`). In the data frame the value is encoded as a 1-byte length (max 255 bytes) followed by the UTF-8 bytes, so a host can log it to a text column or mirror it as a Home Assistant text sensor. Matching `write(name/index, char *value[, messageID[, timestamp]])` overloads push an immediate single-signal update, just like the numeric `write(...)` variants. Use a `char*` to a user-owned buffer for the value; the I2C slave path (BlaeckSerial) does not carry string signals yet.
+- Added the `WaveformGeneratorESP32PoE` and `WaveformGeneratorEthernet` examples: a dashboard-friendly waveform generator (frequency, amplitude, offset, waveform shape) controllable live over MQTT commands via Loggbok.
 
 ### Changed
 - Increased the default AVR command-handler limit on larger-SRAM AVR boards (for example Arduino Mega 2560) from 4 to 12 handlers, while keeping smaller AVR boards conservative at 6 handlers.

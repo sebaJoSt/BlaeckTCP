@@ -6,10 +6,10 @@
 #ifndef BLAECKTCP_H
 #define BLAECKTCP_H
 
-#define BLAECKTCP_VERSION "6.0.2"
+#define BLAECKTCP_VERSION "6.1.0"
 #define BLAECKTCP_VERSION_MAJOR 6
-#define BLAECKTCP_VERSION_MINOR 0
-#define BLAECKTCP_VERSION_PATCH 2
+#define BLAECKTCP_VERSION_MINOR 1
+#define BLAECKTCP_VERSION_PATCH 0
 #define BLAECKTCP_NAME "BlaeckTCP"
 
 // Allow user overrides via a config file in the sketch folder.
@@ -69,6 +69,17 @@
   #define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
 #endif
 
+// Command metadata (Home Assistant discovery catalog).
+// When ON, the typed command registration helpers (onNumberCommand/
+// onSwitchCommand/onSelectCommand/onButtonCommand) store parameter metadata and
+// the device can emit a 0xE0 "Command List" frame in response to
+// BLAECK.WRITE_COMMANDS. Turn OFF to save flash on tiny targets; the typed
+// helpers then behave exactly like plain onCommand() (no metadata, no 0xE0).
+// Override via BlaeckTCPConfig.h or build flag.
+#ifndef BLAECK_ENABLE_COMMAND_META
+  #define BLAECK_ENABLE_COMMAND_META 1
+#endif
+
 // Disable Nagle's algorithm for lower latency on ESP32/ESP8266.
 // Set to false in BlaeckTCPConfig.h if you prefer throughput over latency.
 #ifndef BLAECK_TCP_NO_DELAY_DEFAULT
@@ -90,7 +101,8 @@ typedef enum DataType
   Blaeck_long,
   Blaeck_ulong,
   Blaeck_float,
-  Blaeck_double
+  Blaeck_double,
+  Blaeck_string
 } dataType;
 
 struct Signal
@@ -123,6 +135,30 @@ struct BlaeckClient {
 
 typedef void (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
 typedef void (*BlaeckAnyCommandHandler)(const char *command, const char *const *params, byte paramCount);
+
+// Command kind for Home Assistant discovery (0xE0 Command List frame).
+enum BlaeckCommandKind
+{
+  BLAECK_CMD_PLAIN = 0,  // registered via onCommand(): no HA entity, but listed in 0xE0 for command palettes
+  BLAECK_CMD_NUMBER = 1, // HA number   (value in [min,max])
+  BLAECK_CMD_SWITCH = 2, // HA switch   (0/1)
+  BLAECK_CMD_SELECT = 3, // HA select   (index into optionsCsv)
+  BLAECK_CMD_BUTTON = 4, // HA button   (no value)
+  BLAECK_CMD_TEXT = 5    // HA text     (free text, percent-encoded on the wire)
+};
+
+// Acknowledgement reason for the 0xF0 Command Ack frame. Sent back to the
+// commanding client after a command is dispatched so a host can confirm receipt
+// and surface accept/reject feedback. status = 0 accepted, 1 rejected.
+enum BlaeckCommandAckReason
+{
+  BLAECK_ACK_OK = 0,           // accepted: delivered to a handler, validation passed
+  BLAECK_ACK_UNKNOWN = 1,      // rejected: no handler registered for this command
+  BLAECK_ACK_OUT_OF_RANGE = 2, // rejected: number outside [min, max]
+  BLAECK_ACK_BAD_SWITCH = 3,   // rejected: switch value not 0/1
+  BLAECK_ACK_BAD_SELECT = 4,   // rejected: select value not a valid index/option
+  BLAECK_ACK_TOO_LONG = 5      // rejected: text value longer than the advertised max length
+};
 
 class BlaeckTCP
 {
@@ -160,6 +196,11 @@ public:
   void addSignal(String signalName, unsigned long *value);
   void addSignal(String signalName, float *value);
   void addSignal(String signalName, double *value);
+  // String signal: value points to a user-owned, null-terminated char buffer.
+  // The buffer is read (not copied) at transmit time; keep it valid and updated
+  // in place. Emitted on the wire as a 1-byte length (capped at 255) + bytes,
+  // so keep strings short - especially on RAM-constrained targets.
+  void addSignal(String signalName, char *value);
 
   // Delete all Signals
   void deleteSignals();
@@ -177,6 +218,12 @@ public:
   void writeSymbols();
   void writeSymbols(unsigned long messageID);
 
+#if BLAECK_ENABLE_COMMAND_META
+  // ----- Commands (Home Assistant discovery catalog, 0xE0) -----
+  void writeCommands();
+  void writeCommands(unsigned long messageID);
+#endif
+
   // ----- Data Write -----
   // Update value and write directly - by name
   void write(String signalName, bool value);
@@ -189,6 +236,7 @@ public:
   void write(String signalName, unsigned long value);
   void write(String signalName, float value);
   void write(String signalName, double value);
+  void write(String signalName, char *value);
 
   void write(String signalName, bool value, unsigned long messageID);
   void write(String signalName, byte value, unsigned long messageID);
@@ -200,6 +248,7 @@ public:
   void write(String signalName, unsigned long value, unsigned long messageID);
   void write(String signalName, float value, unsigned long messageID);
   void write(String signalName, double value, unsigned long messageID);
+  void write(String signalName, char *value, unsigned long messageID);
 
   void write(String signalName, bool value, unsigned long messageID, unsigned long long timestamp);
   void write(String signalName, byte value, unsigned long messageID, unsigned long long timestamp);
@@ -211,6 +260,7 @@ public:
   void write(String signalName, unsigned long value, unsigned long messageID, unsigned long long timestamp);
   void write(String signalName, float value, unsigned long messageID, unsigned long long timestamp);
   void write(String signalName, double value, unsigned long messageID, unsigned long long timestamp);
+  void write(String signalName, char *value, unsigned long messageID, unsigned long long timestamp);
 
   // Update value and write directly - by index
   void write(int signalIndex, bool value);
@@ -223,6 +273,7 @@ public:
   void write(int signalIndex, unsigned long value);
   void write(int signalIndex, float value);
   void write(int signalIndex, double value);
+  void write(int signalIndex, char *value);
 
   void write(int signalIndex, bool value, unsigned long messageID);
   void write(int signalIndex, byte value, unsigned long messageID);
@@ -234,6 +285,7 @@ public:
   void write(int signalIndex, unsigned long value, unsigned long messageID);
   void write(int signalIndex, float value, unsigned long messageID);
   void write(int signalIndex, double value, unsigned long messageID);
+  void write(int signalIndex, char *value, unsigned long messageID);
 
   void write(int signalIndex, bool value, unsigned long messageID, unsigned long long timestamp);
   void write(int signalIndex, byte value, unsigned long messageID, unsigned long long timestamp);
@@ -245,6 +297,7 @@ public:
   void write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long long timestamp);
   void write(int signalIndex, float value, unsigned long messageID, unsigned long long timestamp);
   void write(int signalIndex, double value, unsigned long messageID, unsigned long long timestamp);
+  void write(int signalIndex, char *value, unsigned long messageID, unsigned long long timestamp);
 
   // ----- Data Update -----
   // Update value and mark Signal as updated - by name
@@ -321,6 +374,35 @@ public:
   void onAnyCommand(BlaeckAnyCommandHandler handler);
   void clearAllCommandHandlers();
 
+  // ----- Typed command registration (Home Assistant discovery metadata) -----
+  // Same runtime behavior as onCommand(), but attach metadata so the device can
+  // describe the command in a 0xE0 "Command List" frame (BLAECK.WRITE_COMMANDS).
+  // stateSignal (nullable): name of the signal that mirrors this command's value
+  // (closed-loop -> HA state_topic + logged); pass nullptr for an optimistic /
+  // open-loop control. All metadata strings must be F()/PROGMEM literals with
+  // program lifetime (stored as pointers, never copied).
+  // Number values outside [min,max], bad select indices and non-0/1 switch
+  // values are rejected (handler skipped) and reported on the debug stream.
+  // step is HA display resolution only; the firmware does not round.
+  bool onNumberCommand(const char *command, BlaeckCommandHandler handler,
+                       const __FlashStringHelper *stateSignal,
+                       float min, float max, float step,
+                       const __FlashStringHelper *unit = nullptr);
+  bool onSwitchCommand(const char *command, BlaeckCommandHandler handler,
+                       const __FlashStringHelper *stateSignal);
+  bool onSelectCommand(const char *command, BlaeckCommandHandler handler,
+                       const __FlashStringHelper *stateSignal,
+                       const __FlashStringHelper *optionsCsv);
+  bool onButtonCommand(const char *command, BlaeckCommandHandler handler);
+  // Registers a free-text command shown as a Home Assistant "text" entity.
+  // The value travels percent-encoded on the wire (so it can carry commas,
+  // angle brackets and non-ASCII); the library decodes it in place before the
+  // handler runs, so the handler receives the raw UTF-8 text. maxLength is the
+  // advertised limit (values longer than this are rejected).
+  bool onTextCommand(const char *command, BlaeckCommandHandler handler,
+                     const __FlashStringHelper *stateSignal,
+                     unsigned int maxLength = 255);
+
   // ----- Before data write callback  -----
   void setBeforeWriteCallback(void (*callback)());
   void setClientConnectedCallback(void (*callback)(byte clientNo));
@@ -347,6 +429,12 @@ private:
   void _setTimedDataState(bool timedActivated, unsigned long timedInterval_ms);
   void _parseCommandTokens(const char *raw);
   void _dispatchRegisteredHandlers();
+  // Send a 0xF0 Command Ack frame (cmdHash + status + reason) to CommandingClient.
+  void _writeCommandAck(const char *rawCommand, byte status, byte reasonCode);
+  // FNV-1a 32-bit hash of a NUL-terminated string; correlation id for acks.
+  static uint32_t _fnv1a32(const char *s);
+  // Monotonic message id stamped into the 0xF0 ack frame header.
+  unsigned long _commandAckMsgId = 0;
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);
@@ -356,6 +444,21 @@ private:
   void writeDevices(unsigned long messageID, byte client);
 
   void writeSymbols(unsigned long messageID, byte client);
+
+#if BLAECK_ENABLE_COMMAND_META
+  void writeCommands(unsigned long messageID, byte client);
+  void _annotateCommand(const char *command, uint8_t kind,
+                        const __FlashStringHelper *stateSignal,
+                        float mn, float mx, float st,
+                        const __FlashStringHelper *unit,
+                        const __FlashStringHelper *options);
+  byte _validateTypedCommand(byte handlerIndex);
+  static byte _flashCsvOptionCount(const __FlashStringHelper *csv);
+  static long _flashCsvIndexOf(const __FlashStringHelper *csv, const char *value);
+  // Percent-decodes a command value (e.g. from a HA text entity) in place.
+  // "%XX" triple -> the byte 0xXX; other characters are copied unchanged.
+  static void _percentDecodeInPlace(char *s);
+#endif
 
   uint16_t _computeSchemaHash();
 
@@ -412,6 +515,15 @@ private:
     char command[MAX_COMMAND_NAME_COUNT];
     BlaeckCommandHandler handler = nullptr;
     bool inUse = false;
+#if BLAECK_ENABLE_COMMAND_META
+    uint8_t kind = BLAECK_CMD_PLAIN;
+    float meta_min = 0.0f;
+    float meta_max = 0.0f;
+    float meta_step = 0.0f;
+    const __FlashStringHelper *unit = nullptr;
+    const __FlashStringHelper *options = nullptr;
+    const __FlashStringHelper *stateSignal = nullptr;
+#endif
   };
   CommandHandlerEntry _commandHandlers[MAX_COMMAND_HANDLERS];
   BlaeckAnyCommandHandler _anyCommandHandler = nullptr;
@@ -419,6 +531,12 @@ private:
   char _parsedCommand[MAX_COMMAND_NAME_COUNT] = {0};
   const char *_parsedParamPtrs[MAX_COMMAND_PARAM_COUNT] = {0};
   byte _parsedParamCount = 0;
+#if BLAECK_ENABLE_COMMAND_META
+  // Scratch buffer holding a select command's normalized index string, so a
+  // name payload (e.g. from a Home Assistant select) is handed to index-based
+  // handlers as its numeric index.
+  char _selectIndexScratch[8] = {0};
+#endif
   bool recvWithStartEndMarkers();
   void parseData();
 
