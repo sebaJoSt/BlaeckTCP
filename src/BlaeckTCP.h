@@ -224,6 +224,15 @@ public:
   void writeCommands(unsigned long messageID);
 #endif
 
+  // ----- Messages (Home Assistant text/log channel, 0x90) -----
+  // Send a free-text status/log message on a named channel to every connected
+  // client. Fire-and-forget: a host may surface it (e.g. a Home Assistant text
+  // sensor auto-created per channel name) but it is never stored as signal data.
+  // The frame carries no CRC (like the 0xE0/0xF0 frames). Text longer than
+  // 65535 bytes is truncated.
+  void writeMessage(const char *channelName, const char *text);
+  void writeMessage(const char *channelName, const char *text, unsigned long messageID);
+
   // ----- Data Write -----
   // Update value and write directly - by name
   void write(String signalName, bool value);
@@ -435,6 +444,11 @@ private:
   static uint32_t _fnv1a32(const char *s);
   // Monotonic message id stamped into the 0xF0 ack frame header.
   unsigned long _commandAckMsgId = 0;
+
+  // Send a 0x90 Message frame (channel name + length-prefixed UTF-8 text) to one client.
+  void writeMessage(const char *channelName, const char *text, unsigned long messageID, byte client);
+  // Monotonic message id stamped into the 0x90 message frame header.
+  unsigned long _messageMsgId = 0;
 
   void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
   void tick(unsigned long messageID, bool onlyUpdated);

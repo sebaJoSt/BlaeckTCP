@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ## [6.1.0] - 2026-08-06
 
 ### Added
+- Message frame (`0x90`): `writeMessage(channelName, text)` and `writeMessage(channelName, text, messageID)` send a fire-and-forget, named free-text status/log line from the device to every connected host. The payload is `name` (NUL-terminated) followed by a 2-byte little-endian length and the UTF-8 text (up to 65535 bytes, truncated beyond), so arbitrary bytes are carried binary-safe with no percent-encoding. Like `0xE0`/`0xF0` the frame carries no CRC and is broadcast to all connected clients regardless of the data mask. A host (e.g. Loggbok) can surface each channel as its own Home Assistant text sensor; messages are never logged/stored and carry no signal semantics.
+
+### Added
 - Typed command registration for Home Assistant MQTT Discovery:
   - `onNumberCommand(...)`, `onSwitchCommand(...)`, `onSelectCommand(...)` and `onButtonCommand(...)` register a command together with the metadata a dashboard needs: the command kind, plus where applicable a numeric range/step/unit, select options, and a mirrored state signal.
   - `onTextCommand(command, handler, stateSignal, maxLength)` registers a free-text command that surfaces as a Home Assistant `text` entity. The value is percent-encoded by the host so an arbitrary string (commas, `<`, `>`, `%`, control/non-ASCII bytes) survives the `<NAME,value>` command frame, and the device percent-decodes it before the handler runs. Values longer than `maxLength` are rejected. The optional maximum length is advertised in the `0xE0` frame.

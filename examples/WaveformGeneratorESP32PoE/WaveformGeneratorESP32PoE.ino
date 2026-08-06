@@ -207,6 +207,44 @@ void loop()
       connected clients
     - Sends data messages to all clients at the user-set interval (<BlAECK.ACTIVATE,..>) */
   BlaeckTCP.tick();
+
+  SendStatusMessage();
+}
+
+// Demonstrates the 0x90 message frame: a fire-and-forget, named free-text status/log channel.
+// Unlike signals, messages are NOT logged/stored by the host - a host such as Loggbok can surface
+// each channel (here "status") as its own Home Assistant text sensor.
+//
+// The same status line is produced two ways, both via WriteStatus(), on SEPARATE channels so
+// each drives its own Home Assistant sensor:
+//   - SendStatusMessage(): a periodic 10 s heartbeat on "status"          ("Status (live)")
+//   - onStatus():          the STATUS button handler on "status_ondemand" ("Get Status")
+void WriteStatus(const char *channel)
+{
+  const char *shape;
+  switch (Waveform)
+  {
+  case 1: shape = "Square"; break;
+  case 2: shape = "Triangle"; break;
+  case 3: shape = "Sawtooth"; break;
+  default: shape = "Sine"; break;
+  }
+
+  // Format frequency to 2 decimals without snprintf's %f: AVR (e.g. Mega 2560) does not link
+  // float printf by default, so %f would print blank. Frequency is always >= 0 here.
+  int hz100 = (int)(Frequency * 100.0 + 0.5);
+  char text[80];
+  snprintf(text, sizeof(text), "%s %s @ %d.%02d Hz", Enabled ? "running" : "stopped", shape, hz100 / 100, hz100 % 100);
+  BlaeckTCP.writeMessage(channel, text);
+}
+
+void SendStatusMessage()
+{
+  static unsigned long lastStatusMs = 0;
+  if (millis() - lastStatusMs < 10000UL)
+    return;
+  lastStatusMs = millis();
+  WriteStatus("status");
 }
 
 void UpdateWaveform()
@@ -314,4 +352,8 @@ void onStatus(const char *command, const char *const *params, byte paramCount)
   Serial.print(F(" Freq=")), Serial.print(Frequency);
   Serial.print(F(" Amp=")), Serial.print(Amplitude);
   Serial.print(F(" Offset=")), Serial.println(Offset);
+
+  // On-demand: push a fresh status line to the dedicated "status_ondemand" channel so its HA
+  // sensor updates only on button press (independent of the 10 s "status" heartbeat).
+  WriteStatus("status_ondemand");
 }

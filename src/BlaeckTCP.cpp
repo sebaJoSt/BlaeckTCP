@@ -1653,6 +1653,57 @@ void BlaeckTCP::writeCommands(unsigned long msg_id, byte i)
 }
 #endif
 
+void BlaeckTCP::writeMessage(const char *channelName, const char *text)
+{
+  this->writeMessage(channelName, text, _messageMsgId++);
+}
+
+void BlaeckTCP::writeMessage(const char *channelName, const char *text, unsigned long messageID)
+{
+  for (byte client = 0; client < _maxClients; client++)
+  {
+    if (Clients[client].connection.connected())
+    {
+      this->writeMessage(channelName, text, messageID, client);
+    }
+  }
+}
+
+void BlaeckTCP::writeMessage(const char *channelName, const char *text, unsigned long messageID, byte i)
+{
+  // 0x90 "Message" frame: a named free-text status/log channel, device -> host.
+  //   name\0  length(2, LE uint16)  text[length]
+  // No CRC (like the 0xE0/0xF0 frames). The host may surface it (e.g. an
+  // auto-created Home Assistant text sensor per channel); it is never treated as
+  // signal/telemetry data and is not stored in the database.
+  if (channelName == nullptr)
+    channelName = "";
+  if (text == nullptr)
+    text = "";
+
+  size_t len = strlen(text);
+  if (len > 65535)
+    len = 65535; // 2-byte length prefix caps a single message at 65535 bytes
+
+  Clients[i].connection.write("<BLAECK:");
+  byte msg_key = 0x90;
+  Clients[i].connection.write(msg_key);
+  Clients[i].connection.write(":");
+  ulngCvt.val = messageID;
+  Clients[i].connection.write(ulngCvt.bval, 4);
+  Clients[i].connection.write(":");
+
+  // Channel name (NUL-terminated), then the UTF-8 text length-prefixed (LE uint16).
+  Clients[i].connection.print(channelName);
+  Clients[i].connection.write((byte)0);
+  Clients[i].connection.write((byte)(len & 0xFF));
+  Clients[i].connection.write((byte)((len >> 8) & 0xFF));
+  Clients[i].connection.write((const uint8_t *)text, len);
+
+  Clients[i].connection.write("/BLAECK>");
+  Clients[i].connection.write("\r\n");
+}
+
 void BlaeckTCP::update(int signalIndex, bool value)
 {
   if (signalIndex >= 0 && signalIndex < _signalIndex)
