@@ -85,9 +85,9 @@ BlaeckTCP BlaeckTCP;
 // Enter a static IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-IPAddress ip(192, 168, 1, 177);
-IPAddress dns(192, 168, 1, 1);
-IPAddress gateway(192, 168, 1, 1);
+IPAddress ip(192, 168, 10, 177);
+IPAddress dns(192, 168, 10, 1);
+IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);
 
 //---SIGNALS (fixed set -> safe to control while logging)
@@ -175,7 +175,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Waveform Generator Demo TCP";
+  BlaeckTCP.DeviceName = "Waveform Generator Demo ESP32POE";
   BlaeckTCP.DeviceHWVersion = "ESP32-PoE-ISO Rev.L";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
@@ -195,6 +195,8 @@ void setup()
   BlaeckTCP.onSwitchCommand("SET_ENABLE", onSetEnable, F("Enabled"));
   BlaeckTCP.onTextCommand("SET_LABEL", onSetLabel, F("DeviceLabel"), 32);
   BlaeckTCP.onButtonCommand("STATUS", onStatus);
+
+  BlaeckTCP.setTimestampMode(BLAECK_MICROS);
 
   lastMicros = micros();
 }

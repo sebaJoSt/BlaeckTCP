@@ -2,12 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## [6.1.0] - 2026-08-06
+## [7.0.0] - 2026-08-10
+
+### Breaking
+- **Client compatibility:** string signals introduce a new signal value type (`0xA`) in the binary data frame. Clients must support this variable-length type to decode any frame containing a string signal. Depending on their implementation, clients without support may lose sync, drop data, or fail on such frames. Devices using only numeric signals remain compatible. This new client requirement is why 7.0.0 is a major release.
 
 ### Added
-- Message frame (`0x90`): `writeMessage(channelName, text)` and `writeMessage(channelName, text, messageID)` send a fire-and-forget, named free-text status/log line from the device to every connected host. The payload is `name` (NUL-terminated) followed by a 2-byte little-endian length and the UTF-8 text (up to 65535 bytes, truncated beyond), so arbitrary bytes are carried binary-safe with no percent-encoding. Like `0xE0`/`0xF0` the frame carries no CRC and is broadcast to all connected clients regardless of the data mask. A host (e.g. Loggbok) can surface each channel as its own Home Assistant text sensor; messages are never logged/stored and carry no signal semantics.
-
-### Added
+- String signals: `addSignal(name, char *value)` registers a text-valued signal (`Blaeck_string`, type code `0xA`). In the data frame the value is encoded as a 1-byte length (max 255 bytes) followed by the UTF-8 bytes, so a host can log it to a text column or mirror it as a Home Assistant text sensor. Matching `write(name/index, char *value[, messageID[, timestamp]])` overloads push an immediate single-signal update, just like the numeric `write(...)` variants. Use a `char*` to a user-owned buffer for the value; the I2C slave path (BlaeckSerial) does not carry string signals yet.
 - Typed command registration for Home Assistant MQTT Discovery:
   - `onNumberCommand(...)`, `onSwitchCommand(...)`, `onSelectCommand(...)` and `onButtonCommand(...)` register a command together with the metadata a dashboard needs: the command kind, plus where applicable a numeric range/step/unit, select options, and a mirrored state signal.
   - `onTextCommand(command, handler, stateSignal, maxLength)` registers a free-text command that surfaces as a Home Assistant `text` entity. The value is percent-encoded by the host so an arbitrary string (commas, `<`, `>`, `%`, control/non-ASCII bytes) survives the `<NAME,value>` command frame, and the device percent-decodes it before the handler runs. Values longer than `maxLength` are rejected. The optional maximum length is advertised in the `0xE0` frame.
@@ -15,11 +16,11 @@ All notable changes to this project will be documented in this file.
   - Typed values are validated before the handler runs: numbers outside `[min,max]`, non-`0/1` switch payloads and out-of-range select values are rejected and reported on the debug stream. Select payloads accept an option name (case-insensitive) or a numeric index and are normalized to the index before dispatch.
   - Added `writeCommands()` / `writeCommands(messageID)` and the `BLAECK_ENABLE_COMMAND_META` compile-time switch (default on) to disable the catalog on flash-constrained targets.
 - Command acknowledgement (`0xF0` frame): after dispatching an inbound command the device replies to the sending client with an FNV-1a hash of the received command plus an accept/reject status and reason code, so a host can confirm the command was applied. Like `0xE0`, the frame carries no CRC; hosts that don't recognize the key ignore it.
-- String signals: `addSignal(name, char *value)` registers a text-valued signal (`Blaeck_string`, type code `0xA`). In the data frame the value is encoded as a 1-byte length (max 255 bytes) followed by the UTF-8 bytes, so a host can log it to a text column or mirror it as a Home Assistant text sensor. Matching `write(name/index, char *value[, messageID[, timestamp]])` overloads push an immediate single-signal update, just like the numeric `write(...)` variants. Use a `char*` to a user-owned buffer for the value; the I2C slave path (BlaeckSerial) does not carry string signals yet.
+- Message frame (`0x90`): `writeMessage(channelName, text)` and `writeMessage(channelName, text, messageID)` send a fire-and-forget, named free-text status/log line from the device to every connected host. The payload is `name` (NUL-terminated) followed by a 2-byte little-endian length and the UTF-8 text (up to 65535 bytes, truncated beyond), so arbitrary bytes are carried binary-safe with no percent-encoding. Like `0xE0`/`0xF0` the frame carries no CRC and is broadcast to all connected clients regardless of the data mask. A host (e.g. Loggbok) can surface each channel as its own Home Assistant text sensor; messages are never logged/stored and carry no signal semantics.
 - Added the `WaveformGeneratorESP32PoE` and `WaveformGeneratorEthernet` examples: a dashboard-friendly waveform generator (frequency, amplitude, offset, waveform shape) controllable live over MQTT commands via Loggbok.
 
 ### Changed
-- Increased the default AVR command-handler limit on larger-SRAM AVR boards (for example Arduino Mega 2560) from 4 to 12 handlers, while keeping smaller AVR boards conservative at 6 handlers.
+- Increased the default AVR command-handler limit: larger-SRAM AVR boards (for example Arduino Mega 2560) now default to 12 handlers (up from 4), and smaller AVR boards (Uno/Nano/Leonardo) to 6 handlers (up from 4).
 
 ## [6.0.1] - 2026-04-27
 
