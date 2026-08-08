@@ -18,79 +18,19 @@
 // library and sketch translation units, giving the class two layouts (ODR).
 #include <Arduino.h>
 
-// Allow user overrides of the defaults below, e.g.:
+// Compile-time settings. Override the defaults below, e.g.:
 //   #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 128
 //
-// IMPORTANT: an override MUST reach every translation unit - this sketch AND
-// BlaeckTCP.cpp. The values below size members of class BlaeckTCP, so a
-// setting seen by only one of them gives the class two different layouts
-// (an ODR violation) and corrupts memory silently. All-or-nothing, never half.
+// IMPORTANT: an override MUST reach every translation unit - your sketch AND
+// BlaeckTCP.cpp. These values size members of class BlaeckTCP, so a setting
+// seen by only one of them gives the class two different layouts (an ODR
+// violation) and corrupts memory silently. All-or-nothing, never half.
 //
-//   PlatformIO
-//     build_flags = -DBLAECK_COMMAND_MAX_CHARS_DEFAULT=128
-//     Reaches every unit. Nothing else to do.
-//
-//   Arduino IDE / arduino-cli
-//     A BlaeckTCPConfig.h in your sketch folder is NOT found by default:
-//     the sketch folder is not on the compiler's include path, so the
-//     __has_include below fails and your settings are silently ignored.
-//     There is no IDE preference and no sketch.yaml key for compiler flags;
-//     only the core's own config files can add them.
-//
-//     This is an Arduino build-system limitation, not a library one: a
-//     sketch-local settings header has been requested since 2015
-//     (arduino/arduino-builder#15, closed) and libraries still cannot
-//     extend the include path (arduino/arduino-cli#501, open since 2019).
-//
-//     Three ways round it:
-//
-//     a) Put BlaeckTCPConfig.h in the sketch folder, next to your .ino:
-//
-//          MySketch\
-//            MySketch.ino
-//            BlaeckTCPConfig.h
-//
-//        Then build with arduino-cli rather than the IDE, handing it the
-//        sketch folder as an include path:
-//
-//          arduino-cli compile --fqbn <board> \
-//            --build-property "build.extra_flags=-I{build.source.path}" \
-//            MySketch
-//
-//        {build.source.path} expands to the sketch folder, so the config is
-//        found by every unit. Nothing in your Arduino installation is
-//        touched and the setting stays with the sketch, which also makes
-//        this the one option your CI can reproduce exactly.
-//
-//     b) Put BlaeckTCPConfig.h inside the library itself:
-//
-//          libraries\BlaeckTCP\src\BlaeckTCPConfig.h
-//
-//        Nothing else to do - that folder is already on the include path,
-//        so every unit sees it, in the IDE as well as the CLI. The catch is
-//        that it belongs to the library, not the sketch: it applies to every
-//        sketch you build, and a library update overwrites it.
-//
-//     c) Put BlaeckTCPConfig.h in the sketch folder, next to your .ino,
-//        exactly as in a):
-//
-//          MySketch\
-//            MySketch.ino
-//            BlaeckTCPConfig.h
-//
-//        Then make the IDE look there, by creating platform.local.txt next
-//        to the core's platform.txt with the single line:
-//
-//          build.extra_flags=-I{build.source.path}
-//
-//        On Windows, for the AVR core, that file goes at:
-//          C:\Users\<you>\AppData\Local\Arduino15\packages\arduino
-//               \hardware\avr\1.8.8\platform.local.txt
-//        macOS/Linux: ~/.arduino15/packages/... , same tail.
-//        Use boards.local.txt instead to scope it to a single board.
-//        This is per core - repeat it for esp32, samd, renesas_uno, ...
-//        Without this file the config file is silently ignored.
-//
+//   PlatformIO:   build_flags = -DBLAECK_COMMAND_MAX_CHARS_DEFAULT=128
+//   Arduino IDE:  a BlaeckTCPConfig.h in your sketch folder is NOT picked up
+//                 without extra setup, because the sketch folder is not on
+//                 the compiler's include path. See "Configuration" in
+//                 README.md for the three ways to do it.
 #if defined __has_include
   #if __has_include(<BlaeckTCPConfig.h>)
     #include <BlaeckTCPConfig.h>
