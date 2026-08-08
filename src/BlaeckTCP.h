@@ -103,6 +103,9 @@
 
 #include <TelnetPrint.h>
 #include <CRC.h>
+// strcmp/strncpy/strlen/... are used throughout; do not rely on Arduino.h
+// happening to pull this in.
+#include <string.h>
 
 typedef enum DataType
 {
