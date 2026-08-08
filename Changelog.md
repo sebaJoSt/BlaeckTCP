@@ -39,7 +39,7 @@ All notable changes to this project will be documented in this file.
 ## [6.0.0] - 2026-04-21
 
 ### Added
-- Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO) — *see 7.0.0: the Arduino IDE half of this claim was wrong; a sketch-folder config was never picked up there, only PlatformIO `build_flags` took effect.*
+- Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO) — *see 7.0.0: the Arduino IDE half of this claim was wrong — a config file in the sketch folder is not found there, so following this literally had no effect. PlatformIO `build_flags` always worked.*
 - `#ifndef` guards on all `#define` defaults (`BLAECK_BUFFER_SIZE`, `BLAECK_COMMAND_MAX_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT`, `BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_PARAMS_DEFAULT`, `BLAECK_TCP_NO_DELAY_DEFAULT`)
 - Version preprocessor macros: `BLAECKTCP_VERSION`, `BLAECKTCP_VERSION_MAJOR`, `BLAECKTCP_VERSION_MINOR`, `BLAECKTCP_VERSION_PATCH`, `BLAECKTCP_NAME`
 - **Breaking change:** `begin()` and `beginBridge()` now accept a `port` parameter and start the TCP server internally. Manual `TelnetPrint = NetServer(port); TelnetPrint.begin();` in sketches is no longer needed.
