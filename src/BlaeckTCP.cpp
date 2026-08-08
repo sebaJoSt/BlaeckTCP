@@ -3011,6 +3011,19 @@ unsigned long long BlaeckTCP::getTimeStamp()
   return timestamp;
 }
 
+// Compiled here, so it reports the settings BlaeckTCP.cpp itself saw.
+unsigned long BlaeckTCP::configFingerprint() const
+{
+  return BLAECK_CONFIG_FINGERPRINT;
+}
+
+// sketchFingerprint defaults to BLAECK_CONFIG_FINGERPRINT at the CALL SITE,
+// so a caller in another translation unit passes that unit's own value.
+bool BlaeckTCP::configMatchesLibrary(unsigned long sketchFingerprint) const
+{
+  return sketchFingerprint == BLAECK_CONFIG_FINGERPRINT;
+}
+
 void BlaeckTCP::validatePlatformSizes()
 {
 #ifdef __AVR__
