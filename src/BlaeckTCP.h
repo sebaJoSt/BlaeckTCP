@@ -103,6 +103,9 @@
 
 #include <TelnetPrint.h>
 #include <CRC.h>
+// std::nothrow, so an oversized signal array fails to a null pointer that
+// begin() can report rather than aborting.
+#include <new>
 // strcmp/strncpy/strlen/... are used throughout; do not rely on Arduino.h
 // happening to pull this in.
 #include <string.h>

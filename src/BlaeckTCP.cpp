@@ -108,12 +108,18 @@ void BlaeckTCP::begin(Stream *streamRef, unsigned int maximumSignalCount, uint16
     delete[] Signals;
     Signals = nullptr;
   }
-  Signals = new Signal[maximumSignalCount];
+  Signals = new (std::nothrow) Signal[maximumSignalCount];
   _signalIndex = 0;
   SignalCount = 0;
   _schemaHash = 0;
   _signalOverflowOccurred = false;
   _signalOverflowCount = 0;
+
+  // Requesting more signals than the board has RAM for leaves Signals null.
+  // Reported through the same flag addSignal uses, so hasSignalOverflow()
+  // catches it even before the first addSignal call.
+  if (Signals == nullptr)
+    _signalOverflowOccurred = true;
 
   StreamRef->print("BlaeckTCP Version: ");
   StreamRef->println(BLAECKTCP_VERSION);
@@ -150,12 +156,18 @@ void BlaeckTCP::begin(byte maxClients, Stream *streamRef, unsigned int maximumSi
     delete[] Signals;
     Signals = nullptr;
   }
-  Signals = new Signal[maximumSignalCount];
+  Signals = new (std::nothrow) Signal[maximumSignalCount];
   _signalIndex = 0;
   SignalCount = 0;
   _schemaHash = 0;
   _signalOverflowOccurred = false;
   _signalOverflowCount = 0;
+
+  // Requesting more signals than the board has RAM for leaves Signals null.
+  // Reported through the same flag addSignal uses, so hasSignalOverflow()
+  // catches it even before the first addSignal call.
+  if (Signals == nullptr)
+    _signalOverflowOccurred = true;
 
   StreamRef->print("BlaeckTCP Version: ");
   StreamRef->println(BLAECKTCP_VERSION);
@@ -345,7 +357,7 @@ void BlaeckTCP::bridgePoll()
 
 void BlaeckTCP::addSignal(String signalName, bool *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -361,7 +373,7 @@ void BlaeckTCP::addSignal(String signalName, bool *value)
 
 void BlaeckTCP::addSignal(String signalName, byte *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -377,7 +389,7 @@ void BlaeckTCP::addSignal(String signalName, byte *value)
 
 void BlaeckTCP::addSignal(String signalName, short *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -393,7 +405,7 @@ void BlaeckTCP::addSignal(String signalName, short *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -409,7 +421,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned short *value)
 
 void BlaeckTCP::addSignal(String signalName, int *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -429,7 +441,7 @@ void BlaeckTCP::addSignal(String signalName, int *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -449,7 +461,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned int *value)
 
 void BlaeckTCP::addSignal(String signalName, long *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -465,7 +477,7 @@ void BlaeckTCP::addSignal(String signalName, long *value)
 
 void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -481,7 +493,7 @@ void BlaeckTCP::addSignal(String signalName, unsigned long *value)
 
 void BlaeckTCP::addSignal(String signalName, float *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -497,7 +509,7 @@ void BlaeckTCP::addSignal(String signalName, float *value)
 
 void BlaeckTCP::addSignal(String signalName, double *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -519,7 +531,7 @@ void BlaeckTCP::addSignal(String signalName, double *value)
 
 void BlaeckTCP::addSignal(String signalName, char *value)
 {
-  if (static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
+  if (Signals == nullptr || static_cast<unsigned int>(_signalIndex) >= _signalCapacity)
   {
     _signalOverflowOccurred = true;
     _signalOverflowCount++;
@@ -579,7 +591,7 @@ uint16_t BlaeckTCP::_computeSchemaHash()
 
 void BlaeckTCP::setSignalName(int signalIndex, String signalName)
 {
-  if (signalIndex < 0 || signalIndex >= (int)_signalCapacity)
+  if (Signals == nullptr || signalIndex < 0 || signalIndex >= (int)_signalCapacity)
     return;
 
   Signals[signalIndex].SignalName = "";
