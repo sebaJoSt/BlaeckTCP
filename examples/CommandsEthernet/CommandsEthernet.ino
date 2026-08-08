@@ -2,9 +2,39 @@
   CommandsEthernet.ino
 
   This is a sample sketch to show how to use BlaeckTCP to
-  implement your own command. The example implements
-  the command <SwitchLED> which turns the on-board LED on
-  or off.
+  implement your own commands.
+
+  It registers two kinds of command, on purpose:
+
+    Plain    onCommand(...)         You parse the parameters yourself, and
+                                    nothing is declared about the value.
+
+    Typed    onSwitchCommand(...)   You declare what the command is. The
+             onButtonCommand(...)   library validates the value before your
+                                    handler runs, and describes the command
+                                    so a host (e.g. Loggbok / Home Assistant)
+                                    can create an entity for it by itself.
+
+  Every registered command is listed in <BLAECK.WRITE_COMMANDS>, plain ones
+  included, so a host can offer a complete command palette. What differs is
+  the metadata: a plain entry says only "this command exists", while a typed
+  entry carries its kind, its allowed values and its state signal - which is
+  what a dashboard needs to build a control for it.
+
+  <SwitchLED> and <LED> both switch the same on-board LED, one plain and one
+  typed, so you can compare the two entries side by side in that list.
+
+  How a command reports back differs accordingly:
+
+    <SwitchLED>   CommandingClient.println(...)  Reaches the Telnet client that
+                                                 sent the command, and only it.
+                                                 A Blaeck host skips anything
+                                                 that is not a frame.
+    <LED>         its state signal               The dashboard follows LED_State.
+    <Ping>        writeMessage(...)              A button has no state signal, so
+                                                 it pushes a line to a named
+                                                 message channel, broadcast to
+                                                 every connected client.
 
   The command syntax for implementing your own commands:
 
@@ -35,10 +65,30 @@
   Usage:
     - Upload the sketch to your Arduino.
     - Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
-    - Type the following command and press enter:
-        <SwitchLED,1>    Turn on the LED
-        <SwitchLED,0>    Turn off the LED
-        <SwitchLED,>     Empty param → uses default (OFF)
+    - Type the following commands and press enter:
+
+        Your own commands:
+        <SwitchLED,1>                 Turn on the LED   (plain)
+        <SwitchLED,0>                 Turn off the LED  (plain)
+        <SwitchLED,>                  Empty param → uses default (OFF)
+        <LED,1>                       Turn on the LED   (typed switch)
+        <LED,0>                       Turn off the LED  (typed switch)
+        <LED,7>                       Rejected: a switch only accepts 0 or 1
+        <Ping>                        Typed button, takes no value. The board
+                                      answers on the "Status" message channel
+                                      with how long it has been running, so the
+                                      reply reaches a host and not just a
+                                      Telnet client.
+        <Print,Bye Bye,1>             String parameters
+
+        Built-in Blaeck commands:
+        <BLAECK.GET_DEVICES>          Writes the device's information to the PC
+        <BLAECK.WRITE_SYMBOLS>        Writes the symbol list to the PC
+        <BLAECK.WRITE_COMMANDS>       Writes the command list to the PC
+                                      All four commands appear here. The typed
+                                      ones carry their kind and metadata, the
+                                      plain ones only their name.
+        <BLAECK.WRITE_DATA>           Writes the data to the PC
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -58,9 +108,15 @@ BlaeckTCP BlaeckTCP;
 // Sets the pin number:
 const int ledPin = LED_BUILTIN;
 
+// Mirrors the LED state. Registered as a signal so the typed <LED> command
+// can point at it, which lets a dashboard show the state it is controlling.
+bool ledState = false;
+
 void onSwitchLED(const char *command, const char *const *params, byte paramCount);
-void onSomeCommand(const char *command, const char *const *params, byte paramCount);
+void onLED(const char *command, const char *const *params, byte paramCount);
+void onPing(const char *command, const char *const *params, byte paramCount);
 void onPrint(const char *command, const char *const *params, byte paramCount);
+void setLed(bool on);
 
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
@@ -119,7 +175,7 @@ void setup()
   BlaeckTCP.begin(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, used for debugging
-      0,           // Maximal signal count used;
+      1,           // Maximal signal count used;
       SERVER_PORT  // TCP server port
   );
 
@@ -128,22 +184,35 @@ void setup()
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
-  // Register command handlers (new style)
+  // The state signal the typed switch below refers to
+  BlaeckTCP.addSignal("LED_State", &ledState);
+
+  // Plain: you parse the parameters yourself. Listed by name only, so a host
+  // knows the command exists but cannot build a control for it.
   BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
-  BlaeckTCP.onCommand("SomeCommand", onSomeCommand);
   BlaeckTCP.onCommand("Print", onPrint);
+
+  // Typed: validated by the library, and listed with the metadata a host needs
+  // to create an entity. A switch is 0/1 and mirrors a state signal; a button
+  // carries no value.
+  BlaeckTCP.onSwitchCommand("LED", onLED, F("LED_State"));
+  BlaeckTCP.onButtonCommand("Ping", onPing);
 }
 
 void loop()
 {
-  /* Keeps watching for TCP input and dispatches registered handlers
-     when input with the correct syntax is detected.
-     Instead of BlaeckTCP.read you can use BlaeckTCP.tick
-     if you want to add signals and write them in a user-set interval.
+  /* Keeps watching for TCP input and dispatches registered handlers when
+     input with the correct syntax is detected. tick() also writes the
+     signals in a user-set interval; use BlaeckTCP.read() instead if you
+     only want commands and no data.
   */
-  BlaeckTCP.read();
+  BlaeckTCP.tick();
 }
 
+/* Plain command. You get the raw parameters and decide what they mean,
+   including what an empty one should do. CommandingClient is the client that
+   sent this command, so the reply goes to it alone.
+*/
 void onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {
   if (paramCount < 1)
@@ -154,30 +223,58 @@ void onSwitchLED(const char *command, const char *const *params, byte paramCount
   if (params[0][0] == '\0')
   {
     BlaeckTCP.CommandingClient.println("No state given, using default (OFF).");
-    digitalWrite(ledPin, LOW);
+    setLed(false);
     return;
   }
   int state = atoi(params[0]);
   if (state == 1)
   {
-    digitalWrite(ledPin, HIGH);
+    setLed(true);
     BlaeckTCP.CommandingClient.println("LED is ON.");
     return;
   }
   if (state == 0)
   {
-    digitalWrite(ledPin, LOW);
+    setLed(false);
     BlaeckTCP.CommandingClient.println("LED is OFF.");
     return;
   }
 }
 
-void onSomeCommand(const char *command, const char *const *params, byte paramCount)
+/* Typed switch. The library has already checked that the value is 0 or 1
+   before this runs - <LED,7> is rejected and never reaches the handler - so
+   there is less to guard against here.
+*/
+void onLED(const char *command, const char *const *params, byte paramCount)
+{
+  (void)command;
+  if (paramCount < 1 || params[0][0] == '\0')
+  {
+    return;
+  }
+  setLed(atoi(params[0]) == 1);
+  BlaeckTCP.CommandingClient.println(ledState ? "LED is ON." : "LED is OFF.");
+}
+
+/* Typed button. Carries no value, so there is nothing to parse.
+
+   A button has no state signal, so writeMessage() is how it reports back: it
+   pushes a line to a named 0x90 message channel, broadcast to every connected
+   client, which a host can surface as a text sensor. CommandingClient.println()
+   would reach only the Telnet client that asked - a Blaeck host skips anything
+   that is not a frame.
+*/
+void onPing(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
   (void)params;
   (void)paramCount;
-  // Do something
+
+  // %lu is fine on AVR; only float formatting (%f) is left out of printf there.
+  char text[40];
+  unsigned long seconds = millis() / 1000UL;
+  snprintf(text, sizeof(text), "alive, running for %lu s", seconds);
+  BlaeckTCP.writeMessage("Status", text);
 }
 
 /* Exemplary command using string parameters:
@@ -207,4 +304,12 @@ void onPrint(const char *command, const char *const *params, byte paramCount)
     BlaeckTCP.CommandingClient.println("This'll be the day that I die");
     return;
   }
+}
+
+// Keeps the pin and the state signal in step, so whichever command was used
+// the dashboard sees the same value.
+void setLed(bool on)
+{
+  ledState = on;
+  digitalWrite(ledPin, on ? HIGH : LOW);
 }

@@ -175,7 +175,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Waveform Generator Demo ESP32POE";
+  BlaeckTCP.DeviceName = "Waveform Generator Demo ESP32PoE";
   BlaeckTCP.DeviceHWVersion = "ESP32-PoE-ISO Rev.L";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
