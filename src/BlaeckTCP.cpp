@@ -642,26 +642,7 @@ void BlaeckTCP::read()
       }
     }
 
-    if (_commandCallback != NULL)
-    {
-      if (!_commandCallbackDeprecationWarned && StreamRef != nullptr)
-      {
-        StreamRef->println("WARNING: setCommandCallback(...) is deprecated; use onCommand(...) / onAnyCommand(...)");
-        _commandCallbackDeprecationWarned = true;
-      }
-      _commandCallback(COMMAND, PARAMETER, STRING_01);
-    }
     _dispatchRegisteredHandlers();
-  }
-}
-
-void BlaeckTCP::setCommandCallback(void (*callback)(char *command, int *parameter, char *string_01))
-{
-  _commandCallback = callback;
-  if (_commandCallback != NULL && !_commandCallbackDeprecationWarned && StreamRef != nullptr)
-  {
-    StreamRef->println("WARNING: setCommandCallback(...) is deprecated; use onCommand(...) / onAnyCommand(...)");
-    _commandCallbackDeprecationWarned = true;
   }
 }
 

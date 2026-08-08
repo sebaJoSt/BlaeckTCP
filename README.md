@@ -93,7 +93,6 @@ BlaeckTCP.setIntervalMs(BLAECK_INTERVAL_CLIENT);
 
 Available callbacks:
 - `onCommand(...)` and `onAnyCommand(...)` for parsed incoming commands
-- `setCommandCallback(...)` (deprecated, still supported with runtime warning)
 - `setBeforeWriteCallback(...)` before data is written
 - `setClientConnectedCallback(...)` / `setClientDisconnectedCallback(...)` for client connection events
 - `isClientDataEnabled(clientNo)` to query whether a client is allowed to receive data frames
