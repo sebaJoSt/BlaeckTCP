@@ -34,10 +34,12 @@ jobs:
               - name: CRC
               - name: TelnetStream
               - name: Ethernet
+              - name: EthernetBonjour
             sketch-paths: |
               - examples/BasicEthernet
               - examples/SineGeneratorEthernet
               - examples/SineGeneratorAndCommandsEthernet
+              - examples/SineGeneratorEthernetBonjour
               - examples/CommandsEthernet
               - examples/BridgeEthernet
               - examples/WriteModesEthernet
@@ -64,6 +66,48 @@ jobs:
               - examples/SineGeneratorWiFiS3
               - examples/TimeStampModesWiFiS3
             artifact-name-suffix: arduino-renesas_uno-unor4wifi
+          # --- Espressif ESP32 core: the ETH-based examples.
+          #     These need esp32:esp32 from the Espressif package index -
+          #     arduino:esp32 does not carry the Olimex, WT32 or C6 board
+          #     definitions. Each example is built for the board it is written
+          #     for, so the FQBN documents its target. ---
+          - fqbn: esp32:esp32:esp32-poe
+            platforms: |
+              - name: esp32:esp32
+                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+            libraries: |
+              - source-path: ./
+              - name: CRC
+              - name: TelnetStream
+            sketch-paths: |
+              - examples/BasicESP32PoE
+              - examples/BridgeESP32PoE
+              - examples/SineGeneratorESP32PoE
+              - examples/WaveformGeneratorESP32PoE
+            artifact-name-suffix: esp32-esp32-poe
+          - fqbn: esp32:esp32:wt32-eth01
+            platforms: |
+              - name: esp32:esp32
+                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+            libraries: |
+              - source-path: ./
+              - name: CRC
+              - name: TelnetStream
+            sketch-paths: |
+              - examples/BasicWT32-ETH01
+              - examples/BridgeWT32-ETH01
+            artifact-name-suffix: esp32-wt32-eth01
+          - fqbn: esp32:esp32:esp32c6
+            platforms: |
+              - name: esp32:esp32
+                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+            libraries: |
+              - source-path: ./
+              - name: CRC
+              - name: TelnetStream
+            sketch-paths: |
+              - examples/BasicESP32C6Bug
+            artifact-name-suffix: esp32-esp32c6
 
     steps:
       - name: Checkout repository
