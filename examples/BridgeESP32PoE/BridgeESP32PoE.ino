@@ -78,6 +78,16 @@
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
 
+// The bridge link runs on its own UART, not on Serial. Serial is the USB
+// programming port and carries this sketch's debug output; sharing it would
+// feed that debug text to the BlaeckSerial device and forward anything typed
+// in a serial monitor to the TCP clients as if the device had sent it.
+// CHECK THESE AGAINST YOUR BOARD - they must be pins the Ethernet PHY does not
+// already use. The defaults are the UEXT connector on the ESP32-PoE-ISO.
+#define BRIDGE_RX_PIN 36
+#define BRIDGE_TX_PIN 4
+#define BRIDGE_BAUD 115200
+
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
@@ -130,6 +140,10 @@ void setup()
   Serial.begin(115200);
   delay(500);
 
+  // The UART the BlaeckSerial device is wired to. Its baudrate must match the
+  // device's Serial.begin(...).
+  Serial1.begin(BRIDGE_BAUD, SERIAL_8N1, BRIDGE_RX_PIN, BRIDGE_TX_PIN);
+
   // Register ETH event handler
   Network.onEvent(onEvent);
 
@@ -143,7 +157,7 @@ void setup()
   BlaeckTCP.beginBridge(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, only used for debugging
-      &Serial,     // Bridge Serial reference; connects to the BlaeckSerial device
+      &Serial1,    // Bridge Serial reference; connects to the BlaeckSerial device
       SERVER_PORT  // TCP server port
   );
 }

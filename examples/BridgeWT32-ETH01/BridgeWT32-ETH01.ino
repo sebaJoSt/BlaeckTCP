@@ -57,6 +57,17 @@
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
 
+// The bridge link runs on its own UART, not on Serial. Serial is the
+// programming port and carries this sketch's debug output; sharing it would
+// feed that debug text to the BlaeckSerial device and forward anything typed
+// in a serial monitor to the TCP clients as if the device had sent it.
+// CHECK THESE AGAINST YOUR BOARD - the WT32-ETH01 uses most of its pins for
+// the Ethernet PHY, so only a few are free. GPIO39 is input-only, which suits
+// RX; GPIO33 can drive TX.
+#define BRIDGE_RX_PIN 39
+#define BRIDGE_TX_PIN 33
+#define BRIDGE_BAUD 115200
+
 // ETH pins for WT32-ETH01
 #define ETH_PHY_TYPE ETH_PHY_LAN8720
 #define ETH_PHY_MDC 23
@@ -115,6 +126,10 @@ void setup()
   Serial.begin(115200);
   delay(500);
 
+  // The UART the BlaeckSerial device is wired to. Its baudrate must match the
+  // device's Serial.begin(...).
+  Serial1.begin(BRIDGE_BAUD, SERIAL_8N1, BRIDGE_RX_PIN, BRIDGE_TX_PIN);
+
   // Power up ETH PHY
   pinMode(16, OUTPUT);
   digitalWrite(16, HIGH);
@@ -133,7 +148,7 @@ void setup()
   BlaeckTCP.beginBridge(
       MAX_CLIENTS, // Maximal number of allowed clients
       &Serial,     // Serial reference, only used for debugging
-      &Serial,     // Bridge Serial reference; connects to the BlaeckSerial device
+      &Serial1,    // Bridge Serial reference; connects to the BlaeckSerial device
       SERVER_PORT  // TCP server port
   );
 }

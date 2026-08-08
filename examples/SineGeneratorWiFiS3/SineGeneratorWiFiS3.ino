@@ -31,7 +31,9 @@ int status = WL_IDLE_STATUS;
 BlaeckTCP BlaeckTCP;
 
 // Signals
-float sine;
+// One value per signal, so each Sine_n carries its own curve.
+// Index 0 is unused; signals are numbered from 1.
+float sine[MAX_SIGNALS + 1];
 
 void setup()
 {
@@ -89,7 +91,7 @@ void setup()
   for (int i = 1; i <= MAX_SIGNALS; i++)
   {
     String signalName = "Sine_";
-    BlaeckTCP.addSignal(signalName + i, &sine);
+    BlaeckTCP.addSignal(signalName + i, &sine[i]);
   }
 }
 
@@ -105,5 +107,8 @@ void loop()
 
 void UpdateSineNumbers()
 {
-  sine = sin(millis() * 0.00005);
+  for (int i = 1; i <= MAX_SIGNALS; i++)
+  {
+    sine[i] = i * sin(millis() * 0.000005 * i);
+  }
 }
