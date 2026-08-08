@@ -36,7 +36,7 @@
     Make sure the baudrates match on BLAECKTCP BRIDGE and BLAECKSERIAL DEVICE!
     Upload the sketches to your boards.
 
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.1.177 (Port 23)
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC
@@ -85,12 +85,8 @@ void setup()
   // initialize the Ethernet device
   Ethernet.begin(mac, ip, myDns, gateway, subnet);
 
-  // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial)
-  {
-    // wait for serial port to connect. Needed for native USB port only
-  }
+  // Open serial communications (used for debug output only)
+  Serial.begin(115200);
 
   // In this example Serial1 of the Mega is used to bridge the Signals (Pin 18: TX1, Pin 19: RX1)
   Serial1.begin(115200);

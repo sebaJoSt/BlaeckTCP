@@ -155,7 +155,7 @@ void onEvent(arduino_event_id_t event)
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(500);
 
   // Register ETH event handler

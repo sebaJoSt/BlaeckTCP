@@ -31,12 +31,8 @@ float sine;
 
 void setup()
 {
-  // Open serial communications and wait for port to open:
-  Serial.begin(9600);
-  while (!Serial)
-  {
-    // wait for serial port to connect. Needed for native USB port only
-  }
+  // Open serial communications (used for debug output only)
+  Serial.begin(115200);
 
   wifiMulti.addAP(ssid, password);
 

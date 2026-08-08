@@ -106,7 +106,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicESP32C6Bug
+              - examples/BasicESP32C6BugBoard
             artifact-name-suffix: esp32-esp32c6
 
     steps:

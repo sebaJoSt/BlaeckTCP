@@ -33,7 +33,7 @@
     Make sure the baudrates match on BLAECKTCP BRIDGE and BLAECKSERIAL DEVICE!
     Upload the sketches to your boards.
 
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.1.177 (Port 23)
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC

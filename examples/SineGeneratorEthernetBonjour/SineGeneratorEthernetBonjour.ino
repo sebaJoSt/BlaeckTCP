@@ -44,10 +44,8 @@ void setup()
   // Always call this before any other method!
   EthernetBonjour.begin("SineNumberGenerator");
 
-  Serial.begin(9600);
-  while (!Serial)
-  {
-  }
+  // Serial is used for debug output only
+  Serial.begin(115200);
 
   if (Ethernet.hardwareStatus() == EthernetNoHardware)
   {

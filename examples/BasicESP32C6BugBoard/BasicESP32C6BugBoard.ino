@@ -1,5 +1,5 @@
 /*
-  BasicESP32C6Bug.ino
+  BasicESP32C6BugBoard.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
   from the ESP32-C6-Bug (V2.1.0) + ESP32-BUG-ETH (V1.0.0) to your PC (Client) every minute
@@ -9,7 +9,7 @@
     Upload the sketch to your board.
 
   Usage:
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Adress 192.168.1.177 (Port 23)
+    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.1.177 (Port 23)
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC
@@ -99,7 +99,7 @@ void onEvent(arduino_event_id_t event)
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   delay(500);
 
   // Register ETH event handler
