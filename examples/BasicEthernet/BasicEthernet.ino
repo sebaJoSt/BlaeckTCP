@@ -100,7 +100,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Random Number Generator";
+  BlaeckTCP.DeviceName = "Random Number Generator Ethernet";
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 

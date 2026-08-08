@@ -92,7 +92,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Basic Sine Number Generator";
+  BlaeckTCP.DeviceName = "Timestamp Modes Demo";
   BlaeckTCP.DeviceHWVersion = "Arduino UNO R4 WiFi";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 

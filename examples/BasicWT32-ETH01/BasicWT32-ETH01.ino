@@ -117,7 +117,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Random Number Generator";
+  BlaeckTCP.DeviceName = "Random Number Generator WT32-ETH01";
   BlaeckTCP.DeviceHWVersion = "WT32-ETH01 V1.4";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 

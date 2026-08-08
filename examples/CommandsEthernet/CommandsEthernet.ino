@@ -48,6 +48,7 @@
 #include <Ethernet.h>
 #include "BlaeckTCP.h"
 
+#define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
 
@@ -121,6 +122,11 @@ void setup()
       0,           // Maximal signal count used;
       SERVER_PORT  // TCP server port
   );
+
+  // Reported by <BLAECK.GET_DEVICES>, and used by a host to name the device
+  BlaeckTCP.DeviceName = "Command Demo Ethernet";
+  BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+  BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Register command handlers (new style)
   BlaeckTCP.onCommand("SwitchLED", onSwitchLED);

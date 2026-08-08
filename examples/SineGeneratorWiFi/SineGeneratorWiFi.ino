@@ -77,7 +77,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Basic Sine Number Generator";
+  BlaeckTCP.DeviceName = "Sine Generator WiFi";
   BlaeckTCP.DeviceHWVersion = "ESP32";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
