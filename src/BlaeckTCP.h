@@ -12,6 +12,12 @@
 #define BLAECKTCP_VERSION_PATCH 0
 #define BLAECKTCP_NAME "BlaeckTCP"
 
+// Must come before the compile-time defaults below: the AVR handler-limit
+// gate tests RAMEND, which only exists once <avr/io.h> has been pulled in via
+// Arduino.h. Including it later let the gate resolve differently in the
+// library and sketch translation units, giving the class two layouts (ODR).
+#include <Arduino.h>
+
 // Allow user overrides via a config file in the sketch folder.
 // Create BlaeckTCPConfig.h in your sketch to override defaults, e.g.:
 //   #define BLAECK_BUFFER_SIZE 512
@@ -86,7 +92,6 @@
   #define BLAECK_TCP_NO_DELAY_DEFAULT true
 #endif
 
-#include <Arduino.h>
 #include <TelnetPrint.h>
 #include <CRC.h>
 
