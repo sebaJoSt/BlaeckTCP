@@ -55,7 +55,7 @@
 //        touched and the setting stays with the sketch, which also makes
 //        this the one option your CI can reproduce exactly.
 //
-//     b) Put BlaeckTCPConfig.h next to this header:
+//     b) Put BlaeckTCPConfig.h inside the library itself:
 //
 //          libraries\BlaeckTCP\src\BlaeckTCPConfig.h
 //
