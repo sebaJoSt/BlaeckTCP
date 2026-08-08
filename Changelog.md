@@ -22,6 +22,10 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Increased the default AVR command-handler limit: larger-SRAM AVR boards (for example Arduino Mega 2560) now default to 12 handlers (up from 4), and smaller AVR boards (Uno/Nano/Leonardo) to 6 handlers (up from 4).
 
+### Fixed
+- **Compile-time configuration now has a documented, working route.** A `BlaeckTCPConfig.h` in the sketch folder — the method described since 6.0.0 — is never found under the Arduino IDE or arduino-cli: the sketch folder is not on the compiler's include path, so the `__has_include` in `BlaeckTCP.h` finds nothing and the settings are silently ignored. Anyone who set overrides that way on 6.x was running the built-in defaults, and registrations beyond the real handler limit failed quietly. PlatformIO `build_flags` were unaffected and always worked. README.md now documents three routes that do work (arduino-cli `--build-property`, a config inside the library's `src/`, or `platform.local.txt`), and warns that an override must reach every translation unit — a setting seen by the sketch but not by `BlaeckTCP.cpp` gives `class BlaeckTCP` two layouts (an ODR violation). This is an Arduino build-system limitation, not a library one: see arduino/arduino-builder#15 (closed) and arduino/arduino-cli#501 (open).
+- `writeMessage()`'s length cap no longer trips `-Wtype-limits` on AVR, where `size_t` is 16-bit and the comparison could never be true. No behaviour change; `strlen` could not exceed the cap there in any case.
+
 ## [6.0.1] - 2026-04-27
 
 ### Fixed
@@ -34,7 +38,7 @@ All notable changes to this project will be documented in this file.
 ## [6.0.0] - 2026-04-21
 
 ### Added
-- Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO)
+- Compile-time configuration via `BlaeckTCPConfig.h` (uses `__has_include` pattern; works in Arduino IDE and PlatformIO) — *see 7.0.0: the Arduino IDE half of this claim was wrong; a sketch-folder config was never picked up there, only PlatformIO `build_flags` took effect.*
 - `#ifndef` guards on all `#define` defaults (`BLAECK_BUFFER_SIZE`, `BLAECK_COMMAND_MAX_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_HANDLERS_DEFAULT`, `BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT`, `BLAECK_COMMAND_MAX_PARAMS_DEFAULT`, `BLAECK_TCP_NO_DELAY_DEFAULT`)
 - Version preprocessor macros: `BLAECKTCP_VERSION`, `BLAECKTCP_VERSION_MAJOR`, `BLAECKTCP_VERSION_MINOR`, `BLAECKTCP_VERSION_PATCH`, `BLAECKTCP_NAME`
 - **Breaking change:** `begin()` and `beginBridge()` now accept a `port` parameter and start the TCP server internally. Manual `TelnetPrint = NetServer(port); TelnetPrint.begin();` in sketches is no longer needed.
