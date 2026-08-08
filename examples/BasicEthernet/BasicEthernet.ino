@@ -108,6 +108,14 @@ void setup()
   BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
   BlaeckTCP.addSignal("Big Number", &randomBigNumber);
 
+  /* On AVR - a Mega with an Ethernet shield, say - wrapping the name in F()
+     roughly halves the RAM it costs:
+       BlaeckTCP.addSignal(F("Small Number"), &randomSmallNumber);
+     A plain literal is copied into RAM at startup AND again into the String
+     the signal keeps; F() keeps the literal in flash, so only the String copy
+     remains. The ESP32 and other 32-bit targets handle RAM differently and
+     gain little. */
+
   /*Uncomment for fixed interval lock (ms)
     - ignores ACTIVATE/DEACTIVATE while locked */
   // BlaeckTCP.setIntervalMs(60000);

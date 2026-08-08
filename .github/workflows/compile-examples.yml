@@ -42,7 +42,6 @@ jobs:
               - examples/BridgeEthernet
               - examples/WriteModesEthernet
               - examples/WaveformGeneratorEthernet
-              - examples/SignalNamesInFlashLessRAMUsage
             artifact-name-suffix: arduino-avr-mega
           - fqbn: arduino:esp32:nano_nora
             platforms: |
