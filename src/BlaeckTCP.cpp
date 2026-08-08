@@ -1681,9 +1681,11 @@ void BlaeckTCP::writeMessage(const char *channelName, const char *text, unsigned
   if (text == nullptr)
     text = "";
 
-  size_t len = strlen(text);
-  if (len > 65535)
-    len = 65535; // 2-byte length prefix caps a single message at 65535 bytes
+  // 2-byte length prefix caps a single message at 65535 bytes. Widen before
+  // comparing: size_t is 16 bit on AVR, where `len > 65535` can never be true
+  // and warns under -Wtype-limits.
+  uint32_t rawLen = (uint32_t)strlen(text);
+  uint16_t len = (rawLen > 0xFFFFu) ? (uint16_t)0xFFFFu : (uint16_t)rawLen;
 
   Clients[i].connection.write("<BLAECK:");
   byte msg_key = 0x90;
