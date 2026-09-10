@@ -81,6 +81,15 @@ void setup()
   }
 
   Serial.println();
+
+  // Ethernet.begin() returns before the link has finished coming up, so asking
+  // straight away reports a connected cable as unplugged. Wait for it, briefly.
+  unsigned long settle = millis() + 2000;
+  while (Ethernet.linkStatus() == LinkOFF && millis() < settle)
+  {
+    delay(50);
+  }
+
   if (Ethernet.linkStatus() == LinkOFF)
   {
     Serial.println("Ethernet cable is not connected.");
