@@ -8,7 +8,7 @@
   It generates one fully controllable waveform. Frequency, amplitude, offset and waveform
   shape are all set over MQTT commands. The commands are registered with typed helpers
   (onNumberCommand / onSelectCommand / onSwitchCommand / onButtonCommand) so the device is
-  self-describing: it advertises range, unit, options and the mirrored signal in a 0xE0
+  self-describing: it advertises range, unit, options and the mirrored signal in a 0xA0
   "Command List" frame, which Loggbok turns into Home Assistant MQTT Discovery entities.
   Out-of-range values are rejected by the library (and reported on the debug stream); each
   accepted value is written back to its signal, so a dashboard always shows the value the

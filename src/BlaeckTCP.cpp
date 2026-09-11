@@ -630,14 +630,34 @@ void BlaeckTCP::read()
 
       this->writeDevices(msg_id);
     }
-#if BLAECK_ENABLE_COMMAND_META
+    // Answered with the catalog compiled out too - as an empty list, so a host asking
+    // for it gets an answer rather than waiting for one that never comes.
     else if (strcmp(COMMAND, "BLAECK.WRITE_COMMANDS") == 0)
     {
       unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
 
       this->writeCommands(msg_id);
     }
-#endif
+    // Catalogs this library does not have, answered as BlaeckSerial answers them when it
+    // is built without them: with an empty frame, so a host asking gets its answer.
+    else if (strcmp(COMMAND, "BLAECK.WRITE_STATE_CHANNELS") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->_writeEmptyFrame(0x90, msg_id);
+    }
+    else if (strcmp(COMMAND, "BLAECK.WRITE_EVENT_CHANNELS") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->_writeEmptyFrame(0x80, msg_id);
+    }
+    else if (strcmp(COMMAND, "BLAECK.WRITE_SIGNAL_CONFIG") == 0)
+    {
+      unsigned long msg_id = ((unsigned long)PARAMETER[3] << 24) | ((unsigned long)PARAMETER[2] << 16) | ((unsigned long)PARAMETER[1] << 8) | ((unsigned long)PARAMETER[0]);
+
+      this->_writeEmptyFrame(0xF0, msg_id);
+    }
     else if (strcmp(COMMAND, "BLAECK.ACTIVATE") == 0)
     {
       if (_fixedInterval_ms == BLAECK_INTERVAL_CLIENT)
@@ -1074,21 +1094,30 @@ void BlaeckTCP::_writeCommandAck(const char *rawCommand, byte status, byte reaso
   if (!CommandingClient || !CommandingClient.connected())
     return;
 
+  // 0xA5, laid out as BlaeckSerial lays it out. The header carries the message id the
+  // sender put in front of the command, and 0 when there was none - which is always, here:
+  // this library does not read one yet.
   CommandingClient.write("<BLAECK:");
-  byte msg_key = 0xF0;
+  byte msg_key = 0xA5;
   CommandingClient.write(msg_key);
   CommandingClient.write(":");
-  ulngCvt.val = _commandAckMsgId++;
+  ulngCvt.val = 0;
   CommandingClient.write(ulngCvt.bval, 4);
   CommandingClient.write(":");
 
-  // Payload: command hash (4 bytes, little-endian) + status (1) + reason (1).
+  // The name hash covers the command name alone, which still identifies the command when
+  // the rest of it did not arrive as it was sent.
+  uint32_t nameHash = (_parsedCommand[0] == '\0') ? 0UL : _fnv1a32(_parsedCommand);
+
+  // Payload: command hash (4 bytes, little-endian) + name hash (4) + status (1) + reason (1).
   ulngCvt.val = _fnv1a32(rawCommand);
+  CommandingClient.write(ulngCvt.bval, 4);
+  ulngCvt.val = nameHash;
   CommandingClient.write(ulngCvt.bval, 4);
   CommandingClient.write(status);
   CommandingClient.write(reasonCode);
 
-  // No CRC32 tail: acks mirror the descriptive 0xE0 frame format.
+  // No CRC32 tail: acks mirror the descriptive 0xA0 frame format.
   CommandingClient.write("/BLAECK>");
   CommandingClient.write("\r\n");
 }
@@ -1544,7 +1573,26 @@ void BlaeckTCP::writeSymbols(unsigned long msg_id, byte i)
   Clients[i].connection.write("\r\n");
 }
 
-#if BLAECK_ENABLE_COMMAND_META
+// Header and footer with no payload, to every connected client. An empty body is a
+// catalog that declares nothing, which a host reads without any special case.
+void BlaeckTCP::_writeEmptyFrame(byte msgKey, unsigned long msg_id)
+{
+  for (byte client = 0; client < _maxClients; client++)
+  {
+    if (!Clients[client].connection.connected())
+      continue;
+
+    Clients[client].connection.write("<BLAECK:");
+    Clients[client].connection.write(msgKey);
+    Clients[client].connection.write(":");
+    ulngCvt.val = msg_id;
+    Clients[client].connection.write(ulngCvt.bval, 4);
+    Clients[client].connection.write(":");
+    Clients[client].connection.write("/BLAECK>");
+    Clients[client].connection.write("\r\n");
+  }
+}
+
 void BlaeckTCP::writeCommands()
 {
   this->writeCommands(1);
@@ -1563,26 +1611,37 @@ void BlaeckTCP::writeCommands(unsigned long msg_id)
 
 void BlaeckTCP::writeCommands(unsigned long msg_id, byte i)
 {
-  // 0xE0 "Command List" frame. Per discovered command entry:
-  //   msConfig(1) slaveID(1) name\0 kind(1) flags(1)
-  //   [min(4) max(4) step(4)]  if flags.hasRange   (LE float)
+  // 0xA0 "Command List" frame, laid out as BlaeckSerial lays it out. Per command entry:
+  //   msConfig(1) slaveID(1) payloadMax(2, LE uint16) name\0 kind(1) flags(4, LE uint32)
+  //   [min(4) max(4)]          if flags.hasRange   (LE float)
   //   [unit\0]                 if flags.hasUnit
-  //   [optionsCsv\0]           if flags.hasOptions
-  //   [stateSignal\0]          if flags.hasStateSignal
-  //   [maxLen(2)]              if flags.hasTextMax    (LE uint16)
-  // flags bits: 0=hasRange 1=hasUnit 2=hasOptions 3=hasStateSignal 4=hasTextMax
+  //   [selectOptions\0]        if flags.hasOptions
+  //   [stateSignal\0 src(1)]   if flags.hasStateSignal
+  //   [maxLen(2)]              if flags.isText     (LE uint16)
+  //   [step(4)]                if flags.hasStep    (LE float)
+  // flags bits: 0=hasRange 1=hasUnit 2=hasOptions 3=hasStateSignal 4=isText 7=hasStep.
+  // The other bits BlaeckSerial defines describe fields this library does not keep, and
+  // stay clear. src is always 0 here: a state signal is an addSignal() signal, there being
+  // no state channels in this library.
   // All in-use entries are emitted, including plain onCommand() entries
   // (kind=BLAECK_CMD_PLAIN, flags=0, no trailing metadata). Plain entries carry
   // no Home Assistant entity, but are listed so a host can build a full command
   // palette / autocomplete of every command the device accepts.
   // TCP is always a single server device: msConfig and slaveID are hardcoded 0.
   Clients[i].connection.write("<BLAECK:");
-  byte msg_key = 0xE0;
+  byte msg_key = 0xA0;
   Clients[i].connection.write(msg_key);
   Clients[i].connection.write(":");
   ulngCvt.val = msg_id;
   Clients[i].connection.write(ulngCvt.bval, 4);
   Clients[i].connection.write(":");
+
+  // With BLAECK_ENABLE_COMMAND_META=0 nothing is stored to list, and the frame goes out
+  // empty - which is how a device says it declares no commands.
+#if BLAECK_ENABLE_COMMAND_META
+  // How long a command this device can receive, terminator excluded. The same on every
+  // entry, one buffer serving them all.
+  uint16_t payloadMax = (uint16_t)(MAXIMUM_CHAR_COUNT - 1);
 
   for (byte j = 0; j < MAX_COMMAND_HANDLERS; j++)
   {
@@ -1590,61 +1649,73 @@ void BlaeckTCP::writeCommands(unsigned long msg_id, byte i)
     if (!e.inUse)
       continue;
 
-    byte flags = 0;
+    uint32_t flags = 0;
     if (e.kind == BLAECK_CMD_NUMBER)
-      flags |= 0x01;
+      flags |= 0x0001;
     if (e.unit != nullptr)
-      flags |= 0x02;
+      flags |= 0x0002;
     if (e.kind == BLAECK_CMD_SELECT && e.options != nullptr)
-      flags |= 0x04;
+      flags |= 0x0004;
     if (e.stateSignal != nullptr)
-      flags |= 0x08;
+      flags |= 0x0008;
     if (e.kind == BLAECK_CMD_TEXT)
-      flags |= 0x10;
+      flags |= 0x0010;
+    // A step of 0 is no step: the bit is what says there is one to read.
+    if (e.kind == BLAECK_CMD_NUMBER && e.meta_step > 0.0f)
+      flags |= 0x0080;
 
     Clients[i].connection.write((byte)0); // msConfig
     Clients[i].connection.write((byte)0); // slaveID
+    Clients[i].connection.write((byte)(payloadMax & 0xFF));
+    Clients[i].connection.write((byte)((payloadMax >> 8) & 0xFF));
     Clients[i].connection.print(e.command);
     Clients[i].connection.write((byte)0);
     Clients[i].connection.write(e.kind);
-    Clients[i].connection.write(flags);
+    Clients[i].connection.write((byte)(flags & 0xFF));
+    Clients[i].connection.write((byte)((flags >> 8) & 0xFF));
+    Clients[i].connection.write((byte)((flags >> 16) & 0xFF));
+    Clients[i].connection.write((byte)((flags >> 24) & 0xFF));
 
-    if (flags & 0x01)
+    if (flags & 0x0001)
     {
       fltCvt.val = e.meta_min;
       Clients[i].connection.write(fltCvt.bval, 4);
       fltCvt.val = e.meta_max;
       Clients[i].connection.write(fltCvt.bval, 4);
-      fltCvt.val = e.meta_step;
-      Clients[i].connection.write(fltCvt.bval, 4);
     }
-    if (flags & 0x02)
+    if (flags & 0x0002)
     {
       Clients[i].connection.print(e.unit);
       Clients[i].connection.write((byte)0);
     }
-    if (flags & 0x04)
+    if (flags & 0x0004)
     {
       Clients[i].connection.print(e.options);
       Clients[i].connection.write((byte)0);
     }
-    if (flags & 0x08)
+    if (flags & 0x0008)
     {
       Clients[i].connection.print(e.stateSignal);
       Clients[i].connection.write((byte)0);
+      Clients[i].connection.write((byte)0); // src: an addSignal() signal
     }
-    if (flags & 0x10)
+    if (flags & 0x0010)
     {
       uint16_t maxLen = (uint16_t)e.meta_max;
       Clients[i].connection.write((byte)(maxLen & 0xFF));
       Clients[i].connection.write((byte)((maxLen >> 8) & 0xFF));
     }
+    if (flags & 0x0080)
+    {
+      fltCvt.val = e.meta_step;
+      Clients[i].connection.write(fltCvt.bval, 4);
+    }
   }
+#endif
 
   Clients[i].connection.write("/BLAECK>");
   Clients[i].connection.write("\r\n");
 }
-#endif
 
 void BlaeckTCP::writeMessage(const char *channelName, const char *text)
 {
@@ -1666,7 +1737,7 @@ void BlaeckTCP::writeMessage(const char *channelName, const char *text, unsigned
 {
   // 0x90 "Message" frame: a named free-text status/log channel, device -> host.
   //   name\0  length(2, LE uint16)  text[length]
-  // No CRC (like the 0xE0/0xF0 frames). The host may surface it (e.g. an
+  // No CRC (like the 0xA0/0xF0 frames). The host may surface it (e.g. an
   // auto-created Home Assistant text sensor per channel); it is never treated as
   // signal/telemetry data and is not stored in the database.
   if (channelName == nullptr)

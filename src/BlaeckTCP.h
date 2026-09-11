@@ -86,9 +86,9 @@
 // Command metadata (Home Assistant discovery catalog).
 // When ON, the typed command registration helpers (onNumberCommand/
 // onSwitchCommand/onSelectCommand/onButtonCommand) store parameter metadata and
-// the device can emit a 0xE0 "Command List" frame in response to
+// the device can emit a 0xA0 "Command List" frame in response to
 // BLAECK.WRITE_COMMANDS. Turn OFF to save flash on tiny targets; the typed
-// helpers then behave exactly like plain onCommand() (no metadata, no 0xE0).
+// helpers then behave exactly like plain onCommand() (no metadata, no 0xA0).
 // Override via BlaeckTCPConfig.h or build flag.
 #ifndef BLAECK_ENABLE_COMMAND_META
   #define BLAECK_ENABLE_COMMAND_META 1
@@ -156,10 +156,10 @@ struct BlaeckClient {
 typedef void (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
 typedef void (*BlaeckAnyCommandHandler)(const char *command, const char *const *params, byte paramCount);
 
-// Command kind for Home Assistant discovery (0xE0 Command List frame).
+// Command kind for Home Assistant discovery (0xA0 Command List frame).
 enum BlaeckCommandKind
 {
-  BLAECK_CMD_PLAIN = 0,  // registered via onCommand(): no HA entity, but listed in 0xE0 for command palettes
+  BLAECK_CMD_PLAIN = 0,  // registered via onCommand(): no HA entity, but listed in 0xA0 for command palettes
   BLAECK_CMD_NUMBER = 1, // HA number   (value in [min,max])
   BLAECK_CMD_SWITCH = 2, // HA switch   (0/1)
   BLAECK_CMD_SELECT = 3, // HA select   (index into optionsCsv)
@@ -238,17 +238,16 @@ public:
   void writeSymbols();
   void writeSymbols(unsigned long messageID);
 
-#if BLAECK_ENABLE_COMMAND_META
-  // ----- Commands (Home Assistant discovery catalog, 0xE0) -----
+  // ----- Commands (Home Assistant discovery catalog, 0xA0) -----
+  // Always present: with BLAECK_ENABLE_COMMAND_META=0 the list is sent empty.
   void writeCommands();
   void writeCommands(unsigned long messageID);
-#endif
 
   // ----- Messages (Home Assistant text/log channel, 0x90) -----
   // Send a free-text status/log message on a named channel to every connected
   // client. Fire-and-forget: a host may surface it (e.g. a Home Assistant text
   // sensor auto-created per channel name) but it is never stored as signal data.
-  // The frame carries no CRC (like the 0xE0/0xF0 frames). Text longer than
+  // The frame carries no CRC (like the 0xA0/0xF0 frames). Text longer than
   // 65535 bytes is truncated.
   void writeMessage(const char *channelName, const char *text);
   void writeMessage(const char *channelName, const char *text, unsigned long messageID);
@@ -403,7 +402,7 @@ public:
 
   // ----- Typed command registration (Home Assistant discovery metadata) -----
   // Same runtime behavior as onCommand(), but attach metadata so the device can
-  // describe the command in a 0xE0 "Command List" frame (BLAECK.WRITE_COMMANDS).
+  // describe the command in a 0xA0 "Command List" frame (BLAECK.WRITE_COMMANDS).
   // stateSignal (nullable): name of the signal that mirrors this command's value
   // (closed-loop -> HA state_topic + logged); pass nullptr for an optimistic /
   // open-loop control. All metadata strings must be F()/PROGMEM literals with
@@ -461,7 +460,6 @@ private:
   // FNV-1a 32-bit hash of a NUL-terminated string; correlation id for acks.
   static uint32_t _fnv1a32(const char *s);
   // Monotonic message id stamped into the 0xF0 ack frame header.
-  unsigned long _commandAckMsgId = 0;
 
   // Send a 0x90 Message frame (channel name + length-prefixed UTF-8 text) to one client.
   void writeMessage(const char *channelName, const char *text, unsigned long messageID, byte client);
@@ -477,8 +475,10 @@ private:
 
   void writeSymbols(unsigned long messageID, byte client);
 
-#if BLAECK_ENABLE_COMMAND_META
   void writeCommands(unsigned long messageID, byte client);
+  void _writeEmptyFrame(byte msgKey, unsigned long messageID);
+
+#if BLAECK_ENABLE_COMMAND_META
   void _annotateCommand(const char *command, uint8_t kind,
                         const __FlashStringHelper *stateSignal,
                         float mn, float mx, float st,
