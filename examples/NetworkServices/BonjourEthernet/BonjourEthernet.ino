@@ -30,6 +30,9 @@ BlaeckTCP BlaeckTCP;
 // A sign of life: seconds since the board started.
 unsigned long uptime;
 
+// Whether an address was leased, which decides whether there is a lease to renew.
+bool leased = false;
+
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
@@ -46,7 +49,9 @@ void setup()
   Serial.println("Looking for an address...");
 
   // A short DHCP timeout, so a board with no DHCP server falls back quickly.
-  if (Ethernet.begin(mac, 8000, 2000) == 0)
+  leased = Ethernet.begin(mac, 8000, 2000) != 0;
+
+  if (!leased)
   {
     Ethernet.begin(mac, ip, myDns, gateway, subnet);
   }
@@ -104,6 +109,14 @@ void loop()
   // Answers the host name lookups. Nothing resolves the name without it.
   EthernetBonjour.run();
 
-  // Renews the DHCP lease when it is due; does nothing on the fixed address.
-  Ethernet.maintain();
+  /* Renews the lease when it is due, and only where one was given.
+
+     Not "does nothing on the fixed address", which is what this used to say: after a DHCP
+     attempt that nobody answered, the library still holds what it set up for it, and
+     working on that here stops Bonjour answering to its name - on a board cabled straight
+     to a PC, which is exactly where no DHCP server is. */
+  if (leased)
+  {
+    Ethernet.maintain();
+  }
 }
