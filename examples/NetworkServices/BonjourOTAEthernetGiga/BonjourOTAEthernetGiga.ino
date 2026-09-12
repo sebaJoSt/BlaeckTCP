@@ -8,14 +8,8 @@
   This example requires the EthernetBonjour, ArduinoOTA (by Juraj Andrassy) and
   Arduino_Portenta_OTA libraries to be installed.
 
-  Before the first over-the-air upload:
-    Run QSPIFormat once, from the core's STM32H747_System examples, and let it create the
-    four partitions it offers. An update is kept on the second one; without them there is
-    nowhere to put it. Nothing else on the board has to be changed - the bootloader can
-    already apply an update from there.
-
-    There is no half-the-flash limit here, unlike the boards that keep an update in their
-    own flash: what fits is the 5 MB partition.
+  The board needs setting up once before its first over-the-air upload: see README.md
+  beside this sketch.
 
   Uploading:
     The board announces itself for network discovery under its host name, and accepts
