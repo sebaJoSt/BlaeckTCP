@@ -35,10 +35,13 @@ jobs:
               - name: TelnetStream
               - name: Ethernet
               - name: EthernetBonjour
+              - name: ArduinoOTA
             sketch-paths: |
               - examples/BasicEthernet
               - examples/SineGeneratorEthernet
-              - examples/SineGeneratorEthernetBonjour
+              - examples/NetworkServices/BonjourEthernet
+              - examples/NetworkServices/OTAEthernet
+              - examples/NetworkServices/BonjourOTAEthernet
               - examples/CommandsEthernet
               - examples/BridgeEthernet
               - examples/WriteModesEthernet
@@ -107,6 +110,22 @@ jobs:
             sketch-paths: |
               - examples/BasicESP32C6BugBoard
             artifact-name-suffix: esp32-esp32c6
+          # --- The Giga keeps an over-the-air update on its QSPI flash rather than
+          #     in its own, which is a board of its own and an example of its own. ---
+          - fqbn: arduino:mbed_giga:giga
+            platforms: |
+              - name: arduino:mbed_giga
+            libraries: |
+              - source-path: ./
+              - name: CRC
+              - name: TelnetStream
+              - name: Ethernet
+              - name: EthernetBonjour
+              - name: ArduinoOTA
+              - name: Arduino_Portenta_OTA
+            sketch-paths: |
+              - examples/NetworkServices/BonjourOTAEthernetGiga
+            artifact-name-suffix: arduino-mbed_giga-giga
 
     steps:
       - name: Checkout repository
