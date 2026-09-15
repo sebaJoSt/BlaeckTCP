@@ -9,8 +9,8 @@
 
   Boards:
     Arduino UNO R4 Minima or WiFi   works as is.
-    Arduino Mega 2560               needs the Optiboot bootloader first, see the ArduinoOTA
-                                    README, "ATmega support".
+    Arduino Mega 2560               needs the Optiboot bootloader first, see README.md beside
+                                    this sketch.
     An update has to fit in half of the flash the sketch area has.
 
   Uploading:
