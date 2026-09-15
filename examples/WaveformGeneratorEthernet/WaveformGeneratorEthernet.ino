@@ -18,6 +18,18 @@
 
   Author: Sebastian Strobl, https://github.com/sebaJoSt/BlaeckTCP
 
+  Requires two libraries:
+    EthernetBonjour   the board answers to its host name ("WaveformGeneratorEthernet" or
+                      "WaveformGeneratorEthernet.local") and announces itself, so upload
+                      tools and loggers find it on the network.
+    ArduinoOTA        a new sketch can be uploaded to the board over the network.
+
+  Boards:
+    Arduino UNO R4 Minima or WiFi   works as is.
+    Arduino Mega 2560               needs the Optiboot bootloader first, see the ArduinoOTA
+                                    README, "ATmega support".
+    An update has to fit in half of the flash the sketch area has.
+
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
 
@@ -42,10 +54,12 @@
     STATUS                  print info to serial                    (HA button)
 
   Setup:
-    Upload the sketch to your board. Adjust the MAC/IP for your local network below.
+    Upload the sketch to your board. It takes its address from DHCP, or uses the one below
+    when no DHCP server answers. Later sketches can be uploaded over the network, with the
+    password passed to ArduinoOTA.begin().
 
   Loggbok CLI (log fast enough to resolve the wave, e.g. 20 ms):
-    Replace <device-ip> with the IP printed on the serial monitor (default 192.168.10.177).
+    Replace <device-ip> with the IP printed on the serial monitor.
 
     lgbk log --tcp <device-ip>:23 --table wave --signals * --interval 20 \
       --mqtt --mqtt-endpoint mqtt://127.0.0.1:1884
@@ -55,20 +69,30 @@
 
 #include <SPI.h>
 #include <Ethernet.h>
+#include <EthernetBonjour.h>
+
+#define NO_OTA_PORT  // If Bonjour is used: turns off discovery in ArduinoOTA.h, so only EthernetBonjour answers discovery
+#include <ArduinoOTA.h>
+
 #include "BlaeckTCP.h"
+
+#define HOST_NAME "WaveformGeneratorEthernet"
 
 #define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
-#define MAX_CLIENTS 8
+// Two of the shield's sockets go to the update listener and to the host name.
+#define MAX_CLIENTS 6
 #define MAX_SIGNALS 10
 
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
+// Whether an address was leased, which decides whether there is a lease to renew.
+bool leased = false;
+
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
+// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -103,6 +127,11 @@ unsigned long lastMicros = 0;
 
 void setup()
 {
+  // Open serial communications (used for debug output only)
+  Serial.begin(115200);
+  Serial.println();
+  Serial.println("Looking for an address...");
+
   // You can use Ethernet.init(pin) to configure the CS pin
   // Ethernet.init(10);  // Most Arduino shields
   // Ethernet.init(5);   // MKR ETH Shield
@@ -111,24 +140,23 @@ void setup()
   // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
   // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
 
-  // initialize the Ethernet device
-  Ethernet.begin(mac, ip, myDns, gateway, subnet);
+  // A short DHCP timeout, so a board with no DHCP server falls back quickly.
+  leased = Ethernet.begin(mac, 8000, 2000) != 0;
 
-  // Open serial communications (used for debug output only)
-  Serial.begin(115200);
+  if (!leased)
+  {
+    Ethernet.begin(mac, ip, myDns, gateway, subnet);
+  }
 
   // Check for Ethernet hardware present
   if (Ethernet.hardwareStatus() == EthernetNoHardware)
   {
-    Serial.println();
     Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
     while (true)
     {
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
-
-  Serial.println();
 
   // Ethernet.begin() returns before the link has finished coming up, so asking
   // straight away reports a connected cable as unplugged. Wait for it, briefly.
@@ -143,6 +171,24 @@ void setup()
     Serial.println("Ethernet cable is not connected.");
   }
 
+  // The host name the board answers to. Before any other EthernetBonjour call.
+  EthernetBonjour.begin(HOST_NAME);
+
+  // Announces the update service, so tools browsing for network boards find it.
+  EthernetBonjour.addServiceRecord(HOST_NAME "._arduino",
+                                   65280,
+                                   MDNSServiceTCP,
+                                   "\x0d" "ssh_upload=no"
+                                   "\x0c" "tcp_check=no"
+                                   "\x0f" "auth_upload=yes"
+                                   "\x0d" "board=arduino");
+
+  // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
+  EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
+
+  // Name, password, and where a received sketch is kept until it replaces this one.
+  ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
+
   Serial.print("BlaeckTCP Server: ");
   Serial.print(Ethernet.localIP());
   Serial.print(":");
@@ -156,7 +202,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Waveform Generator Demo Ethernet";
+  BlaeckTCP.DeviceName = HOST_NAME;
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
@@ -192,6 +238,18 @@ void loop()
   BlaeckTCP.tick();
 
   SendStatusMessage();
+
+  // Takes an upload when one arrives.
+  ArduinoOTA.poll();
+
+  // Answers the host name and discovery. Nothing finds the board without it.
+  EthernetBonjour.run();
+
+  // Maintains the DHCP lease.
+  if (leased)
+  {
+    Ethernet.maintain();
+  }
 }
 
 // Demonstrates the 0x90 message frame: a fire-and-forget, named free-text status/log channel.
