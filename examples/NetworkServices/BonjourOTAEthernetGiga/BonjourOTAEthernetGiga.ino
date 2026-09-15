@@ -53,10 +53,10 @@ unsigned long uptime;
 // Whether an address was leased, which decides whether there is a lease to renew.
 bool leased = false;
 
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = {0xDA, 0x27, 0x99, 0x7B, 0xE0, 0xC6};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
-IPAddress ip(192, 168, 10, 177);
+IPAddress ip(192, 168, 10, 179);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);

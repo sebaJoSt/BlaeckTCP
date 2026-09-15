@@ -90,7 +90,7 @@ BlaeckTCP BlaeckTCP;
 // Whether an address was leased, which decides whether there is a lease to renew.
 bool leased = false;
 
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = {0xA2, 0x2F, 0x90, 0x8E, 0x1E, 0xA3};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
