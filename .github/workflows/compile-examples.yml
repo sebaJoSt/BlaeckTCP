@@ -41,7 +41,7 @@ jobs:
               - examples/SineGeneratorEthernet
               - examples/NetworkServices/BonjourOTAEthernet
               - examples/CommandsEthernet
-              - examples/BridgeEthernet
+              - examples/Bridge/BridgeEthernet
               - examples/WriteModesEthernet
               - examples/WaveformGeneratorEthernet
             artifact-name-suffix: arduino-avr-mega
@@ -81,7 +81,7 @@ jobs:
               - name: TelnetStream
             sketch-paths: |
               - examples/BasicESP32PoE
-              - examples/BridgeESP32PoE
+              - examples/Bridge/BridgeESP32PoE
               - examples/SineGeneratorESP32PoE
               - examples/WaveformGeneratorESP32PoE
             artifact-name-suffix: esp32-esp32-poe
@@ -95,7 +95,7 @@ jobs:
               - name: TelnetStream
             sketch-paths: |
               - examples/BasicWT32-ETH01
-              - examples/BridgeWT32-ETH01
+              - examples/Bridge/BridgeWT32-ETH01
             artifact-name-suffix: esp32-wt32-eth01
           - fqbn: esp32:esp32:esp32c6
             platforms: |
