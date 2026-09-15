@@ -1,12 +1,11 @@
 /*
   BonjourOTAEthernet.ino
 
-  This is BonjourEthernet.ino and OTAEthernet.ino together: the board is reached by its host
-  name ("BonjourOTAEthernet" or "BonjourOTAEthernet.local"), and a new sketch can be uploaded
-  to it over the network.
-
-  This example requires the EthernetBonjour and ArduinoOTA (by Juraj Andrassy) libraries to
-  be installed.
+  Requires two libraries:
+    EthernetBonjour   the board answers to its host name ("BonjourOTAEthernet" or
+                      "BonjourOTAEthernet.local") and announces itself, so upload tools
+                      and loggers find it on the network.
+    ArduinoOTA        a new sketch can be uploaded to the board over the network.
 
   Boards:
     Arduino UNO R4 Minima or WiFi   works as is.
@@ -27,12 +26,10 @@
 
 #include <SPI.h>
 #include <Ethernet.h>
-#include <EthernetBonjour.h>
+#include <EthernetBonjour.h>  // Bonjour
 
-// ArduinoOTA's own discovery answer is switched off: EthernetBonjour answers instead,
-// and the two cannot share the port they listen on.
-#define NO_OTA_PORT
-#include <ArduinoOTA.h>
+#define NO_OTA_PORT  // If Bonjour is used: turns off discovery in ArduinoOTA.h, so only EthernetBonjour answers discovery
+#include <ArduinoOTA.h>  // OTA
 
 #include "BlaeckTCP.h"
 
@@ -98,10 +95,10 @@ void setup()
     Serial.println("Ethernet cable is not connected.");
   }
 
-  // The host name the board answers to. Before any other EthernetBonjour call.
+  // Bonjour: the host name the board answers to. Before any other EthernetBonjour call.
   EthernetBonjour.begin(HOST_NAME);
 
-  // Announces the update service, so tools browsing for network boards find it.
+  // Both: announces the update service, so tools browsing for network boards find it.
   EthernetBonjour.addServiceRecord(HOST_NAME "._arduino",
                                    65280,
                                    MDNSServiceTCP,
@@ -110,7 +107,10 @@ void setup()
                                    "\x0f" "auth_upload=yes"
                                    "\x0d" "board=arduino");
 
-  // Name, password, and where a received sketch is kept until it replaces this one.
+  // Bonjour: announces the BlaeckTCP server, so a logger browsing for devices finds it.
+  EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
+
+  // OTA: name, password, and where a received sketch is kept until it replaces this one.
   ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");
@@ -125,7 +125,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Bonjour OTA Ethernet";
+  BlaeckTCP.DeviceName = HOST_NAME;
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
@@ -138,18 +138,13 @@ void loop()
 
   BlaeckTCP.tick();
 
-  // Takes an upload when one arrives.
+  // OTA: takes an upload when one arrives.
   ArduinoOTA.poll();
 
-  // Answers the host name and discovery. Nothing finds the board without it.
+  // Bonjour: answers the host name and discovery. Nothing finds the board without it.
   EthernetBonjour.run();
 
-  /* Renews the lease when it is due, and only where one was given.
-
-     Not "does nothing on the fixed address", which is what this used to say: after a DHCP
-     attempt that nobody answered, the library still holds what it set up for it, and
-     working on that here stops Bonjour answering to its name - on a board cabled straight
-     to a PC, which is exactly where no DHCP server is. */
+  // Maintains the DHCP lease.
   if (leased)
   {
     Ethernet.maintain();

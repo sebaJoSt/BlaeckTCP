@@ -1,12 +1,12 @@
 /*
   BonjourOTAEthernetGiga.ino
 
-  This is BonjourOTAEthernet.ino for the Arduino Giga R1, which keeps an update somewhere
-  else: the board is reached by its host name ("BonjourOTAEthernetGiga" or
-  "BonjourOTAEthernetGiga.local"), and a new sketch can be uploaded to it over the network.
-
-  This example requires the EthernetBonjour, ArduinoOTA (by Juraj Andrassy) and
-  Arduino_Portenta_OTA libraries to be installed.
+  Requires three libraries:
+    EthernetBonjour        the board answers to its host name ("BonjourOTAEthernetGiga" or
+                           "BonjourOTAEthernetGiga.local") and announces itself, so upload
+                           tools and loggers find it on the network.
+    ArduinoOTA             a new sketch can be uploaded to the board over the network.
+    Arduino_Portenta_OTA   the bootloader applies the new sketch from the QSPI flash.
 
   The board needs setting up once before its first over-the-air upload: see README.md
   beside this sketch.
@@ -26,9 +26,7 @@
 #include <Ethernet.h>
 #include <EthernetBonjour.h>
 
-// ArduinoOTA's own discovery answer is switched off: EthernetBonjour answers instead,
-// and the two cannot share the port they listen on.
-#define NO_OTA_PORT
+#define NO_OTA_PORT  // If Bonjour is used: turns off discovery in ArduinoOTA.h, so only EthernetBonjour answers discovery
 #include <ArduinoOTA.h>
 
 // Where an update is kept on this board, which is a file on the QSPI flash beside the
@@ -112,6 +110,9 @@ void setup()
                                    "\x0f" "auth_upload=yes"
                                    "\x0d" "board=arduino");
 
+  // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
+  EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
+
   // Name, password, and where a received sketch is kept until it replaces this one.
   ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", QspiStorage);
 
@@ -127,7 +128,7 @@ void setup()
       SERVER_PORT  // TCP server port
   );
 
-  BlaeckTCP.DeviceName = "Bonjour OTA Ethernet Giga";
+  BlaeckTCP.DeviceName = HOST_NAME;
   BlaeckTCP.DeviceHWVersion = "Arduino Giga R1";
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
@@ -146,12 +147,7 @@ void loop()
   // Answers the host name and discovery. Nothing finds the board without it.
   EthernetBonjour.run();
 
-  /* Renews the lease when it is due, and only where one was given.
-
-     Not "does nothing on the fixed address", which is what this used to say: after a DHCP
-     attempt that nobody answered, the library still holds what it set up for it, and
-     working on that here stops Bonjour answering to its name - on a board cabled straight
-     to a PC, which is exactly where no DHCP server is. */
+  // Maintains the DHCP lease.
   if (leased)
   {
     Ethernet.maintain();

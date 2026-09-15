@@ -39,8 +39,6 @@ jobs:
             sketch-paths: |
               - examples/BasicEthernet
               - examples/SineGeneratorEthernet
-              - examples/NetworkServices/BonjourEthernet
-              - examples/NetworkServices/OTAEthernet
               - examples/NetworkServices/BonjourOTAEthernet
               - examples/CommandsEthernet
               - examples/BridgeEthernet
