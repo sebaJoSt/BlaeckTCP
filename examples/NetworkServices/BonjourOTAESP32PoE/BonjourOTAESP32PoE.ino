@@ -61,7 +61,7 @@
 
 #define HOST_NAME "BonjourOTAESP32PoE"
 
-#define EXAMPLE_VERSION "2.0"
+#define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
 #define MAX_SIGNALS 1
 #define MAX_CLIENTS 8
