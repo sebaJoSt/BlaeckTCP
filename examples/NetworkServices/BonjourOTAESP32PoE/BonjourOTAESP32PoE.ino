@@ -1,11 +1,15 @@
 /*
   BonjourOTAESP32PoE.ino
 
-  Uses two libraries that come with the ESP32 core:
-    ESPmDNS      the board answers to its host name ("BonjourOTAESP32PoE" or
-                 "BonjourOTAESP32PoE.local") and announces itself, so upload tools
-                 and loggers find it on the network.
-    ArduinoOTA   a new sketch can be uploaded to the board over the network.
+  Requires two libraries:
+    ESPmDNS      comes with the ESP32 core. The board answers to its host name
+                 ("BonjourOTAESP32PoE" or "BonjourOTAESP32PoE.local") and announces itself,
+                 so upload tools and loggers find it on the network.
+    ArduinoOTA   from the Library Manager, not the one bundled with the ESP32 core. The
+                 bundled one has the board fetch a new sketch, which needs the PC to accept
+                 an incoming connection; this one listens and lets the PC push, as the
+                 Ethernet shield examples do. The bundled one has to be removed first: see
+                 README.md beside this sketch.
 
   Board:
     Olimex ESP32-POE or ESP32-POE-ISO. An update has to fit in one app partition of the
@@ -13,8 +17,12 @@
 
   Uploading:
     The board announces itself for network discovery under its host name, and accepts
-    uploads with the password passed to ArduinoOTA.setPassword(). This is the ESP32 core's
-    own upload, on port 3232, not the one the Ethernet shield examples use.
+    uploads on port 65280 with the password passed to ArduinoOTA.begin().
+
+  Names:
+    Bonjour answers "BonjourOTAESP32PoE" and "BonjourOTAESP32PoE.local". The same name goes
+    to the DHCP server, so on a network whose DNS registers DHCP names the board answers to
+    it there as well.
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -40,14 +48,20 @@
 #endif
 
 #include <ETH.h>
+
+// The upload listener is built on the core's WiFi server and client, which serve every
+// interface the board has - here that is Ethernet.
+#include <WiFi.h>
 #include <ESPmDNS.h>
+
+#define NO_OTA_PORT  // ESPmDNS announces the upload service below, so ArduinoOTA does not
 #include <ArduinoOTA.h>
 
 #include "BlaeckTCP.h"
 
 #define HOST_NAME "BonjourOTAESP32PoE"
 
-#define EXAMPLE_VERSION "1.0"
+#define EXAMPLE_VERSION "2.0"
 #define SERVER_PORT 23
 #define MAX_SIGNALS 1
 #define MAX_CLIENTS 8
@@ -101,14 +115,18 @@ void setup()
     ETH.config(ip, gateway, subnet, dns);
   }
 
-  // Name and password. Also starts mDNS, which answers the host name and announces the update service.
-  ArduinoOTA.setHostname(HOST_NAME);
-  ArduinoOTA.setPassword("password");
-  ArduinoOTA.begin();
-
-  // Announces the BlaeckTCP server under the host name, so a logger browsing for devices finds it.
+  // The host name the board answers to.
+  MDNS.begin(HOST_NAME);
   MDNS.setInstanceName(HOST_NAME);
+
+  // Announces the update service, so tools browsing for network boards find it.
+  MDNS.enableArduino(65280, true);
+
+  // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
   MDNS.addService("blaeck", "tcp", SERVER_PORT);
+
+  // Name, password, and where a received sketch is kept until it replaces this one.
+  ArduinoOTA.begin(ETH.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");
   Serial.print(ETH.localIP());
@@ -136,5 +154,5 @@ void loop()
   BlaeckTCP.tick();
 
   // Takes an upload when one arrives. mDNS and the DHCP lease run on their own.
-  ArduinoOTA.handle();
+  ArduinoOTA.poll();
 }
