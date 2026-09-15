@@ -41,7 +41,7 @@
 
 #define HOST_NAME "BonjourOTAEthernet"
 
-#define EXAMPLE_VERSION "3.0"
+#define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
 #define MAX_SIGNALS 1
 
