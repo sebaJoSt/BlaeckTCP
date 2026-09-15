@@ -58,7 +58,7 @@ BlaeckTCP BlaeckTCP;
 unsigned long uptime;
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
-IPAddress ip(192, 168, 10, 178);
+IPAddress ip(192, 168, 10, 177);
 IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);

@@ -53,7 +53,7 @@ bool updateFirstTime_s3 = true;
 // Enter a MAC address and IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-byte mac[] = {0xD2, 0x7E, 0x99, 0x30, 0x9E, 0x0F};
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);

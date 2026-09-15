@@ -17,6 +17,12 @@
     The board announces itself for network discovery under its host name, and accepts
     uploads with the password passed to ArduinoOTA.begin().
 
+  Names:
+    On the local network Bonjour answers "BonjourOTAEthernet" and "BonjourOTAEthernet.local".
+    A DHCP server is told a different name: the Ethernet library always sends "WIZnet" plus
+    the last three bytes of the MAC address, e.g. WIZnetEFFEED. So on a network whose DNS
+    registers DHCP names, that is the name the board answers to there.
+
   Circuit:
    Ethernet shield attached to pins 10, 11, 12, 13
 
@@ -35,7 +41,7 @@
 
 #define HOST_NAME "BonjourOTAEthernet"
 
-#define EXAMPLE_VERSION "1.0"
+#define EXAMPLE_VERSION "3.0"
 #define SERVER_PORT 23
 #define MAX_SIGNALS 1
 
@@ -50,7 +56,7 @@ unsigned long uptime;
 // Whether an address was leased, which decides whether there is a lease to renew.
 bool leased = false;
 
-byte mac[] = {0x9A, 0x85, 0xAF, 0x9F, 0x4B, 0xA4};
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
@@ -65,8 +71,8 @@ void setup()
   Serial.println();
   Serial.println("Looking for an address...");
 
-  // A short DHCP timeout, so a board with no DHCP server falls back quickly.
-  leased = Ethernet.begin(mac, 8000, 2000) != 0;
+  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  leased = Ethernet.begin(mac, 30000, 2000) != 0;
 
   if (!leased)
   {

@@ -58,6 +58,13 @@
     when no DHCP server answers. Later sketches can be uploaded over the network, with the
     password passed to ArduinoOTA.begin().
 
+  Names:
+    On the local network Bonjour answers "WaveformGeneratorEthernet" and
+    "WaveformGeneratorEthernet.local". A DHCP server is told a different name: the Ethernet
+    library always sends "WIZnet" plus the last three bytes of the MAC address, e.g.
+    WIZnetEFFEED. So on a network whose DNS registers DHCP names, that is the name the
+    board answers to there.
+
   Loggbok CLI (log fast enough to resolve the wave, e.g. 20 ms):
     Replace <device-ip> with the IP printed on the serial monitor.
 
@@ -90,7 +97,7 @@ BlaeckTCP BlaeckTCP;
 // Whether an address was leased, which decides whether there is a lease to renew.
 bool leased = false;
 
-byte mac[] = {0xA2, 0x2F, 0x90, 0x8E, 0x1E, 0xA3};
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
@@ -140,8 +147,8 @@ void setup()
   // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
   // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
 
-  // A short DHCP timeout, so a board with no DHCP server falls back quickly.
-  leased = Ethernet.begin(mac, 8000, 2000) != 0;
+  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  leased = Ethernet.begin(mac, 30000, 2000) != 0;
 
   if (!leased)
   {
