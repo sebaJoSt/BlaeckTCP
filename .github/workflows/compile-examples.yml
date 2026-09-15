@@ -84,6 +84,7 @@ jobs:
               - examples/BridgeESP32PoE
               - examples/SineGeneratorESP32PoE
               - examples/WaveformGeneratorESP32PoE
+              - examples/NetworkServices/BonjourOTAESP32PoE
             artifact-name-suffix: esp32-esp32-poe
           - fqbn: esp32:esp32:wt32-eth01
             platforms: |
