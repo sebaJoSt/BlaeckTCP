@@ -45,7 +45,7 @@
     Upload the sketch to your board. Adjust the MAC/IP for your local network below.
 
   Loggbok CLI (log fast enough to resolve the wave, e.g. 20 ms):
-    Replace <device-ip> with the IP printed on the serial monitor (default 192.168.1.177).
+    Replace <device-ip> with the IP printed on the serial monitor (default 192.168.10.177).
 
     lgbk log --tcp <device-ip>:23 --table wave --signals * --interval 20 \
       --mqtt --mqtt-endpoint mqtt://127.0.0.1:1884

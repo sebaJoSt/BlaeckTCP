@@ -33,7 +33,7 @@
     Make sure the baudrates match on BLAECKTCP BRIDGE and BLAECKSERIAL DEVICE!
     Upload the sketches to your boards.
 
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.1.177 (Port 23)
+    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.10.177 (Port 23)
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC
@@ -80,9 +80,9 @@ BlaeckTCP BlaeckTCP;
 // Enter a static IP address for your controller below.
 // The IP address will be dependent on your local network.
 // gateway and subnet are optional:
-IPAddress ip(192, 168, 1, 177);
-IPAddress dns(192, 168, 1, 1);
-IPAddress gateway(192, 168, 1, 1);
+IPAddress ip(192, 168, 10, 177);
+IPAddress dns(192, 168, 10, 1);
+IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);
 
 void onEvent(arduino_event_id_t event)

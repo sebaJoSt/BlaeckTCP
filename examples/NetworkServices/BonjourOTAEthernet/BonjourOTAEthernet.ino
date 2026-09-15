@@ -53,9 +53,9 @@ bool leased = false;
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
-IPAddress ip(192, 168, 1, 177);
-IPAddress myDns(192, 168, 1, 1);
-IPAddress gateway(192, 168, 1, 1);
+IPAddress ip(192, 168, 10, 177);
+IPAddress myDns(192, 168, 10, 1);
+IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);
 
 void setup()
