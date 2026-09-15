@@ -929,6 +929,37 @@ void BlaeckTCP::_percentDecodeInPlace(char *s)
   }
   *dst = '\0';
 }
+#else
+// Without the catalog the typed helpers only register the handler, as onCommand() does.
+bool BlaeckTCP::onNumberCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *, float, float, float,
+                                const __FlashStringHelper *)
+{
+  return onCommand(command, handler);
+}
+
+bool BlaeckTCP::onSwitchCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *)
+{
+  return onCommand(command, handler);
+}
+
+bool BlaeckTCP::onSelectCommand(const char *command, BlaeckCommandHandler handler,
+                                const __FlashStringHelper *, const __FlashStringHelper *)
+{
+  return onCommand(command, handler);
+}
+
+bool BlaeckTCP::onButtonCommand(const char *command, BlaeckCommandHandler handler)
+{
+  return onCommand(command, handler);
+}
+
+bool BlaeckTCP::onTextCommand(const char *command, BlaeckCommandHandler handler,
+                              const __FlashStringHelper *, unsigned int)
+{
+  return onCommand(command, handler);
+}
 #endif
 
 void BlaeckTCP::setClientConnectedCallback(void (*callback)(byte clientNo))
