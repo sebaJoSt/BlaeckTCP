@@ -38,8 +38,8 @@
     STATUS                  print info to serial                    (HA button)
 
   Setup:
-    Upload the sketch to your board. By default, DHCP is used.
-    For a static IP, uncomment ETH.config(ip, gateway, subnet, dns) in setup().
+    Upload the sketch to your board. It takes its address from DHCP, or uses the one below
+    when no DHCP server answers.
 
   Loggbok CLI (log fast enough to resolve the wave, e.g. 20 ms):
     Replace <device-ip> with the IP printed on the serial monitor after ETH gets an IP.
@@ -82,9 +82,7 @@
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Enter a static IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
+// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -123,7 +121,7 @@ void onEvent(arduino_event_id_t event)
   {
   case ARDUINO_EVENT_ETH_START:
     Serial.println("ETH Started");
-    ETH.setHostname("WaveformGeneratorESP32_01");
+    ETH.setHostname("WaveformGeneratorESP32PoE");
     break;
   case ARDUINO_EVENT_ETH_CONNECTED:
     Serial.println("ETH Connected");
@@ -164,8 +162,17 @@ void setup()
   // Initialize ETH
   ETH.begin();
 
-  // Configure static IP
-  // ETH.config(ip, gateway, subnet, dns);
+  // A DHCP answer can take a while on a managed network. A board with no DHCP server falls back.
+  unsigned long waitUntil = millis() + 30000;
+  while (!ETH.hasIP() && millis() < waitUntil)
+  {
+    delay(50);
+  }
+
+  if (!ETH.hasIP())
+  {
+    ETH.config(ip, gateway, subnet, dns);
+  }
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(

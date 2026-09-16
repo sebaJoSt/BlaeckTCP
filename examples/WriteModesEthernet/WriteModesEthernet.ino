@@ -50,10 +50,12 @@ unsigned long updateLastTimeDone_s3 = 0;
 unsigned long updateInterval_s3 = 10000; // 10s interval
 bool updateFirstTime_s3 = true;
 
-// Enter a MAC address and IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
+// Whether an address was leased, which decides whether there is a lease to renew.
+bool leased = false;
+
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+
+// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -69,24 +71,28 @@ void setup()
   // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
   // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
 
-  // initialize the Ethernet device
-  Ethernet.begin(mac, ip, myDns, gateway, subnet);
-
   // Open serial communications (used for debug output only)
   Serial.begin(115200);
+  Serial.println();
+  Serial.println("Looking for an address...");
+
+  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  leased = Ethernet.begin(mac, 30000, 2000) != 0;
+
+  if (!leased)
+  {
+    Ethernet.begin(mac, ip, myDns, gateway, subnet);
+  }
 
   // Check for Ethernet hardware present
   if (Ethernet.hardwareStatus() == EthernetNoHardware)
   {
-    Serial.println();
     Serial.println("Ethernet shield was not found. Sorry, can't run without hardware. :(");
     while (true)
     {
       delay(1); // do nothing, no point running without Ethernet hardware
     }
   }
-
-  Serial.println();
 
   // Ethernet.begin() returns before the link has finished coming up, so asking
   // straight away reports a connected cable as unplugged. Wait for it, briefly.
@@ -132,6 +138,12 @@ void loop()
   UpdateThirdSine();
 
   BlaeckTCP.tickUpdated();
+
+  // Maintains the DHCP lease.
+  if (leased)
+  {
+    Ethernet.maintain();
+  }
 }
 
 void TransmitFirstSine()

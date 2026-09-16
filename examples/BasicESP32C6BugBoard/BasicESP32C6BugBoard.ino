@@ -9,7 +9,7 @@
     Upload the sketch to your board.
 
   Usage:
-    Open a Telnet Client (e.g. PuTTY) and connect to IP Address 192.168.10.177 (Port 23)
+    Open a Telnet Client (e.g. PuTTY) and connect to the IP address printed on the serial monitor (Port 23)
     Type the following commands and press enter:
 
     <BLAECK.GET_DEVICES>              Writes the device's information to the PC
@@ -49,9 +49,7 @@
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Enter a static IP address for your controller below.
-// The IP address will be dependent on your local network.
-// gateway and subnet are optional:
+// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -67,7 +65,7 @@ void onEvent(arduino_event_id_t event)
   {
   case ARDUINO_EVENT_ETH_START:
     Serial.println("ETH Started");
-    ETH.setHostname("ESP32-ETH01");
+    ETH.setHostname("BasicESP32C6BugBoard");
     break;
   case ARDUINO_EVENT_ETH_CONNECTED:
     Serial.println("ETH Connected");
@@ -109,8 +107,17 @@ void setup()
   SPI.begin(ETH_SPI_SCK, ETH_SPI_MISO, ETH_SPI_MOSI);
   ETH.begin(ETH_TYPE, ETH_ADDR, ETH_CS, ETH_IRQ, ETH_RST, SPI);
 
-  // Configure static IP
-  ETH.config(ip, gateway, subnet, dns);
+  // A DHCP answer can take a while on a managed network. A board with no DHCP server falls back.
+  unsigned long waitUntil = millis() + 30000;
+  while (!ETH.hasIP() && millis() < waitUntil)
+  {
+    delay(50);
+  }
+
+  if (!ETH.hasIP())
+  {
+    ETH.config(ip, gateway, subnet, dns);
+  }
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(
