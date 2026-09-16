@@ -114,7 +114,7 @@ BlaeckTCP BlaeckTCP;
 // A flag for whether DHCP gave the address. Only such an address has a lease to renew.
 bool leased = false;
 
-byte mac[] = {0x9A, 0x85, 0xAF, 0xDF, 0x9D, 0x23};
+byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
 // The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
