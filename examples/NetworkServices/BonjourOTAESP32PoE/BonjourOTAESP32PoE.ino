@@ -71,7 +71,7 @@ BlaeckTCP BlaeckTCP;
 // Seconds since the board started. Drops back to zero after an update, which shows it landed.
 unsigned long uptime;
 
-// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
+// The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -82,7 +82,7 @@ void onEvent(arduino_event_id_t event)
   switch (event)
   {
   case ARDUINO_EVENT_ETH_START:
-    // After the interface starts and before DHCP asks, so the DHCP server learns the name too.
+    // The host name, set after the interface starts and before DHCP asks, so the DHCP server learns it too.
     ETH.setHostname(HOST_NAME);
     break;
   case ARDUINO_EVENT_ETH_DISCONNECTED:
@@ -125,7 +125,7 @@ void setup()
   // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
   MDNS.addService("blaeck", "tcp", SERVER_PORT);
 
-  // Name, password, and where a received sketch is kept until it replaces this one.
+  // Name, password, and the storage that keeps a received sketch until it replaces this one.
   ArduinoOTA.begin(ETH.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");

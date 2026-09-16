@@ -1,17 +1,20 @@
 /*
   BonjourOTAEthernet.ino
 
-  Requires two libraries:
-    EthernetBonjour   the board answers to its host name ("BonjourOTAEthernet" or
-                      "BonjourOTAEthernet.local") and announces itself, so upload tools
-                      and loggers find it on the network.
-    ArduinoOTA        a new sketch can be uploaded to the board over the network.
+  Requires two libraries, and a third on the Giga:
+    EthernetBonjour        the board answers to its host name ("BonjourOTAEthernet" or
+                           "BonjourOTAEthernet.local") and announces itself, so upload
+                           tools and loggers find it on the network.
+    ArduinoOTA             a new sketch can be uploaded to the board over the network.
+    Arduino_Portenta_OTA   Giga only: the bootloader applies the new sketch from the QSPI
+                           flash.
 
   Boards:
     Arduino UNO R4 Minima or WiFi   works as is.
-    Arduino Mega 2560               needs the Optiboot bootloader first, see README.md beside
-                                    this sketch.
-    An update has to fit in half of the flash the sketch area has.
+    Arduino Mega 2560               needs the Optiboot bootloader first.
+    Arduino Giga R1                 needs its QSPI flash partitioned first.
+    Both are set up once, as README.md beside this sketch describes. An update has to fit in
+    half of the flash the sketch area has; on the Giga it may be almost 5 MB.
 
   Uploading:
     The board announces itself for network discovery under its host name, and accepts
@@ -37,6 +40,19 @@
 #define NO_OTA_PORT  // If Bonjour is used: turns off discovery in ArduinoOTA.h, so only EthernetBonjour answers discovery
 #include <ArduinoOTA.h>  // OTA
 
+/*
+  OTA: the storage that keeps a received sketch until it replaces this one. A Giga keeps it in a
+  file on the QSPI flash beside its processor; the other boards keep it in the second half of
+  their own flash.
+*/
+#if defined(ARDUINO_GIGA)
+#include "QspiOtaStorage.h"
+QspiOtaStorageClass QspiStorage;
+OTAStorage &OtaStorage = QspiStorage;
+#else
+OTAStorage &OtaStorage = InternalStorage;
+#endif
+
 #include "BlaeckTCP.h"
 
 #define HOST_NAME "BonjourOTAEthernet"
@@ -53,12 +69,12 @@ BlaeckTCP BlaeckTCP;
 // Seconds since the board started. Drops back to zero after an update, which shows it landed.
 unsigned long uptime;
 
-// Whether an address was leased, which decides whether there is a lease to renew.
+// A flag for whether DHCP gave the address. Only such an address has a lease to renew.
 bool leased = false;
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
-// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
+// The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -71,7 +87,7 @@ void setup()
   Serial.println();
   Serial.println("Looking for an address...");
 
-  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  // A DHCP wait long enough for a managed network to answer. A board with no DHCP server falls back after it.
   leased = Ethernet.begin(mac, 30000, 2000) != 0;
 
   if (!leased)
@@ -101,7 +117,7 @@ void setup()
     Serial.println("Ethernet cable is not connected.");
   }
 
-  // Bonjour: the host name the board answers to. Before any other EthernetBonjour call.
+  // Bonjour: the host name the board answers to. This call comes before any other EthernetBonjour call.
   EthernetBonjour.begin(HOST_NAME);
 
   // Both: announces the update service, so tools browsing for network boards find it.
@@ -116,8 +132,8 @@ void setup()
   // Bonjour: announces the BlaeckTCP server, so a logger browsing for devices finds it.
   EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
 
-  // OTA: name, password, and where a received sketch is kept until it replaces this one.
-  ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
+  // OTA: name, password, and the storage chosen above.
+  ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", OtaStorage);
 
   Serial.print("BlaeckTCP Server: ");
   Serial.print(HOST_NAME);
@@ -147,7 +163,11 @@ void setup()
   );
 
   BlaeckTCP.DeviceName = HOST_NAME;
+#if defined(ARDUINO_GIGA)
+  BlaeckTCP.DeviceHWVersion = "Arduino Giga R1";
+#else
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+#endif
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
   BlaeckTCP.addSignal("Uptime_s", &uptime);

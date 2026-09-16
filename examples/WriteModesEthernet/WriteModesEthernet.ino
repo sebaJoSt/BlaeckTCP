@@ -50,12 +50,12 @@ unsigned long updateLastTimeDone_s3 = 0;
 unsigned long updateInterval_s3 = 10000; // 10s interval
 bool updateFirstTime_s3 = true;
 
-// Whether an address was leased, which decides whether there is a lease to renew.
+// A flag for whether DHCP gave the address. Only such an address has a lease to renew.
 bool leased = false;
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
-// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
+// The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -76,7 +76,7 @@ void setup()
   Serial.println();
   Serial.println("Looking for an address...");
 
-  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  // A DHCP wait long enough for a managed network to answer. A board with no DHCP server falls back after it.
   leased = Ethernet.begin(mac, 30000, 2000) != 0;
 
   if (!leased)

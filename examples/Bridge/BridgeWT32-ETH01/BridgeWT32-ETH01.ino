@@ -77,7 +77,7 @@
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
+// The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);

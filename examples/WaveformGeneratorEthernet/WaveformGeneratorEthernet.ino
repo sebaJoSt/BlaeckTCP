@@ -94,12 +94,12 @@
 // Instantiate a new BlaeckTCP object
 BlaeckTCP BlaeckTCP;
 
-// Whether an address was leased, which decides whether there is a lease to renew.
+// A flag for whether DHCP gave the address. Only such an address has a lease to renew.
 bool leased = false;
 
 byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
 
-// Used only when no DHCP server answers, e.g. a board cabled straight to a PC.
+// The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
 IPAddress myDns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
@@ -147,7 +147,7 @@ void setup()
   // Ethernet.init(15);  // ESP8266 with Adafruit FeatherWing Ethernet
   // Ethernet.init(33);  // ESP32 with Adafruit FeatherWing Ethernet
 
-  // Long enough for a managed network to answer; a board with no DHCP server falls back after it.
+  // A DHCP wait long enough for a managed network to answer. A board with no DHCP server falls back after it.
   leased = Ethernet.begin(mac, 30000, 2000) != 0;
 
   if (!leased)
@@ -178,7 +178,7 @@ void setup()
     Serial.println("Ethernet cable is not connected.");
   }
 
-  // The host name the board answers to. Before any other EthernetBonjour call.
+  // The host name the board answers to. This call comes before any other EthernetBonjour call.
   EthernetBonjour.begin(HOST_NAME);
 
   // Announces the update service, so tools browsing for network boards find it.
@@ -193,7 +193,7 @@ void setup()
   // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
   EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
 
-  // Name, password, and where a received sketch is kept until it replaces this one.
+  // Name, password, and the storage that keeps a received sketch until it replaces this one.
   ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");
