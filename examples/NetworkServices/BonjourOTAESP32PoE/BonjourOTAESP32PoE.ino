@@ -129,9 +129,14 @@ void setup()
   ArduinoOTA.begin(ETH.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");
+  Serial.print(HOST_NAME);
+  Serial.print(":");
+  Serial.print(SERVER_PORT);
+  Serial.print(" (");
   Serial.print(ETH.localIP());
   Serial.print(":");
-  Serial.println(SERVER_PORT);
+  Serial.print(SERVER_PORT);
+  Serial.println(")");
 
   BlaeckTCP.begin(
       MAX_CLIENTS,

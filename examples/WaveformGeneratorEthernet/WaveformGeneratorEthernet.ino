@@ -197,9 +197,24 @@ void setup()
   ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
 
   Serial.print("BlaeckTCP Server: ");
+  Serial.print(HOST_NAME);
+  Serial.print(":");
+  Serial.print(SERVER_PORT);
+  Serial.print(" (");
   Serial.print(Ethernet.localIP());
   Serial.print(":");
-  Serial.println(SERVER_PORT);
+  Serial.print(SERVER_PORT);
+  Serial.println(")");
+
+  // The name the Ethernet library sends with its DHCP request, which is not the host name:
+  // "WIZnet" and the last three bytes of the MAC address. Nothing is sent on the fallback address.
+  if (leased)
+  {
+    char dhcpName[13];
+    snprintf(dhcpName, sizeof(dhcpName), "WIZnet%02X%02X%02X", mac[3], mac[4], mac[5]);
+    Serial.print("DHCP host name: ");
+    Serial.println(dhcpName);
+  }
 
   // Setup BlaeckTCP
   BlaeckTCP.begin(
