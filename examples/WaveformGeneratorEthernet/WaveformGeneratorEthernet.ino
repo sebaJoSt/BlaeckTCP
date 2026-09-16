@@ -18,17 +18,21 @@
 
   Author: Sebastian Strobl, https://github.com/sebaJoSt/BlaeckTCP
 
-  Requires two libraries:
-    EthernetBonjour   the board answers to its host name ("WaveformGeneratorEthernet" or
-                      "WaveformGeneratorEthernet.local") and announces itself, so upload
-                      tools and loggers find it on the network.
-    ArduinoOTA        a new sketch can be uploaded to the board over the network.
+  Requires two libraries, and a third on the Giga:
+    EthernetBonjour        the board answers to its host name ("WaveformGeneratorEthernet" or
+                           "WaveformGeneratorEthernet.local") and announces itself, so upload
+                           tools and loggers find it on the network.
+    ArduinoOTA             a new sketch can be uploaded to the board over the network.
+    Arduino_Portenta_OTA   Giga only: the bootloader applies the new sketch from the QSPI
+                           flash.
 
   Boards:
     Arduino UNO R4 Minima or WiFi   works as is.
-    Arduino Mega 2560               needs the Optiboot bootloader first, see README.md in
-                                    examples/NetworkServices/BonjourOTAEthernet.
-    An update has to fit in half of the flash the sketch area has.
+    Arduino Mega 2560               needs the Optiboot bootloader first.
+    Arduino Giga R1                 needs its QSPI flash partitioned first.
+    Both are set up once, as README.md in examples/NetworkServices/BonjourOTAEthernet
+    describes. An update has to fit in half of the flash the sketch area has; on the Giga it
+    may be almost 5 MB.
 
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
@@ -81,6 +85,19 @@
 #define NO_OTA_PORT  // If Bonjour is used: turns off discovery in ArduinoOTA.h, so only EthernetBonjour answers discovery
 #include <ArduinoOTA.h>
 
+/*
+  The storage that keeps a received sketch until it replaces this one. A Giga keeps it in a
+  file on the QSPI flash beside its processor; the other boards keep it in the second half of
+  their own flash.
+*/
+#if defined(ARDUINO_GIGA)
+#include "QspiOtaStorage.h"
+QspiOtaStorageClass QspiStorage;
+OTAStorage &OtaStorage = QspiStorage;
+#else
+OTAStorage &OtaStorage = InternalStorage;
+#endif
+
 #include "BlaeckTCP.h"
 
 #define HOST_NAME "WaveformGeneratorEthernet"
@@ -97,7 +114,7 @@ BlaeckTCP BlaeckTCP;
 // A flag for whether DHCP gave the address. Only such an address has a lease to renew.
 bool leased = false;
 
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = {0x9A, 0x85, 0xAF, 0xDF, 0x9D, 0x23};
 
 // The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
@@ -193,8 +210,8 @@ void setup()
   // Announces the BlaeckTCP server, so a logger browsing for devices finds it.
   EthernetBonjour.addServiceRecord(HOST_NAME "._blaeck", SERVER_PORT, MDNSServiceTCP);
 
-  // Name, password, and the storage that keeps a received sketch until it replaces this one.
-  ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", InternalStorage);
+  // Name, password, and the storage chosen above.
+  ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", OtaStorage);
 
   Serial.print("BlaeckTCP Server: ");
   Serial.print(HOST_NAME);
@@ -225,7 +242,11 @@ void setup()
   );
 
   BlaeckTCP.DeviceName = HOST_NAME;
+#if defined(ARDUINO_GIGA)
+  BlaeckTCP.DeviceHWVersion = "Arduino Giga R1";
+#else
   BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+#endif
   BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
 
   BlaeckTCP.addSignal("Output", &Output);

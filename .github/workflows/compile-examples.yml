@@ -123,6 +123,7 @@ jobs:
               - name: Arduino_Portenta_OTA
             sketch-paths: |
               - examples/NetworkServices/BonjourOTAEthernet
+              - examples/WaveformGeneratorEthernet
             artifact-name-suffix: arduino-mbed_giga-giga
 
     steps:
