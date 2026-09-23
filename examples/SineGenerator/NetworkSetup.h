@@ -23,6 +23,12 @@
   Each board first asks for an address over DHCP, waiting up to 30 s, and takes the fixed
   address below if none comes, e.g. when cabled straight to a PC.
 
+  Names: with NETWORK_WITH_SERVICES, Bonjour answers to HOST_NAME and HOST_NAME.local on the
+  local network. A DHCP server learns HOST_NAME from the ESP32 boards, but the Ethernet
+  library on the Mega and the Giga always sends "WIZnet" plus the last three bytes of the
+  MAC address, e.g. WIZnetEFFEED. On a network whose DNS registers DHCP names, that is the
+  name the board answers to there. The serial monitor shows it.
+
   OTA updates need a one-time setup per board: see README.md in the WaveformGenerator
   example. The password is "password".
 */
@@ -37,6 +43,25 @@
 #define NETWORK_FALLBACK_IP 192, 168, 10, 177
 #define NETWORK_FALLBACK_GATEWAY 192, 168, 10, 1
 #define NETWORK_FALLBACK_SUBNET 255, 255, 0, 0
+
+// The server line, with the name Bonjour answers to when it runs.
+inline void networkPrintServer(const Printable &ip, uint16_t port)
+{
+  Serial.print(F("BlaeckTCP server: "));
+#if defined(NETWORK_WITH_SERVICES)
+  Serial.print(F(HOST_NAME));
+  Serial.print(':');
+  Serial.print(port);
+  Serial.print(F(" ("));
+#endif
+  Serial.print(ip);
+  Serial.print(':');
+  Serial.print(port);
+#if defined(NETWORK_WITH_SERVICES)
+  Serial.print(')');
+#endif
+  Serial.println();
+}
 
 // ---------------------------------------------------------------------------------------
 #if defined(ARDUINO_ESP32_POE) || defined(ARDUINO_WT32_ETH01)
@@ -63,10 +88,34 @@
 #include <ArduinoOTA.h>
 #endif
 
+// Also reports the link going up and down while the sketch runs.
 inline void networkEvent(arduino_event_id_t event)
 {
-  if (event == ARDUINO_EVENT_ETH_START)
+  switch (event)
+  {
+  case ARDUINO_EVENT_ETH_START:
+    // Before DHCP asks, so the DHCP server learns the name too.
     ETH.setHostname(HOST_NAME);
+    break;
+  case ARDUINO_EVENT_ETH_CONNECTED:
+    Serial.println(F("Ethernet connected."));
+    break;
+  case ARDUINO_EVENT_ETH_DISCONNECTED:
+    Serial.println(F("Ethernet cable is not connected."));
+    break;
+  case ARDUINO_EVENT_ETH_GOT_IP:
+    Serial.print(F("MAC: "));
+    Serial.print(ETH.macAddress());
+    Serial.print(F(", IPv4: "));
+    Serial.print(ETH.localIP());
+    Serial.print(F(", "));
+    Serial.print(ETH.subnetMask());
+    Serial.print(F(", "));
+    Serial.println(ETH.gatewayIP());
+    break;
+  default:
+    break;
+  }
 }
 
 inline void networkBegin(uint16_t port)
@@ -92,10 +141,7 @@ inline void networkBegin(uint16_t port)
   ArduinoOTA.begin(ETH.localIP(), HOST_NAME, "password", InternalStorage);
 #endif
 
-  Serial.print(F("BlaeckTCP server: "));
-  Serial.print(ETH.localIP());
-  Serial.print(':');
-  Serial.println(port);
+  networkPrintServer(ETH.localIP(), port);
 }
 
 inline void networkLoop()
@@ -213,12 +259,23 @@ inline void networkBegin(uint16_t port)
   ArduinoOTA.begin(Ethernet.localIP(), HOST_NAME, "password", OtaStorage);
 #endif
 
-  Serial.print(F("BlaeckTCP server: "));
-  Serial.print(Ethernet.localIP());
-  Serial.print(':');
-  Serial.println(port);
+  networkPrintServer(Ethernet.localIP(), port);
   Serial.print(F("MAC: "));
   Serial.println(F(NETWORK_MAC));
+
+  // What the Ethernet library sent with its DHCP request. Nothing is sent on the fallback
+  // address.
+  if (networkLeased)
+  {
+    Serial.print(F("DHCP host name: WIZnet"));
+    for (byte i = 3; i < 6; i++)
+    {
+      if (networkMac[i] < 0x10)
+        Serial.print('0');
+      Serial.print(networkMac[i], HEX);
+    }
+    Serial.println();
+  }
 }
 
 inline void networkLoop()
