@@ -49,6 +49,15 @@ BlaeckTCP Blaeck;
 // Signals
 float sine;
 
+#if HAS_NETWORK_CLOCK
+unsigned long long GetNtpUnixTimeMicros()
+{
+  struct timeval now;
+  gettimeofday(&now, nullptr);
+  return (unsigned long long)now.tv_sec * 1000000ULL + now.tv_usec;
+}
+#endif
+
 void setup()
 {
   // Initialize Serial port
@@ -97,12 +106,3 @@ void UpdateSineNumbers()
 {
   sine = sin(millis() * 0.00005);
 }
-
-#if HAS_NETWORK_CLOCK
-unsigned long long GetNtpUnixTimeMicros()
-{
-  struct timeval now;
-  gettimeofday(&now, nullptr);
-  return (unsigned long long)now.tv_sec * 1000000ULL + now.tv_usec;
-}
-#endif
