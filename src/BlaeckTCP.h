@@ -1,6 +1,11 @@
 /*
         File: BlaeckTCP.h
         Author: Sebastian Strobl
+
+    Sends binary sensor data over a network, and receives commands written as
+    <HelloWorld, 12, 47>. The same library as BlaeckSerial, over TCP: a device describes
+    its signals, commands, state and event channels, so a host can present them without
+    being configured for it.
 */
 
 #ifndef BLAECKTCP_H
@@ -12,635 +17,317 @@
 #define BLAECKTCP_VERSION_PATCH 0
 #define BLAECKTCP_NAME "BlaeckTCP"
 
-// Must come before the compile-time defaults below: the AVR handler-limit
-// gate tests RAMEND, which only exists once <avr/io.h> has been pulled in via
-// Arduino.h. Including it later let the gate resolve differently in the
-// library and sketch translation units, giving the class two layouts (ODR).
-#include <Arduino.h>
+#include "BlaeckCore.h"
+// NetServer and NetClient, the classes of whichever network library the sketch uses.
+#include <TelnetPrint.h>
 
-// Compile-time settings. Override the defaults below, e.g.:
-//   #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 128
-//
-// IMPORTANT: an override MUST reach every translation unit - your sketch AND
-// BlaeckTCP.cpp. These values size members of class BlaeckTCP, so a setting
-// seen by only one of them gives the class two different layouts (an ODR
-// violation) and corrupts memory silently. All-or-nothing, never half.
-//
-//   PlatformIO:   build_flags = -DBLAECK_COMMAND_MAX_CHARS_DEFAULT=128
-//   Arduino IDE:  a BlaeckTCPConfig.h in your sketch folder is NOT picked up
-//                 without extra setup, because the sketch folder is not on
-//                 the compiler's include path. See "Configuration" in
-//                 README.md for the three ways to do it.
-#if defined __has_include
-  #if __has_include(<BlaeckTCPConfig.h>)
-    #include <BlaeckTCPConfig.h>
-  #endif
-#endif
-
-#ifndef BLAECK_BUFFER_SIZE
-  #if defined(ARDUINO_ARCH_ESP32) || defined(ARDUINO_ARCH_ESP8266)
-    #define BLAECK_BUFFER_SIZE 1024
-  #elif defined(ARDUINO_ARCH_AVR)
-    #define BLAECK_BUFFER_SIZE 32
-  #else
-    #define BLAECK_BUFFER_SIZE 64
-  #endif
-#endif
-
-#ifndef BLAECK_COMMAND_MAX_CHARS_DEFAULT
-  #if defined(__AVR__)
-    #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 48
-  #else
-    #define BLAECK_COMMAND_MAX_CHARS_DEFAULT 96
-  #endif
-#endif
-
-#ifndef BLAECK_COMMAND_MAX_HANDLERS_DEFAULT
-  #if defined(__AVR__)
-    // Scale with available SRAM: each handler entry costs roughly
-    // MAX_COMMAND_NAME_COUNT + a function pointer (~28 bytes on AVR).
-    // Larger-SRAM AVRs (Mega 2560, ATmega1284, ...) get a generous limit;
-    // small ones (Uno/Nano/Leonardo) get a modest one to conserve SRAM.
-    #if defined(RAMEND) && (RAMEND >= 0x10FF)
-      #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
-    #else
-      #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 6
-    #endif
-  #else
-    #define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 12
-  #endif
-#endif
-
-#ifndef BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT
-  #if defined(__AVR__)
-    #define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 24
-  #else
-    #define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 40
-  #endif
-#endif
-
-#ifndef BLAECK_COMMAND_MAX_PARAMS_DEFAULT
-  #define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 10
-#endif
-
-// Command metadata (Home Assistant discovery catalog).
-// When ON, the typed command registration helpers (onNumberCommand/
-// onSwitchCommand/onSelectCommand/onButtonCommand) store parameter metadata and
-// the device can emit a 0xA0 "Command List" frame in response to
-// BLAECK.WRITE_COMMANDS. Turn OFF to save flash on tiny targets; the typed
-// helpers then behave exactly like plain onCommand() (no metadata, no 0xA0).
-// Override via BlaeckTCPConfig.h or build flag.
-#ifndef BLAECK_ENABLE_COMMAND_META
-  #define BLAECK_ENABLE_COMMAND_META 1
-#endif
-
-
-// Disable Nagle's algorithm for lower latency on ESP32/ESP8266.
-// Set to false in BlaeckTCPConfig.h if you prefer throughput over latency.
+// Nagle's algorithm off on ESP32 and ESP8266, for lower latency. Set it false in
+// BlaeckTCPConfig.h to favour throughput instead.
 #ifndef BLAECK_TCP_NO_DELAY_DEFAULT
   #define BLAECK_TCP_NO_DELAY_DEFAULT true
 #endif
 
-#include <TelnetPrint.h>
-#include <CRC.h>
-// std::nothrow, so an oversized signal array fails to a null pointer that
-// begin() can report rather than aborting.
-#include <new>
-// strcmp/strncpy/strlen/... are used throughout; do not rely on Arduino.h
-// happening to pull this in.
-#include <string.h>
+// The core's names, at global scope where sketches use them.
+using namespace BLAECK_CORE_NAMESPACE;
 
-typedef enum DataType
-{
-  Blaeck_bool,
-  Blaeck_byte,
-  Blaeck_short,
-  Blaeck_ushort,
-  Blaeck_int,
-  Blaeck_uint,
-  Blaeck_long,
-  Blaeck_ulong,
-  Blaeck_float,
-  Blaeck_double,
-  Blaeck_string
-} dataType;
+class BlaeckTCP;
 
-struct Signal
-{
-  String SignalName;
-  dataType DataType;
-  void *Address;
-  bool Updated = false;
-};
-
-enum BlaeckTimestampMode
-{
-  BLAECK_NO_TIMESTAMP = 0,
-  BLAECK_MICROS = 1,
-  BLAECK_UNIX = 2,
-  BLAECK_RTC = BLAECK_UNIX // Deprecated alias
-};
-
-enum BlaeckIntervalMode
-{
-  BLAECK_INTERVAL_CLIENT = -1,
-  BLAECK_INTERVAL_OFF = -2
-};
-
-struct BlaeckClient {
-    NetClient connection;
-    char name[20];
-    char type[8];
-};
-
-typedef void (*BlaeckCommandHandler)(const char *command, const char *const *params, byte paramCount);
-typedef void (*BlaeckAnyCommandHandler)(const char *command, const char *const *params, byte paramCount);
-
-// Command kind for Home Assistant discovery (0xA0 Command List frame).
-enum BlaeckCommandKind
-{
-  BLAECK_CMD_PLAIN = 0,  // registered via onCommand(): no HA entity, but listed in 0xA0 for command palettes
-  BLAECK_CMD_NUMBER = 1, // HA number   (value in [min,max])
-  BLAECK_CMD_SWITCH = 2, // HA switch   (0/1)
-  BLAECK_CMD_SELECT = 3, // HA select   (index into optionsCsv)
-  BLAECK_CMD_BUTTON = 4, // HA button   (no value)
-  BLAECK_CMD_TEXT = 5    // HA text     (free text, percent-encoded on the wire)
-};
-
-// Acknowledgement reason for the 0xF0 Command Ack frame. Sent back to the
-// commanding client after a command is dispatched so a host can confirm receipt
-// and surface accept/reject feedback. status = 0 accepted, 1 rejected.
-enum BlaeckCommandAckReason
-{
-  BLAECK_ACK_OK = 0,           // accepted: delivered to a handler, validation passed
-  BLAECK_ACK_UNKNOWN = 1,      // rejected: no handler registered for this command
-  BLAECK_ACK_OUT_OF_RANGE = 2, // rejected: number outside [min, max]
-  BLAECK_ACK_BAD_SWITCH = 3,   // rejected: switch value not 0/1
-  BLAECK_ACK_BAD_SELECT = 4,   // rejected: select value not a valid index/option
-  BLAECK_ACK_TOO_LONG = 5      // rejected: text value longer than the advertised max length
-};
-
-class BlaeckTCP
+// Returned by begin(): the core's table sizes, plus the number of connections. Each call
+// returns this handle again, so withClients() can come anywhere in the chain.
+class BlaeckTCPBeginRef : public BlaeckBeginRef
 {
 public:
-  // ----- Constructor -----
-  BlaeckTCP();
+  explicit BlaeckTCPBeginRef(BlaeckTCP *owner);
 
-  // ----- Destructor -----
-  ~BlaeckTCP();
+  /*!
+    @brief   Sets how many connections the device accepts at once.
 
-  // ----- Initialize ----
-  void begin(Stream *streamRef, unsigned int size, uint16_t port);
-  void begin(byte maxClients, Stream *streamRef, unsigned int size, uint16_t port);
-  void begin(byte maxClients, Stream *streamRef, unsigned int size, int blaeckWriteDataClientMask, uint16_t port);
-  void beginBridge(byte maxClients, Stream *streamRef, Stream *bridgeStream, uint16_t port);
+    Hosts and terminals together. Each connection takes a receive buffer of
+    BLAECK_COMMAND_MAX_CHARS_DEFAULT bytes, 128 on a Mega. A connection beyond the
+    limit is closed at once. Set it before the first read(); later it is refused.
 
-  // Set these variables in your Arduino sketch
-  String DeviceName;
-  String DeviceHWVersion;
-  String DeviceFWVersion;
+    @param   count  1 to 255. The default is 4.
+    @return  The same handle, for chaining.
 
-  BlaeckClient *Clients = nullptr;
-  // CommandingClient is the client which sent the parsed command
-  NetClient CommandingClient;
-
-  // ----- Signals -----
-  // Add a Signal
-  void addSignal(String signalName, bool *value);
-  void addSignal(String signalName, byte *value);
-  void addSignal(String signalName, short *value);
-  void addSignal(String signalName, unsigned short *value);
-  void addSignal(String signalName, int *value);
-  void addSignal(String signalName, unsigned int *value);
-  void addSignal(String signalName, long *value);
-  void addSignal(String signalName, unsigned long *value);
-  void addSignal(String signalName, float *value);
-  void addSignal(String signalName, double *value);
-  // String signal: value points to a user-owned, null-terminated char buffer.
-  // The buffer is read (not copied) at transmit time; keep it valid and updated
-  // in place. Emitted on the wire as a 1-byte length (capped at 255) + bytes,
-  // so keep strings short - especially on RAM-constrained targets.
-  void addSignal(String signalName, char *value);
-
-  // Delete all Signals
-  void deleteSignals();
-  bool hasSignalOverflow() const { return _signalOverflowOccurred; }
-  uint16_t getSignalOverflowCount() const { return _signalOverflowCount; }
-
-  // Signal Count
-  int SignalCount;
-
-  // ----- Devices -----
-  void writeDevices();
-  void writeDevices(unsigned long messageID);
-
-  // ----- Symbols -----
-  void writeSymbols();
-  void writeSymbols(unsigned long messageID);
-
-  // ----- Commands (Home Assistant discovery catalog, 0xA0) -----
-  // Always present: with BLAECK_ENABLE_COMMAND_META=0 the list is sent empty.
-  void writeCommands();
-  void writeCommands(unsigned long messageID);
-
-  // ----- Messages (Home Assistant text/log channel, 0x90) -----
-  // Send a free-text status/log message on a named channel to every connected
-  // client. Fire-and-forget: a host may surface it (e.g. a Home Assistant text
-  // sensor auto-created per channel name) but it is never stored as signal data.
-  // The frame carries no CRC (like the 0xA0/0xF0 frames). Text longer than
-  // 65535 bytes is truncated.
-  void writeMessage(const char *channelName, const char *text);
-  void writeMessage(const char *channelName, const char *text, unsigned long messageID);
-
-  // ----- Data Write -----
-  // Update value and write directly - by name
-  void write(String signalName, bool value);
-  void write(String signalName, byte value);
-  void write(String signalName, short value);
-  void write(String signalName, unsigned short value);
-  void write(String signalName, int value);
-  void write(String signalName, unsigned int value);
-  void write(String signalName, long value);
-  void write(String signalName, unsigned long value);
-  void write(String signalName, float value);
-  void write(String signalName, double value);
-  void write(String signalName, char *value);
-
-  void write(String signalName, bool value, unsigned long messageID);
-  void write(String signalName, byte value, unsigned long messageID);
-  void write(String signalName, short value, unsigned long messageID);
-  void write(String signalName, unsigned short value, unsigned long messageID);
-  void write(String signalName, int value, unsigned long messageID);
-  void write(String signalName, unsigned int value, unsigned long messageID);
-  void write(String signalName, long value, unsigned long messageID);
-  void write(String signalName, unsigned long value, unsigned long messageID);
-  void write(String signalName, float value, unsigned long messageID);
-  void write(String signalName, double value, unsigned long messageID);
-  void write(String signalName, char *value, unsigned long messageID);
-
-  void write(String signalName, bool value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, byte value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, short value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, unsigned short value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, int value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, unsigned int value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, long value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, unsigned long value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, float value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, double value, unsigned long messageID, unsigned long long timestamp);
-  void write(String signalName, char *value, unsigned long messageID, unsigned long long timestamp);
-
-  // Update value and write directly - by index
-  void write(int signalIndex, bool value);
-  void write(int signalIndex, byte value);
-  void write(int signalIndex, short value);
-  void write(int signalIndex, unsigned short value);
-  void write(int signalIndex, int value);
-  void write(int signalIndex, unsigned int value);
-  void write(int signalIndex, long value);
-  void write(int signalIndex, unsigned long value);
-  void write(int signalIndex, float value);
-  void write(int signalIndex, double value);
-  void write(int signalIndex, char *value);
-
-  void write(int signalIndex, bool value, unsigned long messageID);
-  void write(int signalIndex, byte value, unsigned long messageID);
-  void write(int signalIndex, short value, unsigned long messageID);
-  void write(int signalIndex, unsigned short value, unsigned long messageID);
-  void write(int signalIndex, int value, unsigned long messageID);
-  void write(int signalIndex, unsigned int value, unsigned long messageID);
-  void write(int signalIndex, long value, unsigned long messageID);
-  void write(int signalIndex, unsigned long value, unsigned long messageID);
-  void write(int signalIndex, float value, unsigned long messageID);
-  void write(int signalIndex, double value, unsigned long messageID);
-  void write(int signalIndex, char *value, unsigned long messageID);
-
-  void write(int signalIndex, bool value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, byte value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, short value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, unsigned short value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, int value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, unsigned int value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, long value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, unsigned long value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, float value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, double value, unsigned long messageID, unsigned long long timestamp);
-  void write(int signalIndex, char *value, unsigned long messageID, unsigned long long timestamp);
-
-  // ----- Data Update -----
-  // Update value and mark Signal as updated - by name
-  void update(String signalName, bool value);
-  void update(String signalName, byte value);
-  void update(String signalName, short value);
-  void update(String signalName, unsigned short value);
-  void update(String signalName, int value);
-  void update(String signalName, unsigned int value);
-  void update(String signalName, long value);
-  void update(String signalName, unsigned long value);
-  void update(String signalName, float value);
-  void update(String signalName, double value);
-
-  // Update value and mark Signal as updated - by index
-  void update(int signalIndex, bool value);
-  void update(int signalIndex, byte value);
-  void update(int signalIndex, short value);
-  void update(int signalIndex, unsigned short value);
-  void update(int signalIndex, int value);
-  void update(int signalIndex, unsigned int value);
-  void update(int signalIndex, long value);
-  void update(int signalIndex, unsigned long value);
-  void update(int signalIndex, float value);
-  void update(int signalIndex, double value);
-
-  // ----- Mark Signals as Updated -----
-  // Use these mark functions for cases where you don't want to change the value
-  void markSignalUpdated(int signalIndex);
-  void markSignalUpdated(String signalName);
-  void markAllSignalsUpdated();
-  void clearAllUpdateFlags();
-  // Check if any Signals are marked as updated
-  bool hasUpdatedSignals();
-
-  // ----- Data Write All -----
-  void writeAllData();
-  void writeAllData(unsigned long messageID);
-  void writeAllData(unsigned long messageID, unsigned long long timestamp);
-  void timedWriteAllData();
-  void timedWriteAllData(unsigned long messageID);
-  void timedWriteAllData(unsigned long messageID, unsigned long long timestamp);
-
-  // ----- Data Write Updated -----
-  void writeUpdatedData();
-  void writeUpdatedData(unsigned long messageID);
-  void writeUpdatedData(unsigned long messageID, unsigned long long timestamp);
-  void timedWriteUpdatedData();
-  void timedWriteUpdatedData(unsigned long messageID);
-  void timedWriteUpdatedData(unsigned long messageID, unsigned long long timestamp);
-
-  // ----- Tick -----
-  void tick();
-  void tick(unsigned long messageID);
-  void tickUpdated();
-  void tickUpdated(unsigned long messageID);
-
-  // ----- Timed Data configuruation -----
-  // interval_ms semantics:
-  //   >= 0                    fixed interval lock in ms (ACTIVATE/DEACTIVATE ignored)
-  //   BLAECK_INTERVAL_OFF     timed data locked off (ACTIVATE ignored)
-  //   BLAECK_INTERVAL_CLIENT  client-controlled mode (default)
-  // Invalid values are rejected and the previous mode remains active.
-  void setIntervalMs(long interval_ms);
-  long getIntervalMs() const { return _fixedInterval_ms; }
-
-  // ----- Read  -----
-  void read();
-
-  // ----- Command callback  -----
-  bool onCommand(const char *command, BlaeckCommandHandler handler);
-  void onAnyCommand(BlaeckAnyCommandHandler handler);
-  void clearAllCommandHandlers();
-
-  // ----- Typed command registration (Home Assistant discovery metadata) -----
-  // Same runtime behavior as onCommand(), but attach metadata so the device can
-  // describe the command in a 0xA0 "Command List" frame (BLAECK.WRITE_COMMANDS).
-  // stateSignal (nullable): name of the signal that mirrors this command's value
-  // (closed-loop -> HA state_topic + logged); pass nullptr for an optimistic /
-  // open-loop control. All metadata strings must be F()/PROGMEM literals with
-  // program lifetime (stored as pointers, never copied).
-  // Number values outside [min,max], bad select indices and non-0/1 switch
-  // values are rejected (handler skipped) and reported on the debug stream.
-  // step is HA display resolution only; the firmware does not round.
-  bool onNumberCommand(const char *command, BlaeckCommandHandler handler,
-                       const __FlashStringHelper *stateSignal,
-                       float min, float max, float step,
-                       const __FlashStringHelper *unit = nullptr);
-  bool onSwitchCommand(const char *command, BlaeckCommandHandler handler,
-                       const __FlashStringHelper *stateSignal);
-  bool onSelectCommand(const char *command, BlaeckCommandHandler handler,
-                       const __FlashStringHelper *stateSignal,
-                       const __FlashStringHelper *optionsCsv);
-  bool onButtonCommand(const char *command, BlaeckCommandHandler handler);
-  // Registers a free-text command shown as a Home Assistant "text" entity.
-  // The value travels percent-encoded on the wire (so it can carry commas,
-  // angle brackets and non-ASCII); the library decodes it in place before the
-  // handler runs, so the handler receives the raw UTF-8 text. maxLength is the
-  // advertised limit (values longer than this are rejected).
-  bool onTextCommand(const char *command, BlaeckCommandHandler handler,
-                     const __FlashStringHelper *stateSignal,
-                     unsigned int maxLength = 255);
-
-  // ----- Before data write callback  -----
-  void setBeforeWriteCallback(void (*callback)());
-  void setClientConnectedCallback(void (*callback)(byte clientNo));
-  void setClientDisconnectedCallback(void (*callback)(byte clientNo));
-  bool isClientDataEnabled(byte clientNo) const;
-
-  /**
-  Handles bidirectional data transfer between TCP and UART interface. This function
-  should be called in the main loop to maintain communication flow.
-  Data received from TCP is forwarded to UART and responses are sent back.
+    @code
+      Blaeck.begin(SERVER_PORT).withClients(2);
+    @endcode
   */
-  void bridgePoll();
+  BlaeckTCPBeginRef &withClients(byte count);
 
-  // Timestamp configuration methods
-  void setTimestampMode(BlaeckTimestampMode mode);
-  void setTimestampCallback(unsigned long long (*callback)());
-  BlaeckTimestampMode getTimestampMode() const { return _timestampMode; }
-  bool hasValidTimestampCallback() const;
+  /*!
+    @brief   Sets how many signals fit in the signal table.
 
-private:
-  unsigned long long getTimeStamp();
-  int findSignalIndex(String signalName);
-  void setSignalName(int signalIndex, String signalName);
-  void _setTimedDataState(bool timedActivated, unsigned long timedInterval_ms);
-  void _parseCommandTokens(const char *raw);
-  void _dispatchRegisteredHandlers();
-  // Send a 0xF0 Command Ack frame (cmdHash + status + reason) to CommandingClient.
-  void _writeCommandAck(const char *rawCommand, byte status, byte reasonCode);
-  // FNV-1a 32-bit hash of a NUL-terminated string; correlation id for acks.
-  static uint32_t _fnv1a32(const char *s);
-  // Monotonic message id stamped into the 0xF0 ack frame header.
+    Each signal takes 9 bytes of SRAM on AVR.
 
-  // Send a 0x90 Message frame (channel name + length-prefixed UTF-8 text) to one client.
-  void writeMessage(const char *channelName, const char *text, unsigned long messageID, byte client);
-  // Monotonic message id stamped into the 0x90 message frame header.
-  unsigned long _messageMsgId = 0;
+    @param   count  Up to 32767. A larger literal fails the build.
+    @return  The same handle, for chaining.
 
-  void timedWriteData(unsigned long msg_id, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
-  void tick(unsigned long messageID, bool onlyUpdated);
-
-  void writeData(unsigned long msg_id, byte i, int signalIndex_start, int signalIndex_end, bool onlyUpdated, unsigned long long timestamp);
-
-  void writeDevices(unsigned long messageID, byte client);
-
-  void writeSymbols(unsigned long messageID, byte client);
-
-  void writeCommands(unsigned long messageID, byte client);
-  void _writeEmptyFrame(byte msgKey, unsigned long messageID);
-
-#if BLAECK_ENABLE_COMMAND_META
-  void _annotateCommand(const char *command, uint8_t kind,
-                        const __FlashStringHelper *stateSignal,
-                        float mn, float mx, float st,
-                        const __FlashStringHelper *unit,
-                        const __FlashStringHelper *options);
-  byte _validateTypedCommand(byte handlerIndex);
-  static byte _flashCsvOptionCount(const __FlashStringHelper *csv);
-  static long _flashCsvIndexOf(const __FlashStringHelper *csv, const char *value);
-  // Percent-decodes a command value (e.g. from a HA text entity) in place.
-  // "%XX" triple -> the byte 0xXX; other characters are copied unchanged.
-  static void _percentDecodeInPlace(char *s);
-#endif
-
-  uint16_t _computeSchemaHash();
-
-  static void validatePlatformSizes();
-
-  void _initClientMeta();
-  void _parseClientIdentity(const char *raw);
-  void _startServer(uint16_t port);
-
-  Stream *StreamRef = nullptr;
-  int _blaeckWriteDataClientMask;
-  byte _maxClients = 0;
-  Stream *BridgeStreamRef = nullptr;
-  bool _bridgeMode = false;
-
-  Signal *Signals = nullptr;
-  int _signalIndex = 0;
-  unsigned int _signalCapacity = 0;
-  bool _signalOverflowOccurred = false;
-  uint16_t _signalOverflowCount = 0;
-  uint16_t _schemaHash = 0;
-
-  bool _serverRestarted = true;
-  bool _sendRestartFlag = true;
-
-  // Micros overflow tracking for D2 (uint64 timestamp)
-  unsigned long _prevMicros = 0;
-  unsigned long long _overflowCount = 0;
-
-  bool _timedActivated = false;
-  bool _timedFirstTime = true;
-  unsigned long _timedFirstTimeDone_ms = 0;
-  unsigned long _timedSetPoint_ms = 0;
-  unsigned long _timedInterval_ms = 1000;
-  long _fixedInterval_ms = BLAECK_INTERVAL_CLIENT;
-
-  static const int MAXIMUM_CHAR_COUNT = BLAECK_COMMAND_MAX_CHARS_DEFAULT;
-  static const byte MAX_COMMAND_HANDLERS = BLAECK_COMMAND_MAX_HANDLERS_DEFAULT;
-  static const byte MAX_COMMAND_PARAM_COUNT = BLAECK_COMMAND_MAX_PARAMS_DEFAULT;
-  static const byte MAX_COMMAND_NAME_COUNT = BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT;
-  char receivedChars[MAXIMUM_CHAR_COUNT];
-  char COMMAND[MAXIMUM_CHAR_COUNT] = {0};
-  int PARAMETER[10];
-  // STRING_01: Max. 15 chars allowed  + Null Terminator '\0' = 16
-  // In case more than 15 chars are sent, the rest is cut off in function void parseData()
-  char STRING_01[16];
-
-  CRC32 _crc;
-
-  struct CommandHandlerEntry
+    @code
+      Blaeck.begin(SERVER_PORT).withSignals(50);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withSignals(unsigned int count)
   {
-    char command[MAX_COMMAND_NAME_COUNT];
-    BlaeckCommandHandler handler = nullptr;
-    bool inUse = false;
-#if BLAECK_ENABLE_COMMAND_META
-    uint8_t kind = BLAECK_CMD_PLAIN;
-    float meta_min = 0.0f;
-    float meta_max = 0.0f;
-    float meta_step = 0.0f;
-    const __FlashStringHelper *unit = nullptr;
-    const __FlashStringHelper *options = nullptr;
-    const __FlashStringHelper *stateSignal = nullptr;
-#endif
-  };
-  CommandHandlerEntry _commandHandlers[MAX_COMMAND_HANDLERS];
-  BlaeckAnyCommandHandler _anyCommandHandler = nullptr;
-  char _parsedTokenBuffer[MAXIMUM_CHAR_COUNT] = {0};
-  char _parsedCommand[MAX_COMMAND_NAME_COUNT] = {0};
-  const char *_parsedParamPtrs[MAX_COMMAND_PARAM_COUNT] = {0};
-  byte _parsedParamCount = 0;
-#if BLAECK_ENABLE_COMMAND_META
-  // Scratch buffer holding a select command's normalized index string, so a
-  // name payload (e.g. from a Home Assistant select) is handed to index-based
-  // handlers as its numeric index.
-  char _selectIndexScratch[8] = {0};
-#endif
-  bool recvWithStartEndMarkers();
-  void parseData();
-
-  void (*_beforeWriteCallback)() = nullptr;
-  void (*_clientConnectedCallback)(byte clientNo) = nullptr;
-  void (*_clientDisconnectedCallback)(byte clientNo) = nullptr;
-
-  static unsigned long long _microsWrapper()
-  {
-    return (unsigned long long)micros();
+    BlaeckBeginRef::withSignals(count);
+    return *this;
   }
 
-  BlaeckTimestampMode _timestampMode = BLAECK_NO_TIMESTAMP;
-  unsigned long long (*_timestampCallback)() = nullptr;
+  /*!
+    @brief   Sets how many state channels fit in the state channel table.
 
-  union
-  {
-    bool val;
-    byte bval[1];
-  } boolCvt;
+    Count the channels from addStateChannel() plus one for each command that uses
+    withOwnState(). Each channel takes 26 bytes of SRAM on AVR.
 
-  union
-  {
-    short val;
-    byte bval[2];
-  } shortCvt;
+    @param   count  Up to 32767. A larger literal fails the build.
+    @return  The same handle, for chaining.
 
-  union
+    @code
+      Blaeck.begin(SERVER_PORT).withStateChannels(12);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withStateChannels(unsigned int count)
   {
-    unsigned short val;
-    byte bval[2];
-  } ushortCvt;
+    BlaeckBeginRef::withStateChannels(count);
+    return *this;
+  }
 
-  union
-  {
-    int val;
-    byte bval[2];
-  } intCvt;
+  /*!
+    @brief   Sets how many event channels fit in the event channel table.
 
-  union
-  {
-    unsigned int val;
-    byte bval[2];
-  } uintCvt;
+    Each channel takes 10 bytes of SRAM on AVR.
 
-  union
-  {
-    long val;
-    byte bval[4];
-  } lngCvt;
+    @param   count  Up to 32767. A larger literal fails the build.
+    @return  The same handle, for chaining.
 
-  union
+    @code
+      Blaeck.begin(SERVER_PORT).withEventChannels(4);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withEventChannels(unsigned int count)
   {
-    unsigned long val;
-    byte bval[4];
-  } ulngCvt;
+    BlaeckBeginRef::withEventChannels(count);
+    return *this;
+  }
 
-  union
-  {
-    unsigned long long val;
-    byte bval[8];
-  } ullCvt;
+  /*!
+    @brief   Sets how many event types fit, counted across all channels.
 
-  union
-  {
-    float val;
-    byte bval[4];
-  } fltCvt;
+    All channels share one table of types, so give the total: four channels with
+    five types each need 20. Each type takes 5 bytes of SRAM on AVR.
 
-  union
+    @param   count  Up to 32767. A larger literal fails the build.
+    @return  The same handle, for chaining.
+
+    @code
+      Blaeck.begin(SERVER_PORT).withEventChannels(4).withEventTypes(20);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withEventTypes(unsigned int count)
   {
-    double val;
-    byte bval[8];
-  } dblCvt;
+    BlaeckBeginRef::withEventTypes(count);
+    return *this;
+  }
+
+  /*!
+    @brief   Sets how many commands fit in the command table.
+
+    onCommand() and all the typed commands share this table. Each command takes 48
+    bytes of SRAM on AVR. A command using withOwnState() also needs a state channel,
+    so raise withStateChannels() to match.
+
+    @param   count  Up to 32767. A larger literal fails the build.
+    @return  The same handle, for chaining.
+
+    @code
+      Blaeck.begin(SERVER_PORT).withCommands(8);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withCommands(unsigned int count)
+  {
+    BlaeckBeginRef::withCommands(count);
+    return *this;
+  }
+
+  /*!
+    @brief   Sets a stream where the library reports what it rejected and why.
+
+    Without one, problems such as a full table show only in hasRejections().
+
+    @param   debugStream  Where to print: a serial port, or anything else that can print,
+                          such as a display.
+    @return  The same handle, for chaining.
+
+    @code
+      Blaeck.begin(SERVER_PORT).withSignals(50).withDebugStream(&Blaeck.Terminal);
+    @endcode
+  */
+  BlaeckTCPBeginRef &withDebugStream(Print *debugStream)
+  {
+    BlaeckBeginRef::withDebugStream(debugStream);
+    return *this;
+  }
+
+private:
+  BlaeckTCP *_tcp;
 };
+
+// Text for every connected terminal: what Blaeck.Terminal is.
+class BlaeckTerminal : public Print
+{
+public:
+  explicit BlaeckTerminal(BlaeckTCP *owner) : _owner(owner) {}
+
+  /*!
+    @brief   Sends one byte to every connected terminal.
+
+    Print's print() and println() call this; a sketch rarely needs it directly.
+
+    @param   b  The byte.
+    @return  1.
+
+    @code
+      Blaeck.Terminal.write('.');
+    @endcode
+  */
+  size_t write(uint8_t b) override;
+
+  /*!
+    @brief   Sends bytes to every connected terminal.
+
+    @param   buffer  The bytes.
+    @param   size    How many.
+    @return  size.
+
+    @code
+      Blaeck.Terminal.write((const uint8_t *)"ok\n", 3);
+    @endcode
+  */
+  size_t write(const uint8_t *buffer, size_t size) override;
+
+  using Print::write;
+
+private:
+  BlaeckTCP *_owner;
+};
+
+// Blaeck over TCP. A connection becomes a host by sending a BLAECK. command and receives
+// frames from then on; every other connection is a terminal and receives text.
+class BlaeckTCP : public BlaeckCore
+{
+public:
+  BlaeckTCP();
+  ~BlaeckTCP();
+
+  /*!
+    @brief   Starts the library as a TCP server on a port.
+
+    Call it first, after the network is up. A connection becomes a host when it sends
+    a BLAECK. command, such as <BLAECK.GET_DEVICES>, and receives frames from then on.
+    Every other connection is a terminal: it receives the text sent to Terminal, and
+    its commands run but aren't answered.
+
+    @param   port  The TCP port to listen on.
+    @return  A handle for setting the number of connections, table sizes and a debug
+             stream. Each has a default, so the handle can be ignored.
+
+    @code
+      Blaeck.begin(SERVER_PORT)
+          .withClients(4)
+          .withSignals(50)
+          .withDebugStream(&Blaeck.Terminal);
+    @endcode
+  */
+  BlaeckTCPBeginRef begin(uint16_t port);
+
+  /*!
+    @brief   Text to every connected terminal, used like Serial.
+
+    Hosts never receive it. Pass it to withDebugStream() to see on a terminal what
+    the library refuses and which commands arrive.
+
+    @note    A terminal that connects but never reads can fill its send buffer, and a
+             write to it may then wait. Short lines don't get there.
+
+    @code
+      Blaeck.Terminal.println("LED is ON.");
+    @endcode
+  */
+  BlaeckTerminal Terminal;
+
+  /*!
+    @brief   Sets a function to call when a connection opens.
+
+    @param   callback  Receives the connection's slot, starting at 0.
+
+    @code
+      Blaeck.setClientConnectedCallback(onClientConnected);
+    @endcode
+  */
+  void setClientConnectedCallback(void (*callback)(byte clientNo));
+
+  /*!
+    @brief   Sets a function to call when a connection closes.
+
+    A connection that dies without closing, such as one whose cable was pulled, is
+    noticed only when the network stack gives up on it.
+
+    @param   callback  Receives the connection's slot, starting at 0.
+
+    @code
+      Blaeck.setClientDisconnectedCallback(onClientDisconnected);
+    @endcode
+  */
+  void setClientDisconnectedCallback(void (*callback)(byte clientNo));
+
+protected:
+  bool _transportReady() const override;
+  void _writeDirect(const byte *data, size_t len) override;
+  void _flushDirect() override;
+  void _sendBuffered() override;
+  bool _receiveCommand() override;
+  void _builtinCommandReceived() override;
+  const char *_libraryName() const override { return BLAECKTCP_NAME; }
+  const char *_libraryVersion() const override { return BLAECKTCP_VERSION; }
+
+private:
+  struct Connection
+  {
+    NetClient client;
+    Receiver receiver;
+    // The slot holds a connection. Tracked here because a client's own bool means
+    // "connected" on some cores and "has a socket" on others.
+    bool open = false;
+    bool host = false;
+  };
+
+  // Allocated by the first read(), so withClients() on the begin() chain can size it.
+  Connection *_connections = nullptr;
+  byte _maxClients = 4;
+  // The connection whose command is being handled; acks and answers go only there.
+  byte _requester = 0;
+
+  void (*_connectedCallback)(byte clientNo) = nullptr;
+  void (*_disconnectedCallback)(byte clientNo) = nullptr;
+
+  bool _ensureConnections();
+  void _acceptConnection();
+  void _dropClosedConnections();
+  // Whether the frame being written goes to this connection.
+  bool _receivesFrame(byte slot) const;
+  void _setMaxClients(byte count);
+
+  friend class BlaeckTCPBeginRef;
+  friend class BlaeckTerminal;
+};
+
+inline BlaeckTCPBeginRef::BlaeckTCPBeginRef(BlaeckTCP *owner) : BlaeckBeginRef(owner), _tcp(owner) {}
+
+inline BlaeckTCPBeginRef &BlaeckTCPBeginRef::withClients(byte count)
+{
+  if (_tcp != nullptr)
+    _tcp->_setMaxClients(count);
+  return *this;
+}
 
 #endif //  BLAECKTCP_H
