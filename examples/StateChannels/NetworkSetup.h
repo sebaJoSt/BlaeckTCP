@@ -6,8 +6,9 @@
 
   In the sketch, before the other includes:
 
-    #define HOST_NAME "WaveformGenerator"   // optional, the name the board answers to
-    #define NETWORK_WITH_SERVICES           // optional, OTA updates and Bonjour
+    #define HOST_NAME "WaveformGenerator"     // optional, the name the board answers to
+    #define NETWORK_MAC "DE:AD:BE:EF:FE:ED"   // optional, the shield's address (Mega, Giga)
+    #define NETWORK_WITH_SERVICES             // optional, OTA updates and Bonjour
     #include "NetworkSetup.h"
 
   then networkBegin(SERVER_PORT) in setup() before Blaeck.begin(), and networkLoop() in
@@ -134,13 +135,51 @@ OTAStorage &OtaStorage = InternalStorage;
 #endif
 
 // The shield's MAC address. Give each board on the same network its own.
-byte networkMac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+#ifndef NETWORK_MAC
+#define NETWORK_MAC "DE:AD:BE:EF:FE:ED"
+#endif
+
+byte networkMac[6];
 
 // Only an address from DHCP has a lease to renew.
 bool networkLeased = false;
 
+// Reads NETWORK_MAC, written as DE:AD:BE:EF:FE:ED or DE-AD-BE-EF-FE-ED.
+inline bool networkReadMac(const char *text)
+{
+  for (byte i = 0; i < 6; i++)
+  {
+    byte value = 0;
+    for (byte j = 0; j < 2; j++)
+    {
+      char c = *text++;
+      if (c >= '0' && c <= '9')
+        value = value * 16 + (c - '0');
+      else if (c >= 'A' && c <= 'F')
+        value = value * 16 + (c - 'A' + 10);
+      else if (c >= 'a' && c <= 'f')
+        value = value * 16 + (c - 'a' + 10);
+      else
+        return false;
+    }
+    networkMac[i] = value;
+
+    char separator = *text++;
+    if (i < 5 ? separator != ':' && separator != '-' : separator != 0)
+      return false;
+  }
+  return true;
+}
+
 inline void networkBegin(uint16_t port)
 {
+  if (!networkReadMac(NETWORK_MAC))
+  {
+    Serial.println(F("NETWORK_MAC is not a MAC address. Write it as DE:AD:BE:EF:FE:ED."));
+    while (true)
+      delay(1);
+  }
+
   Serial.println(F("Looking for an address..."));
   networkLeased = Ethernet.begin(networkMac, 30000, 2000) != 0;
   if (!networkLeased)
@@ -178,6 +217,8 @@ inline void networkBegin(uint16_t port)
   Serial.print(Ethernet.localIP());
   Serial.print(':');
   Serial.println(port);
+  Serial.print(F("MAC: "));
+  Serial.println(F(NETWORK_MAC));
 }
 
 inline void networkLoop()
