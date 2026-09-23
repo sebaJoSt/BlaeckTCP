@@ -6,9 +6,8 @@ BlaeckTCP is an Arduino library. It sends any value your sketch holds - sensor r
 calculated results, text - over Ethernet or WiFi as binary data, using the
 [Blaeck protocol](https://sebajost.github.io/blaeck-protocol/).
 
-It is the same library as [BlaeckSerial](https://github.com/sebaJoSt/BlaeckSerial), over a
-network instead of a serial port. A sketch registers the same signals, commands, state
-channels and events, and a host receives the same frames. Only `begin()` differs.
+Its sister library [BlaeckSerial](https://github.com/sebaJoSt/BlaeckSerial) does the same
+over a serial port.
 
 It is the first part of a chain:
 
@@ -101,20 +100,12 @@ and documented there. Read `begin(&Serial)` in those pages as `begin(SERVER_PORT
 | [State channels](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/state-channels.md) | Reporting a value that is displayed but not logged |
 | [Events](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/events.md) | Reporting that something happened |
 | [Sending data](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/sending-data.md) | Intervals, sending it yourself, timestamps, buffered writes |
-| [Table sizes](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/configuration.md) | Table sizes and the switches shared with BlaeckSerial |
+| [Table sizes](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/configuration.md) | Table sizes and switches |
 
 ## Examples
 
-The examples are in `examples/`. In the Arduino IDE, open them with
-**File > Examples > BlaeckTCP**.
-
-- **`Basic`** is the smallest sketch, on the same boards as the topic examples.
-- **`MoreBoards`** holds boards outside those four, each getting online on its own: `WiFi`
-  on the UNO R4 WiFi and ESP32 boards, and `ESP32C6BugBoard`.
-- **Topic examples** match BlaeckSerial's, one each, and run on the Mega and the Giga with an
-  Ethernet shield, the ESP32-PoE and the WT32-ETH01: `SineGenerator`, `Commands`,
-  `StateChannels`, `EventChannels`, `WriteModes`, `TimeStampModes` and `WaveformGenerator`.
-  **WaveformGenerator** uses every feature, and also takes updates over the network.
+Open them with **File > Examples > BlaeckTCP**. Start with **Basic**, the smallest sketch;
+**WaveformGenerator** shows everything the library can do. The others each cover one topic.
 
 ## Reference
 
