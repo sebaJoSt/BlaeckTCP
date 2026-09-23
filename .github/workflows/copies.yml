@@ -1,0 +1,70 @@
+name: Copies
+
+# Two sets of files are copies that must not drift, and nothing but this check notices when
+# one does.
+
+on:
+  push:
+    paths:
+      - ".github/workflows/copies.yml"
+      - "src/BlaeckCore.h"
+      - "src/BlaeckCore.cpp"
+      - "extras/core-source.txt"
+      - "examples/**/Network.h"
+  pull_request:
+    paths:
+      - ".github/workflows/copies.yml"
+      - "src/BlaeckCore.h"
+      - "src/BlaeckCore.cpp"
+      - "extras/core-source.txt"
+      - "examples/**/Network.h"
+  workflow_dispatch:
+
+jobs:
+  # BlaeckCore.h and BlaeckCore.cpp are changed only in BlaeckSerial and copied here by
+  # extras/scripts/synccore.py, which records the source commit. A hand edit here would
+  # make the two libraries send different frames without anyone deciding they should.
+  core:
+    name: The core matches BlaeckSerial
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare with the recorded BlaeckSerial commit
+        run: |
+          commit=$(tr -d '\r\n' < extras/core-source.txt)
+          echo "BlaeckSerial $commit"
+          for f in src/BlaeckCore.h src/BlaeckCore.cpp; do
+            curl -fsSL "https://raw.githubusercontent.com/sebaJoSt/BlaeckSerial/$commit/$f" -o /tmp/source
+            if ! cmp -s /tmp/source "$f"; then
+              echo "::error file=$f::$f differs from BlaeckSerial $commit. Change the core in"
+              echo "BlaeckSerial and run extras/scripts/synccore.py rather than editing it here."
+              exit 1
+            fi
+            echo "$f matches"
+          done
+
+  # Every topic example carries the same Network.h, because Arduino examples cannot share
+  # a file. A fix made in one copy has to reach all of them.
+  network:
+    name: Every Network.h is the same
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the copies
+        run: |
+          files=$(find examples -name Network.h | sort)
+          if [ -z "$files" ]; then
+            echo "No Network.h in the examples."; exit 0
+          fi
+          first=$(echo "$files" | head -n1)
+          status=0
+          for f in $files; do
+            if ! cmp -s "$first" "$f"; then
+              echo "::error file=$f::$f differs from $first. Every copy of Network.h must be identical."
+              status=1
+            fi
+          done
+          [ $status -eq 0 ] && echo "$(echo "$files" | wc -l) copies, all identical"
+          exit $status

@@ -181,7 +181,7 @@ public:
   /*!
     @brief   Sends one byte to every connected terminal.
 
-    Print's print() and println() call this; a sketch rarely needs it directly.
+    Everything printed to Terminal goes through this; a sketch rarely calls it directly.
 
     @param   b  The byte.
     @return  1.
