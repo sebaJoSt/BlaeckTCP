@@ -1,6 +1,10 @@
-<a href="url"><img src="https://user-images.githubusercontent.com/388152/185908831-4eccf7a6-5f43-405d-b7fe-5225eeba302d.png" height="75"></a>
-<a href="url"><img src="https://github.com/sebaJoSt/BlaeckTCP/assets/388152/15f6a932-2263-4453-9686-0ad9e36720fd"  alt="BlaeckTCP Logo SeeSaw Font" height="70"></a>
-===
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="extras/blaeckTCP-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="extras/blaeckTCP-light.svg">
+  <img src="extras/blaeckTCP-light.svg" alt="BlaeckTCP" height="75">
+</picture>
+
+---
 
 BlaeckTCP is an Arduino library. It sends any value your sketch holds - sensor readings,
 calculated results, text - over Ethernet or WiFi as binary data, using the
