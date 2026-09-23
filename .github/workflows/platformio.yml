@@ -114,7 +114,7 @@ jobs:
       # CRC, TelnetStream and Ethernet. WaveformGenerator turns on OTA and Bonjour, and the
       # ESP32 and WiFi sketches need their own boards - the arduino-cli matrix covers those.
       # The sketch folder is passed rather than the .ino so a sketch split across several
-      # files, such as one with a Network.h tab, is built whole.
+      # files, such as one with a NetworkSetup.h tab, is built whole.
       - name: Build examples
         run: |
           for ex in BasicEthernet Commands EventChannels SineGenerator \

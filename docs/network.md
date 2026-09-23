@@ -81,7 +81,7 @@ slot, starting at 0. They are for the sketch's own use, such as a status LED.
 
 ## Boards
 
-The topic examples run on these boards through a shared `Network.h` tab:
+The topic examples run on these boards through a shared `NetworkSetup.h` tab:
 
 | Board | Network |
 |---|---|
@@ -96,6 +96,6 @@ The board examples (`BasicEthernet`, `BasicESP32PoE`, `BasicWT32-ETH01`, `BasicW
 ## Updates over the network
 
 `WaveformGenerator` turns on updates over the network and Bonjour, with
-`#define NETWORK_WITH_SERVICES` before `#include "Network.h"`. Any other topic example can do
+`#define NETWORK_WITH_SERVICES` before `#include "NetworkSetup.h"`. Any other topic example can do
 the same. Each board needs a one-time setup first; see the
 [WaveformGenerator README](../examples/WaveformGenerator/README.md).

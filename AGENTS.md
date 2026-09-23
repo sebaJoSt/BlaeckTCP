@@ -35,7 +35,7 @@ change it there first.
 - Frame codes and byte layout belong in the
   [protocol spec](https://sebajost.github.io/blaeck-protocol/), not in the header.
   These doc comments describe what a sketch does
-- Each topic example carries an identical `Network.h`; CI fails if the copies differ
+- Each topic example carries an identical `NetworkSetup.h`; CI fails if the copies differ
 
 ## Documenting the public API
 

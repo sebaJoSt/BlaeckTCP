@@ -2,25 +2,23 @@
   BasicWT32-ETH01.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
-  from the WT32-ETH01 V1.4 board (Server) to your PC (Client) every minute (or the user-set interval).
+  from the WT32-ETH01 V1.4 board (Server) to your PC (Client), at the interval a host asks for.
 
   Setup:
     Upload the sketch to your board.
 
   Usage:
-    Open a Telnet Client (e.g. PuTTY) and connect to the IP address printed on the serial monitor (Port 23)
-    Type the following commands and press enter:
+    Upload the sketch, and open the serial monitor at 115200 baud: it prints the
+    board's address.
 
-    <BLAECK.GET_DEVICES>              Writes the device's information to the PC
-    <BLAECK.WRITE_SYMBOLS>            Writes the symbol list to the PC
-    <BLAECK.WRITE_COMMANDS>           Writes the command list to the PC
-    <BLAECK.WRITE_DATA>               Writes the data to the PC
-    <BLAECK.ACTIVATE,96,234>          The data is written every 60 seconds (60 000ms)
-                                      first Byte:  0b01100000 = 96 DEC
-                                      second Byte: 0b11101010 = 234 DEC
-                                      Minimum: 0[milliseconds] Maximum: 4 294 967 295[milliseconds]
-    <BLAECK.DEACTIVATE>               Stops writing the data every 60s
+    Connect Loggbok, or another Blaeck host, to that address on port 23. It asks for
+    the data with <BLAECK.ACTIVATE,1000> (one frame a second) and stops it with
+    <BLAECK.DEACTIVATE>.
 
+    To watch what the device does, connect a telnet client such as PuTTY to the same
+    address and port. It shows connections, the commands that arrive, and anything the
+    library refuses. Typing a BLAECK. command there turns it into a host too, and binary
+    frames follow.
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -40,7 +38,7 @@
 #define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
 
 // Instantiate a new BlaeckTCP object
-BlaeckTCP BlaeckTCP;
+BlaeckTCP Blaeck;
 
 // Signals
 float randomSmallNumber;
@@ -116,31 +114,25 @@ void setup()
     ETH.config(ip, gateway, subnet, dns);
   }
 
-  // Setup BlaeckTCP
-  BlaeckTCP.begin(
-      MAX_CLIENTS,
-      &Serial,
-      2,
-      SERVER_PORT  // TCP server port
-  );
+  // Setup BlaeckTCP. The library reports on the terminal connections.
+  Blaeck.begin(SERVER_PORT)
+      .withClients(MAX_CLIENTS)
+      .withSignals(2)
+      .withDebugStream(&Blaeck.Terminal);
 
-  BlaeckTCP.DeviceName = "Random Number Generator WT32-ETH01";
-  BlaeckTCP.DeviceHWVersion = "WT32-ETH01 V1.4";
-  BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
+  Blaeck.DeviceName = "Random Number Generator WT32-ETH01";
+  Blaeck.DeviceHWVersion = "WT32-ETH01 V1.4";
+  Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP
-  BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
-  BlaeckTCP.addSignal("Big Number", &randomBigNumber);
-
-  /*Uncomment for fixed interval lock (ms)
-    - ignores ACTIVATE/DEACTIVATE while locked */
-  // BlaeckTCP.setIntervalMs(60000);
+  Blaeck.addSignal(F("Small Number"), &randomSmallNumber);
+  Blaeck.addSignal(F("Big Number"), &randomBigNumber);
 }
 
 void loop()
 {
   UpdateRandomNumbers();
-  BlaeckTCP.tick();
+  Blaeck.tick();
 }
 
 void UpdateRandomNumbers()

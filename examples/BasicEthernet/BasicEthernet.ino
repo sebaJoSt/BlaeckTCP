@@ -2,26 +2,23 @@
   BasicEthernet.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
-  from an Arduino with Ethernet Shield (Server) to your PC (Client) every minute (or the user-set interval).
+  from an Arduino with Ethernet Shield (Server) to your PC (Client), at the interval a host asks for.
 
   Circuit:
     Ethernet shield attached to pins 10, 11, 12, 13
 
   Usage:
-    Upload the sketch to your board.
-    Open a Telnet Client (e.g. PuTTY) and connect to the IP address printed on the serial monitor (Port 23)
-    Type the following commands and press enter:
+    Upload the sketch, and open the serial monitor at 115200 baud: it prints the
+    board's address.
 
-    <BLAECK.GET_DEVICES>              Writes the device's information to the PC
-    <BLAECK.WRITE_SYMBOLS>            Writes the symbol list to the PC
-    <BLAECK.WRITE_COMMANDS>           Writes the command list to the PC
-    <BLAECK.WRITE_DATA>               Writes the data to the PC
-    <BLAECK.ACTIVATE,96,234>          The data is written every 60 seconds (60 000ms)
-                                      first Byte:  0b01100000 = 96 DEC
-                                      second Byte: 0b11101010 = 234 DEC
-                                      Minimum: 0[milliseconds] Maximum: 4 294 967 295[milliseconds]
-    <BLAECK.DEACTIVATE>               Stops writing the data every 60s
+    Connect Loggbok, or another Blaeck host, to that address on port 23. It asks for
+    the data with <BLAECK.ACTIVATE,1000> (one frame a second) and stops it with
+    <BLAECK.DEACTIVATE>.
 
+    To watch what the device does, connect a telnet client such as PuTTY to the same
+    address and port. It shows connections, the commands that arrive, and anything the
+    library refuses. Typing a BLAECK. command there turns it into a host too, and binary
+    frames follow.
 
   created by Sebastian Strobl
   More information on: https://github.com/sebaJoSt/BlaeckTCP
@@ -33,10 +30,11 @@
 
 #define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
-#define MAX_CLIENTS 8
+// A W5100 shield has four sockets, and each connection takes a receive buffer in RAM.
+#define MAX_CLIENTS 4
 
 // Instantiate a new BlaeckTCP object
-BlaeckTCP BlaeckTCP;
+BlaeckTCP Blaeck;
 
 // Signals
 float randomSmallNumber;
@@ -104,43 +102,27 @@ void setup()
   Serial.print(":");
   Serial.println(SERVER_PORT);
 
-  // Setup BlaeckTCP
-  BlaeckTCP.begin(
-      MAX_CLIENTS, // Maximal number of allowed clients
-      &Serial,     // Serial reference, used for debugging
-      2,           // Maximal signal count used;
-      SERVER_PORT  // TCP server port
-  );
+  // Setup BlaeckTCP. The library reports on the terminal connections.
+  Blaeck.begin(SERVER_PORT)
+      .withClients(MAX_CLIENTS)
+      .withSignals(2)
+      .withDebugStream(&Blaeck.Terminal);
 
-  BlaeckTCP.DeviceName = "Random Number Generator Ethernet";
-  BlaeckTCP.DeviceHWVersion = "Arduino Mega 2560 Rev3";
-  BlaeckTCP.DeviceFWVersion = EXAMPLE_VERSION;
+  Blaeck.DeviceName = "Random Number Generator Ethernet";
+  Blaeck.DeviceHWVersion = "Arduino Mega 2560 Rev3";
+  Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP
-  BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
-  BlaeckTCP.addSignal("Big Number", &randomBigNumber);
-
-  /* On AVR - a Mega with an Ethernet shield, say - wrapping the name in F()
-     roughly halves the RAM it costs:
-       BlaeckTCP.addSignal(F("Small Number"), &randomSmallNumber);
-     A plain literal is copied into RAM at startup AND again into the String
-     the signal keeps; F() keeps the literal in flash, so only the String copy
-     remains. The ESP32 and other 32-bit targets handle RAM differently and
-     gain little. */
-
-  /*Uncomment for fixed interval lock (ms)
-    - ignores ACTIVATE/DEACTIVATE while locked */
-  // BlaeckTCP.setIntervalMs(60000);
+  Blaeck.addSignal(F("Small Number"), &randomSmallNumber);
+  Blaeck.addSignal(F("Big Number"), &randomBigNumber);
 }
 
 void loop()
 {
   UpdateRandomNumbers();
 
-  /*- Keeps watching for commands from TCP clients and transmits the reply messages back to all
-      connected clients
-    - Sends data messages to all clients at the user-set interval (<BlAECK.ACTIVATE,..>) */
-  BlaeckTCP.tick();
+  // Handles connections and commands, and sends the signals when the interval is up.
+  Blaeck.tick();
 
   // Maintains the DHCP lease.
   if (leased)

@@ -10,14 +10,14 @@ on:
       - "src/BlaeckCore.h"
       - "src/BlaeckCore.cpp"
       - "extras/core-source.txt"
-      - "examples/**/Network.h"
+      - "examples/**/NetworkSetup.h"
   pull_request:
     paths:
       - ".github/workflows/copies.yml"
       - "src/BlaeckCore.h"
       - "src/BlaeckCore.cpp"
       - "extras/core-source.txt"
-      - "examples/**/Network.h"
+      - "examples/**/NetworkSetup.h"
   workflow_dispatch:
 
 jobs:
@@ -44,25 +44,25 @@ jobs:
             echo "$f matches"
           done
 
-  # Every topic example carries the same Network.h, because Arduino examples cannot share
+  # Every topic example carries the same NetworkSetup.h, because Arduino examples cannot share
   # a file. A fix made in one copy has to reach all of them.
   network:
-    name: Every Network.h is the same
+    name: Every NetworkSetup.h is the same
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - name: Compare the copies
         run: |
-          files=$(find examples -name Network.h | sort)
+          files=$(find examples -name NetworkSetup.h | sort)
           if [ -z "$files" ]; then
-            echo "No Network.h in the examples."; exit 0
+            echo "No NetworkSetup.h in the examples."; exit 0
           fi
           first=$(echo "$files" | head -n1)
           status=0
           for f in $files; do
             if ! cmp -s "$first" "$f"; then
-              echo "::error file=$f::$f differs from $first. Every copy of Network.h must be identical."
+              echo "::error file=$f::$f differs from $first. Every copy of NetworkSetup.h must be identical."
               status=1
             fi
           done
