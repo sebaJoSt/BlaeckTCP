@@ -121,7 +121,7 @@ jobs:
       # deep finder gives it them. chain+, deep+ and off were tried and fail.
       - name: Build examples
         run: |
-          for ex in BasicEthernet Commands EventChannels SineGenerator \
+          for ex in Basic Commands EventChannels SineGenerator \
                     StateChannels TimeStampModes WriteModes; do
             echo "::group::$ex"
             pio ci --board=megaatmega2560 \

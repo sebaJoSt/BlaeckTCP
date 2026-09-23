@@ -38,7 +38,7 @@ jobs:
               - name: EthernetBonjour
               - name: ArduinoOTA
             sketch-paths: |
-              - examples/BasicEthernet
+              - examples/Basic
               - examples/Commands
               - examples/EventChannels
               - examples/SineGenerator
@@ -55,7 +55,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicWiFi
+              - examples/MoreBoards/WiFi
             artifact-name-suffix: arduino-esp32-nano_nora
           - fqbn: arduino:renesas_uno:unor4wifi
             platforms: |
@@ -65,7 +65,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicWiFi
+              - examples/MoreBoards/WiFi
             artifact-name-suffix: arduino-renesas_uno-unor4wifi
           # --- Espressif ESP32 core: the ETH-based boards. These need esp32:esp32 from the
           #     Espressif package index - arduino:esp32 does not carry the Olimex, WT32 or C6
@@ -80,7 +80,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicESP32PoE
+              - examples/Basic
               - examples/BridgeESP32PoE
               - examples/Commands
               - examples/EventChannels
@@ -98,7 +98,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicWT32-ETH01
+              - examples/Basic
               - examples/SineGenerator
             artifact-name-suffix: esp32-wt32-eth01
           - fqbn: esp32:esp32:esp32c6
@@ -110,7 +110,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/BasicESP32C6BugBoard
+              - examples/MoreBoards/ESP32C6BugBoard
             artifact-name-suffix: esp32-esp32c6
           # --- The Giga keeps its update on the QSPI flash, which takes Arduino_Portenta_OTA. ---
           - fqbn: arduino:mbed_giga:giga

@@ -81,7 +81,7 @@ slot, starting at 0. They are for the sketch's own use, such as a status LED.
 
 ## Boards
 
-The topic examples run on these boards through a shared `NetworkSetup.h` tab:
+`Basic` and the topic examples run on these boards through a shared `NetworkSetup.h` tab:
 
 | Board | Network |
 |---|---|
@@ -90,8 +90,10 @@ The topic examples run on these boards through a shared `NetworkSetup.h` tab:
 | Olimex ESP32-PoE | built-in Ethernet |
 | WT32-ETH01 | built-in Ethernet |
 
-The board examples (`BasicEthernet`, `BasicESP32PoE`, `BasicWT32-ETH01`, `BasicWiFi`,
-`BasicESP32C6BugBoard`) show each board's network setup on its own, WiFi included.
+The `MoreBoards` examples are for boards outside `NetworkSetup.h`, each getting online on
+its own: `WiFi` on the UNO R4 WiFi and ESP32 boards, and `ESP32C6BugBoard` on the
+ESP32-C6-Bug with its Ethernet add-on. A board added later gets a folder there, with its
+setup in a README.
 
 ## Updates over the network
 

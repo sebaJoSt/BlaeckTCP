@@ -1,8 +1,8 @@
 /*
   NetworkSetup.h
 
-  Gets the board online, for every topic example in BlaeckTCP. The same file is in each of
-  them, and CI fails if the copies differ, so change it in all of them at once.
+  Gets the board online, for Basic and every topic example in BlaeckTCP. The same file is in
+  each of them, and CI fails if the copies differ, so change it in all of them at once.
 
   In the sketch, before the other includes:
 
@@ -290,5 +290,5 @@ inline void networkLoop()
 
 // ---------------------------------------------------------------------------------------
 #else
-#error "NetworkSetup.h covers the Mega, the Giga, the ESP32-PoE and the WT32-ETH01. For another board, start from its Basic example."
+#error "NetworkSetup.h covers the Mega, the Giga, the ESP32-PoE and the WT32-ETH01. For another board, see the MoreBoards examples, or the Ethernet library's."
 #endif

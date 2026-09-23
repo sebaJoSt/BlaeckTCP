@@ -1,5 +1,5 @@
 /*
-  BasicWiFi.ino
+  WiFi.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
   over WiFi to your PC (Client), at the interval a host asks for. It runs on the

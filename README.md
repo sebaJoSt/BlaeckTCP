@@ -108,8 +108,9 @@ and documented there. Read `begin(&Serial)` in those pages as `begin(SERVER_PORT
 The examples are in `examples/`. In the Arduino IDE, open them with
 **File > Examples > BlaeckTCP**.
 
-- **Board examples** show how each board gets online: `BasicEthernet`, `BasicESP32PoE`,
-  `BasicWT32-ETH01`, `BasicWiFi` and `BasicESP32C6BugBoard`.
+- **`Basic`** is the smallest sketch, on the same boards as the topic examples.
+- **`MoreBoards`** holds boards outside those four, each getting online on its own: `WiFi`
+  on the UNO R4 WiFi and ESP32 boards, and `ESP32C6BugBoard`.
 - **Topic examples** match BlaeckSerial's, one each, and run on the Mega and the Giga with an
   Ethernet shield, the ESP32-PoE and the WT32-ETH01: `SineGenerator`, `Commands`,
   `StateChannels`, `EventChannels`, `WriteModes`, `TimeStampModes` and `WaveformGenerator`.

@@ -35,7 +35,7 @@ change it there first.
 - Frame codes and byte layout belong in the
   [protocol spec](https://sebajost.github.io/blaeck-protocol/), not in the header.
   These doc comments describe what a sketch does
-- Each topic example carries an identical `NetworkSetup.h`; CI fails if the copies differ
+- `Basic` and each topic example carry an identical `NetworkSetup.h`; CI fails if the copies differ
 
 ## Documenting the public API
 
@@ -54,7 +54,7 @@ wrapper's doc text drifts from the core's.
 ## Building
 
 ```
-arduino-cli compile --fqbn arduino:avr:mega examples/BasicEthernet
+arduino-cli compile --fqbn arduino:avr:mega examples/Basic
 ```
 
 CI compiles the examples for the Mega, the Giga, the R4 WiFi and several ESP32 boards, so

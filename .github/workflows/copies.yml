@@ -44,7 +44,7 @@ jobs:
             echo "$f matches"
           done
 
-  # Every topic example carries the same NetworkSetup.h, because Arduino examples cannot share
+  # Basic and every topic example carry the same NetworkSetup.h, because Arduino examples cannot share
   # a file. A fix made in one copy has to reach all of them.
   network:
     name: Every NetworkSetup.h is the same

@@ -1,11 +1,12 @@
 /*
-  BasicWT32-ETH01.ino
+  ESP32C6BugBoard.ino
 
   This is a sample sketch to show how to use the BlaeckTCP library to transmit data
-  from the WT32-ETH01 V1.4 board (Server) to your PC (Client), at the interval a host asks for.
+  from the ESP32-C6-Bug (V2.1.0) + ESP32-BUG-ETH (V1.0.0) to your PC (Client),
+  at the interval a host asks for.
 
   Setup:
-    Upload the sketch to your board.
+    See README.md in this folder.
 
   Usage:
     Upload the sketch, and open the serial monitor at 115200 baud: it prints the
@@ -25,24 +26,26 @@
  */
 
 #include <ETH.h>
+#include <SPI.h>
 #include "BlaeckTCP.h"
+
+#define ETH_TYPE ETH_PHY_W5500
+#define ETH_ADDR 1
+#define ETH_CS 5
+#define ETH_IRQ 4
+#define ETH_RST -1
+
+// SPI pins
+#define ETH_SPI_SCK 6
+#define ETH_SPI_MISO 2
+#define ETH_SPI_MOSI 7
 
 #define EXAMPLE_VERSION "1.0"
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
 
-// ETH pins for WT32-ETH01
-#define ETH_PHY_TYPE ETH_PHY_LAN8720
-#define ETH_PHY_MDC 23
-#define ETH_PHY_MDIO 18
-#define ETH_CLK_MODE ETH_CLOCK_GPIO0_IN
-
 // Instantiate a new BlaeckTCP object
 BlaeckTCP Blaeck;
-
-// Signals
-float randomSmallNumber;
-long randomBigNumber;
 
 // The fallback address, for when no DHCP server answers, e.g. a board cabled straight to a PC.
 IPAddress ip(192, 168, 10, 177);
@@ -50,13 +53,17 @@ IPAddress dns(192, 168, 10, 1);
 IPAddress gateway(192, 168, 10, 1);
 IPAddress subnet(255, 255, 0, 0);
 
+// Signals
+float randomSmallNumber;
+long randomBigNumber;
+
 void onEvent(arduino_event_id_t event)
 {
   switch (event)
   {
   case ARDUINO_EVENT_ETH_START:
     Serial.println("ETH Started");
-    ETH.setHostname("BasicWT32-ETH01");
+    ETH.setHostname("ESP32C6BugBoard");
     break;
   case ARDUINO_EVENT_ETH_CONNECTED:
     Serial.println("ETH Connected");
@@ -91,16 +98,12 @@ void setup()
   Serial.begin(115200);
   delay(500);
 
-  // Power up ETH PHY
-  pinMode(16, OUTPUT);
-  digitalWrite(16, HIGH);
-  delay(100);
-
   // Register ETH event handler
   Network.onEvent(onEvent);
 
   // Initialize ETH
-  ETH.begin();
+  SPI.begin(ETH_SPI_SCK, ETH_SPI_MISO, ETH_SPI_MOSI);
+  ETH.begin(ETH_TYPE, ETH_ADDR, ETH_CS, ETH_IRQ, ETH_RST, SPI);
 
   // A DHCP answer can take a while on a managed network. A board with no DHCP server falls back.
   unsigned long waitUntil = millis() + 30000;
@@ -120,8 +123,8 @@ void setup()
       .withSignals(2)
       .withDebugStream(&Blaeck.Terminal);
 
-  Blaeck.DeviceName = "Random Number Generator WT32-ETH01";
-  Blaeck.DeviceHWVersion = "WT32-ETH01 V1.4";
+  Blaeck.DeviceName = "Random Number Generator ESP32C6";
+  Blaeck.DeviceHWVersion = "ESP32-C6-Bug V2.1.0";
   Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP
