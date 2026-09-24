@@ -36,6 +36,9 @@ to the old bootloader, and its uploads fail on this one.
 
 ## Arduino Giga R1
 
+`NetworkSetup.h` includes the QSPI storage adapter when Giga network services are enabled.
+No extra sketch header is needed. Install the **Arduino_Portenta_OTA** library as well.
+
 ### Partition the QSPI flash
 
 An update is kept on the QSPI flash, which is unpartitioned when the board is new. The

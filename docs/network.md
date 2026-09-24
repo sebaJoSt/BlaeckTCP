@@ -121,3 +121,6 @@ BlaeckTCP or interpret its frames.
 `#define NETWORK_WITH_SERVICES` before `#include "NetworkSetup.h"`. Any other topic example can do
 the same. Each board needs a one-time setup first; see the
 [WaveformGenerator README](../examples/WaveformGenerator/README.md).
+
+Giga OTA storage is included in `NetworkSetup.h`; no additional sketch file is needed.
+Its `Arduino_Portenta_OTA` dependency is required only for Giga builds with services enabled.
