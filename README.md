@@ -104,8 +104,28 @@ and documented there. Read `begin(&Serial)` in those pages as `begin(SERVER_PORT
 
 ## Examples
 
-Open them with **File > Examples > BlaeckTCP**. Start with **Basic**, the smallest sketch;
-**WaveformGenerator** shows everything the library can do. The others each cover one topic.
+Open them with **File > Examples > BlaeckTCP**. Start with **Basic**, then **Signals** and
+**Commands**. Follow with **StateChannels** and **EventChannels**, then **WaveformGenerator**
+to see the pieces working together.
+
+| Example | What it teaches |
+|---|---|
+| [Basic](examples/Basic) | The smallest sketch that logs two values over TCP |
+| [Signals](examples/Signals) | Numeric, boolean and text signals, metadata, and numbered arrays |
+| [Commands](examples/Commands) | Plain commands and typed dashboard controls |
+| [StateChannels](examples/StateChannels) | Values shown but never logged, from variables, getters or explicit writes |
+| [EventChannels](examples/EventChannels) | Declaring and reporting occurrences |
+| [WaveformGenerator](examples/WaveformGenerator) | A complete waveform dashboard, with OTA and Bonjour |
+| [WriteModes](examples/WriteModes) | Immediate writes versus updated-only data sent on the host's interval |
+| [more / BridgeESP32PoE](examples/more/BridgeESP32PoE) | Put a BlaeckSerial device on the network through a transparent UART bridge |
+| [more / WiFi](examples/more/WiFi) | Connect an UNO R4 WiFi or ESP32 over WiFi |
+| [more / ESP32C6BugBoard](examples/more/ESP32C6BugBoard) | Connect a C6 Bug board through its W5500 Ethernet add-on |
+| [more / TimestampsNTP](examples/more/TimestampsNTP) | Wall-clock timestamps from NTP on an ESP32-PoE or WT32-ETH01 |
+
+The seven core topics stay at the top level and use the same `NetworkSetup.h`: Mega and Giga
+with an Ethernet shield, ESP32-PoE, or WT32-ETH01. `more/` holds the additional examples.
+The shared topics follow BlaeckSerial,
+with network setup and `begin(SERVER_PORT)` in place of its serial connection.
 
 ## Reference
 

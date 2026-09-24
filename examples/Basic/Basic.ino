@@ -11,7 +11,7 @@
   Runs on the boards NetworkSetup.h covers: the Mega and the Giga with an Ethernet
   shield, the ESP32-PoE and the WT32-ETH01. Select the two ESP32 boards under their own
   names, OLIMEX ESP32-POE and WT32-ETH01 Ethernet Module, not as ESP32 Dev Module. For
-  other boards, see the MoreBoards examples.
+  other boards, see the examples under more.
 
   Usage:
     Upload the sketch, and open the serial monitor at 115200 baud: it prints the
@@ -62,7 +62,6 @@ void setup()
 
   // Names the device wherever it turns up
   Blaeck.DeviceName = "Random Number Generator";
-  Blaeck.DeviceHWVersion = NETWORK_BOARD;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   // F() keeps the name in flash instead of SRAM, which is worth having on a

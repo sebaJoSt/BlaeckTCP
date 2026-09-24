@@ -20,6 +20,14 @@ All notable changes to this project will be documented in this file.
 - Added the `WaveformGeneratorESP32PoE` and `WaveformGeneratorEthernet` examples: a dashboard-friendly waveform generator (frequency, amplitude, offset, waveform shape) controllable live over MQTT commands via Loggbok.
 
 ### Changed
+- The protocol core is shared with BlaeckSerial. `DeviceHWVersion` now defaults to the
+  selected build target: a friendly name for recognised boards, the core's `ARDUINO_BOARD`
+  string when available, or `"n/a"`. An explicit sketch assignment still overrides it.
+- Examples follow the same core topics as BlaeckSerial. `Signals` replaces `SineGenerator`
+  and includes numeric, boolean and text metadata plus numbered arrays. The bridge moves to
+  `more/`; WiFi and C6 Bug move there from `MoreBoards/` too.
+- `TimeStampModes` becomes `more/TimestampsNTP`, an ESP32 network-clock example that
+  waits for synchronization before starting its server.
 - Increased the default AVR command-handler limit: larger-SRAM AVR boards (for example Arduino Mega 2560) now default to 12 handlers (up from 4), and smaller AVR boards (Uno/Nano/Leonardo) to 6 handlers (up from 4).
 - `BlaeckTCP.h` now includes `<string.h>` explicitly. The `strcmp`/`strncpy`/`strlen`/… calls throughout `BlaeckTCP.cpp` previously relied on `Arduino.h` pulling it in transitively, which is a core implementation detail rather than a guarantee. No functional change.
 

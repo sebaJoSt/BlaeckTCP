@@ -12,7 +12,7 @@
     #include "NetworkSetup.h"
 
   then networkBegin(SERVER_PORT) in setup() before Blaeck.begin(), and networkLoop() in
-  loop(). NETWORK_BOARD names the board, for Blaeck.DeviceHWVersion.
+  loop(). Blaeck supplies the hardware name from the selected build target.
 
   Boards:
     Arduino Mega 2560      Ethernet shield
@@ -66,12 +66,6 @@ inline void networkPrintServer(const Printable &ip, uint16_t port)
 // ---------------------------------------------------------------------------------------
 #if defined(ARDUINO_ESP32_POE) || defined(ARDUINO_WT32_ETH01)
 // ---------------------------------------------------------------------------------------
-
-#if defined(ARDUINO_ESP32_POE)
-#define NETWORK_BOARD "Olimex ESP32-PoE"
-#else
-#define NETWORK_BOARD "WT32-ETH01"
-#endif
 
 // The PHY pins come from the board definition, which is why the board has to be selected
 // as the ESP32-PoE or the WT32-ETH01 rather than as a generic ESP32.
@@ -154,12 +148,6 @@ inline void networkLoop()
 // ---------------------------------------------------------------------------------------
 #elif defined(ARDUINO_AVR_MEGA2560) || defined(ARDUINO_GIGA)
 // ---------------------------------------------------------------------------------------
-
-#if defined(ARDUINO_GIGA)
-#define NETWORK_BOARD "Arduino Giga R1"
-#else
-#define NETWORK_BOARD "Arduino Mega 2560 Rev3"
-#endif
 
 #include <SPI.h>
 #include <Ethernet.h>
@@ -290,5 +278,5 @@ inline void networkLoop()
 
 // ---------------------------------------------------------------------------------------
 #else
-#error "NetworkSetup.h covers the Mega, the Giga, the ESP32-PoE and the WT32-ETH01. For another board, see the MoreBoards examples, or the Ethernet library's."
+#error "NetworkSetup.h covers the Mega, the Giga, the ESP32-PoE and the WT32-ETH01. For another board, see the examples under more, or the Ethernet library's."
 #endif

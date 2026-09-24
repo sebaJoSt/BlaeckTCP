@@ -112,7 +112,7 @@ jobs:
 
       # The examples that build on a Mega with an Ethernet shield and need nothing beyond
       # CRC, TelnetStream and Ethernet. WaveformGenerator turns on OTA and Bonjour, and the
-      # ESP32 and WiFi sketches need their own boards - the arduino-cli matrix covers those.
+      # ESP32, WiFi and NTP sketches need their own boards - the arduino-cli matrix covers those.
       # The sketch folder is passed rather than the .ino so a sketch split across several
       # files, such as one with a NetworkSetup.h tab, is built whole.
       #
@@ -121,8 +121,8 @@ jobs:
       # deep finder gives it them. chain+, deep+ and off were tried and fail.
       - name: Build examples
         run: |
-          for ex in Basic Commands EventChannels SineGenerator \
-                    StateChannels TimeStampModes WriteModes; do
+          for ex in Basic Commands EventChannels Signals \
+                    StateChannels WriteModes; do
             echo "::group::$ex"
             pio ci --board=megaatmega2560 \
                    --lib="." \

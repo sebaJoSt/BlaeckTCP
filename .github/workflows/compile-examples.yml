@@ -26,7 +26,7 @@ jobs:
 
       matrix:
         board:
-          # --- The Mega builds every topic example, WaveformGenerator with OTA and Bonjour. ---
+          # --- The Mega builds every core topic, WaveformGenerator with OTA and Bonjour. ---
           - fqbn: arduino:avr:mega
             platforms: |
               - name: arduino:avr
@@ -41,9 +41,8 @@ jobs:
               - examples/Basic
               - examples/Commands
               - examples/EventChannels
-              - examples/SineGenerator
+              - examples/Signals
               - examples/StateChannels
-              - examples/TimeStampModes
               - examples/WaveformGenerator
               - examples/WriteModes
             artifact-name-suffix: arduino-avr-mega
@@ -55,7 +54,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/MoreBoards/WiFi
+              - examples/more/WiFi
             artifact-name-suffix: arduino-esp32-nano_nora
           - fqbn: arduino:renesas_uno:unor4wifi
             platforms: |
@@ -65,7 +64,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/MoreBoards/WiFi
+              - examples/more/WiFi
             artifact-name-suffix: arduino-renesas_uno-unor4wifi
           # --- Espressif ESP32 core: the ETH-based boards. These need esp32:esp32 from the
           #     Espressif package index - arduino:esp32 does not carry the Olimex, WT32 or C6
@@ -81,12 +80,12 @@ jobs:
               - name: TelnetStream
             sketch-paths: |
               - examples/Basic
-              - examples/BridgeESP32PoE
+              - examples/more/BridgeESP32PoE
               - examples/Commands
               - examples/EventChannels
-              - examples/SineGenerator
+              - examples/Signals
               - examples/StateChannels
-              - examples/TimeStampModes
+              - examples/more/TimestampsNTP
               - examples/WriteModes
             artifact-name-suffix: esp32-esp32-poe
           - fqbn: esp32:esp32:wt32-eth01
@@ -99,7 +98,8 @@ jobs:
               - name: TelnetStream
             sketch-paths: |
               - examples/Basic
-              - examples/SineGenerator
+              - examples/Signals
+              - examples/more/TimestampsNTP
             artifact-name-suffix: esp32-wt32-eth01
           - fqbn: esp32:esp32:esp32c6
             platforms: |
@@ -110,7 +110,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/MoreBoards/ESP32C6BugBoard
+              - examples/more/ESP32C6BugBoard
             artifact-name-suffix: esp32-esp32c6
           # --- The Giga keeps its update on the QSPI flash, which takes Arduino_Portenta_OTA. ---
           - fqbn: arduino:mbed_giga:giga
@@ -125,7 +125,7 @@ jobs:
               - name: ArduinoOTA
               - name: Arduino_Portenta_OTA
             sketch-paths: |
-              - examples/SineGenerator
+              - examples/Signals
               - examples/WaveformGenerator
             artifact-name-suffix: arduino-mbed_giga-giga
 

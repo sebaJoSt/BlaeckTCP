@@ -100,11 +100,6 @@ void setup()
       .withDebugStream(&Blaeck.Terminal);
 
   Blaeck.DeviceName = "Random Number Generator WiFi";
-#if defined(ARDUINO_UNOWIFIR4)
-  Blaeck.DeviceHWVersion = "Arduino UNO R4 WiFi";
-#else
-  Blaeck.DeviceHWVersion = "ESP32";
-#endif
   Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP

@@ -13,7 +13,8 @@ library as [BlaeckSerial](https://github.com/sebaJoSt/BlaeckSerial), over a netw
   - `BlaeckCoreLibrary.h` — this library's namespace and settings; differs per library
   - `BlaeckTCP.h/.cpp` — the network transport: begin(), connections, hosts and
     terminals, `Blaeck.Terminal`
-- `examples/` — sketches listed under *File → Examples*
+- `examples/` — sketches listed under *File → Examples*. Core topics are at the top level;
+  `more/` holds the serial bridge, WiFi, C6 Bug and NTP examples
 - `extras/` — the doc tooling, the core sync script, and the doc-example preamble.
   Installed alongside the library, so keep it small
 

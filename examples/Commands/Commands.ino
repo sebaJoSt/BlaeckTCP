@@ -4,7 +4,7 @@
   How to add your own commands. There are two kinds:
 
     Plain   onCommand()          You parse the parameters yourself.
-                                 Sent from a terminal.
+                                 No automatic dashboard control.
 
     Typed   onSwitchCommand()    You declare what the command is. The library
             onButtonCommand()    checks the value first, and describes the
@@ -28,8 +28,9 @@
 
     <COMMAND,PARAMETER01,PARAMETER02,...,PARAMETER10>
 
-    Parameters arrive as text; convert with atoi/atol/atof as needed. An empty
-    one keeps its slot, so <SwitchLED,> below reads as params[0][0] == '\0'.
+    Parameters arrive as text. Plain handlers must check the parameter count and the whole
+    value, not just a numeric prefix. An empty one keeps its slot, so <SwitchLED,> below
+    reads as params[0][0] == '\0'.
 
   The circuit:
     - No wiring required, the on-board LED is used.
@@ -46,20 +47,27 @@
                                       state channel with how long the board
                                       has been running.
 
-  Plain, and so from a terminal only:
+  Plain commands, callable by a host or terminal but not auto-discovered as controls:
 
         <SwitchLED,1>                 Turn on the LED
         <SwitchLED,0>                 Turn off the LED
         <SwitchLED,ON>                Also accepts text: a plain command
         <SwitchLED,OFF>               parses its value itself
         <SwitchLED,>                  Empty parameter -> uses default (OFF)
-        <Print,Hello,3>               Two parameters: text and a count
+        <SwitchLED,garbage>           Reports an error; leaves the LED unchanged
+        <Print,Hello,3>               Prints Hello three times; count must be 1..10
+        <Print,Hello,3abc>            Reports an error; prints no copies of Hello
+        <Print,Hello,11>              Reports an error; does not clamp the count
+
+  Plain-handler errors are terminal text, not protocol rejection acknowledgements.
+  A protocol host does not receive Blaeck.Terminal text; keep a terminal connected to see it.
 */
 
 #include "Arduino.h"
 #define HOST_NAME "Commands"
 #include "NetworkSetup.h"
 #include "BlaeckTCP.h"
+#include <stdlib.h>
 
 #define ExampleVersion "1.0"
 
@@ -102,7 +110,6 @@ void setup()
 
   // Names the device wherever it turns up
   Blaeck.DeviceName = "Command Demo";
-  Blaeck.DeviceHWVersion = NETWORK_BOARD;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   // The state signal the typed switch below refers to
@@ -134,8 +141,9 @@ void loop()
 void onSwitchLED(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
-  if (paramCount < 1)
+  if (paramCount != 1)
   {
+    Blaeck.Terminal.println(F("SwitchLED expects exactly one value: 0, 1, ON or OFF."));
     return;
   }
   // <SwitchLED,> sends an empty field
@@ -147,32 +155,20 @@ void onSwitchLED(const char *command, const char *const *params, byte paramCount
   }
   // Parsing it yourself means accepting whatever spelling suits you.
   // equalsFlash() compares against a name kept in flash instead of SRAM.
-  if (Blaeck.equalsFlash(params[0], F("ON")))
+  if (Blaeck.equalsFlash(params[0], F("ON")) || Blaeck.equalsFlash(params[0], F("1")))
   {
     setLed(true);
     Blaeck.Terminal.println("LED is ON.");
     return;
   }
-  if (Blaeck.equalsFlash(params[0], F("OFF")))
+  if (Blaeck.equalsFlash(params[0], F("OFF")) || Blaeck.equalsFlash(params[0], F("0")))
   {
     setLed(false);
     Blaeck.Terminal.println("LED is OFF.");
     return;
   }
 
-  int state = atoi(params[0]);
-  if (state == 1)
-  {
-    setLed(true);
-    Blaeck.Terminal.println("LED is ON.");
-    return;
-  }
-  if (state == 0)
-  {
-    setLed(false);
-    Blaeck.Terminal.println("LED is OFF.");
-    return;
-  }
+  Blaeck.Terminal.println(F("Invalid SwitchLED value. Use 0, 1, ON or OFF; LED unchanged."));
 }
 
 // Typed switch: the library rejects <LED,7> before this runs, so the value
@@ -212,12 +208,20 @@ void onPing(const char *command, const char *const *params, byte paramCount)
 void onPrint(const char *command, const char *const *params, byte paramCount)
 {
   (void)command;
-  if (paramCount < 2)
+  if (paramCount != 2)
   {
+    Blaeck.Terminal.println(F("Print expects exactly two parameters: text and count."));
     return;
   }
-  // params[0] is text, params[1] is how many times to repeat it.
-  int repeats = atoi(params[1]);
+  // Digits only, with no ignored suffix. The bound keeps this handler short.
+  char *end;
+  const long repeats = strtol(params[1], &end, 10);
+  if (params[1][0] < '0' || params[1][0] > '9' || *end != '\0' ||
+      repeats < 1 || repeats > 10)
+  {
+    Blaeck.Terminal.println(F("Print count must be decimal digits with a value from 1 to 10."));
+    return;
+  }
   for (int i = 0; i < repeats; i++)
   {
     Blaeck.Terminal.println(params[0]);

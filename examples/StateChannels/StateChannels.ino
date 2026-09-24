@@ -92,7 +92,6 @@ void setup()
       .withDebugStream(&Blaeck.Terminal);
 
   Blaeck.DeviceName = "State Channels Demo";
-  Blaeck.DeviceHWVersion = NETWORK_BOARD;
   Blaeck.DeviceFWVersion = "1.0";
 
   // A logging session needs something to log; state channels are never logged themselves,

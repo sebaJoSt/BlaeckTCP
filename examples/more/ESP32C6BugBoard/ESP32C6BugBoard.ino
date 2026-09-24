@@ -124,6 +124,7 @@ void setup()
       .withDebugStream(&Blaeck.Terminal);
 
   Blaeck.DeviceName = "Random Number Generator ESP32C6";
+  // This wiring is for a specific board that the generic ESP32C6 build target cannot name.
   Blaeck.DeviceHWVersion = "ESP32-C6-Bug V2.1.0";
   Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 

@@ -53,7 +53,6 @@ void setup()
       .withEventTypes(10);
 
   Blaeck.DeviceName = "Event Channels Demo";
-  Blaeck.DeviceHWVersion = NETWORK_BOARD;
   Blaeck.DeviceFWVersion = "1.0";
 
   Blaeck.addSignal(F("Uptime"), &Uptime)

@@ -90,10 +90,30 @@ slot, starting at 0. They are for the sketch's own use, such as a status LED.
 | Olimex ESP32-PoE | built-in Ethernet |
 | WT32-ETH01 | built-in Ethernet |
 
-The `MoreBoards` examples are for boards outside `NetworkSetup.h`, each getting online on
-its own: `WiFi` on the UNO R4 WiFi and ESP32 boards, and `ESP32C6BugBoard` on the
-ESP32-C6-Bug with its Ethernet add-on. A board added later gets a folder there, with its
-setup in a README.
+The `more` folder includes additional networking examples:
+[WiFi](../examples/more/WiFi) gets the UNO R4 WiFi and ESP32 boards online, and
+[ESP32C6BugBoard](../examples/more/ESP32C6BugBoard) sets the pins for the
+ESP32-C6-Bug's Ethernet add-on. These use their own network setup.
+
+The hardware name defaults to the selected build target, with a friendly name for recognised
+boards or the core's board identifier otherwise. It is not physical board detection.
+`DeviceHWVersion` can still describe custom hardware: the C6 Bug example overrides it because
+its generic ESP32C6 build target cannot identify that board or its wiring.
+
+## Network timestamps
+
+The default `BLAECK_NO_TIMESTAMP` mode lets the host timestamp data on arrival.
+`Blaeck.setTimestampMode(BLAECK_MICROS)` uses device uptime instead; neither needs a clock
+source. [TimestampsNTP](../examples/more/TimestampsNTP) uses the ESP32 network clock on an
+ESP32-PoE or WT32-ETH01. It waits for synchronization before starting the TCP server and reports
+failed attempts on the serial monitor, rather than sending readings dated 1970. It needs
+network access to `pool.ntp.org`.
+
+## A serial device on the network
+
+[BridgeESP32PoE](../examples/more/BridgeESP32PoE) forwards bytes unchanged between one TCP
+connection and a UART. The device behind it runs BlaeckSerial; the bridge does not use
+BlaeckTCP or interpret its frames.
 
 ## Updates over the network
 

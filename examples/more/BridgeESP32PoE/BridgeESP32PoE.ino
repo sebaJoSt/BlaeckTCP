@@ -25,7 +25,7 @@
          | RX                   | TX
   ---------------------------
   |  BLAECKSERIAL DEVICE    |
-  |  e.g. SineGeneratorBasic|
+  |  e.g. Signals          |
   |  from BlaeckSerial      |
   ---------------------------
 
