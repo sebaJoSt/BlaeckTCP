@@ -12,7 +12,9 @@
     #include "NetworkSetup.h"
 
   then networkBegin(SERVER_PORT) in setup() before Blaeck.begin(), and networkLoop() in
-  loop(). Blaeck supplies the hardware name from the selected build target.
+  loop(). Call Serial.begin() first: networkBegin() waits up to three seconds for the
+  monitor before printing startup diagnostics, then continues even without a computer.
+  Blaeck supplies the hardware name from the selected build target.
 
   Boards:
     Arduino Mega 2560      Ethernet shield
@@ -43,6 +45,13 @@
 #define NETWORK_FALLBACK_IP 192, 168, 10, 177
 #define NETWORK_FALLBACK_GATEWAY 192, 168, 10, 1
 #define NETWORK_FALLBACK_SUBNET 255, 255, 0, 0
+
+inline void networkWaitForSerial()
+{
+  const unsigned long started = millis();
+  while (!Serial && millis() - started < 3000UL)
+    delay(10);
+}
 
 // The server line, with the name Bonjour answers to when it runs.
 inline void networkPrintServer(const Printable &ip, uint16_t port)
@@ -114,6 +123,7 @@ inline void networkEvent(arduino_event_id_t event)
 
 inline void networkBegin(uint16_t port)
 {
+  networkWaitForSerial();
   Serial.println(F("Looking for an address..."));
   Network.onEvent(networkEvent);
   ETH.begin();
@@ -207,6 +217,7 @@ inline bool networkReadMac(const char *text)
 
 inline void networkBegin(uint16_t port)
 {
+  networkWaitForSerial();
   if (!networkReadMac(NETWORK_MAC))
   {
     Serial.println(F("NETWORK_MAC is not a MAC address. Write it as DE:AD:BE:EF:FE:ED."));

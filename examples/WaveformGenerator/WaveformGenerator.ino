@@ -67,7 +67,6 @@
 #include "Arduino.h"
 #define HOST_NAME "WaveformGenerator"
 // OTA updates and Bonjour. Remove this line to leave them out.
-#define NETWORK_MAC "9A:85:AF:DF:9D:23"
 #define NETWORK_WITH_SERVICES
 #include "NetworkSetup.h"
 #include "BlaeckTCP.h"
