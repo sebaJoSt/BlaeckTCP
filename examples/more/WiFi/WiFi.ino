@@ -34,6 +34,7 @@
 #include "BlaeckTCP.h"
 
 #define EXAMPLE_VERSION "1.0"
+#define HOST_NAME "WiFi"
 #define SERVER_PORT 23
 #define MAX_CLIENTS 4
 
@@ -60,6 +61,8 @@ void setup()
   if (WiFi.firmwareVersion() < WIFI_FIRMWARE_LATEST_VERSION)
     Serial.println("Please upgrade the WiFi firmware.");
 #endif
+
+  WiFi.setHostname(HOST_NAME);
 
 #if defined(ARDUINO_UNOWIFIR4)
   // Keep trying: begin() waits for an answer, and gives up after a while.
@@ -99,7 +102,7 @@ void setup()
       .withSignals(2)
       .withDebugStream(&Blaeck.Terminal);
 
-  Blaeck.DeviceName = "Random Number Generator WiFi";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = EXAMPLE_VERSION;
 
   // Add signals to BlaeckTCP

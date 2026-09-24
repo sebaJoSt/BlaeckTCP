@@ -2,7 +2,8 @@
   NetworkSetup.h
 
   Gets the board online, for Basic and every topic example in BlaeckTCP. The same file is in
-  each of them, and CI fails if the copies differ, so change it in all of them at once.
+  each of them, and CI fails if the copies differ. Edit examples/Basic/NetworkSetup.h,
+  then run extras/scripts/syncnetwork.py to update the other copies.
 
   In the sketch, before the other includes:
 

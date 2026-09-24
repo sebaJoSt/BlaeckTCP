@@ -61,7 +61,7 @@ void setup()
       .withDebugStream(&Blaeck.Terminal);
 
   // Names the device wherever it turns up
-  Blaeck.DeviceName = "Random Number Generator";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   // F() keeps the name in flash instead of SRAM, which is worth having on a

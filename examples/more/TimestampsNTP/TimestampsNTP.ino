@@ -65,7 +65,7 @@ void setup()
   // Setup BlaeckTCP, with room for one signal
   Blaeck.begin(SERVER_PORT).withSignals(1);
 
-  Blaeck.DeviceName = "NTP Timestamps Demo";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   Blaeck.addSignal(F("Sine_1"), &sine);

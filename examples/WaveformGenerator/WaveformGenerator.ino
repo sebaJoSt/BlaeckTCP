@@ -125,7 +125,7 @@ void setup()
       .withStateChannels(8)
       .withEventChannels(1);
 
-  Blaeck.DeviceName = "Waveform Generator Demo";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = "1.0";
 
   // Everything after addSignal() is optional, and each call changes how Home Assistant shows it.

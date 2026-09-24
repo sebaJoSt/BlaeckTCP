@@ -32,11 +32,16 @@ change it there first.
   name switches off IntelliSense for every builder chain
   ([vscode-cpptools#4251](https://github.com/microsoft/vscode-cpptools/issues/4251))
 - Sources are CRLF. Check after any scripted edit
+- Example device names match the sketch name. TCP sketches use `HOST_NAME` for both
+  the configurable network hostname and `Blaeck.DeviceName`.
 - `extras/tests/DocCodeBlocks/DocCodeBlocks.ino` is generated. It is gitignored; do not commit it
 - Frame codes and byte layout belong in the
   [protocol spec](https://sebajost.github.io/blaeck-protocol/), not in the header.
   These doc comments describe what a sketch does
-- `Basic` and each topic example carry an identical `NetworkSetup.h`; CI fails if the copies differ
+- `Basic` and each topic example carry an identical `NetworkSetup.h`. Edit only
+  `examples/Basic/NetworkSetup.h`, then run `python extras/scripts/syncnetwork.py` to
+  overwrite the other existing copies byte for byte. The script works from any directory.
+  `python extras/scripts/syncnetwork.py --check` checks without writing; CI runs this too
 
 ## Documenting the public API
 

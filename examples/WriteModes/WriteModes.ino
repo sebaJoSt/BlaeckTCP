@@ -53,7 +53,7 @@ void setup()
   // Setup BlaeckTCP, with room for three signals
   Blaeck.begin(SERVER_PORT).withSignals(3);
 
-  Blaeck.DeviceName = "Write Modes Demo";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   // Add signals to BlaeckTCP

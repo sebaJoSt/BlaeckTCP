@@ -41,6 +41,7 @@
 #define ETH_SPI_MOSI 7
 
 #define EXAMPLE_VERSION "1.0"
+#define HOST_NAME "ESP32C6BugBoard"
 #define SERVER_PORT 23
 #define MAX_CLIENTS 8
 
@@ -63,7 +64,7 @@ void onEvent(arduino_event_id_t event)
   {
   case ARDUINO_EVENT_ETH_START:
     Serial.println("ETH Started");
-    ETH.setHostname("ESP32C6BugBoard");
+    ETH.setHostname(HOST_NAME);
     break;
   case ARDUINO_EVENT_ETH_CONNECTED:
     Serial.println("ETH Connected");
@@ -123,7 +124,7 @@ void setup()
       .withSignals(2)
       .withDebugStream(&Blaeck.Terminal);
 
-  Blaeck.DeviceName = "Random Number Generator ESP32C6";
+  Blaeck.DeviceName = HOST_NAME;
   // This wiring is for a specific board that the generic ESP32C6 build target cannot name.
   Blaeck.DeviceHWVersion = "ESP32-C6-Bug V2.1.0";
   Blaeck.DeviceFWVersion = EXAMPLE_VERSION;

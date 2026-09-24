@@ -49,7 +49,7 @@ void setup()
       .withSignals(5 + SINE_COUNT)
       .withDebugStream(&Blaeck.Terminal);
 
-  Blaeck.DeviceName = "Signals Demo";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = "1.0";
 
   // The display name changes the dashboard label, not the logged column name.

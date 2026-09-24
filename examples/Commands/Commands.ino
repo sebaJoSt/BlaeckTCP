@@ -109,7 +109,7 @@ void setup()
   Blaeck.begin(SERVER_PORT).withSignals(1).withDebugStream(&Blaeck.Terminal);
 
   // Names the device wherever it turns up
-  Blaeck.DeviceName = "Command Demo";
+  Blaeck.DeviceName = HOST_NAME;
   Blaeck.DeviceFWVersion = ExampleVersion;
 
   // The state signal the typed switch below refers to

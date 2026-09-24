@@ -10,6 +10,7 @@ on:
       - "src/BlaeckCore.h"
       - "src/BlaeckCore.cpp"
       - "extras/core-source.txt"
+      - "extras/scripts/syncnetwork.py"
       - "examples/**/NetworkSetup.h"
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - "src/BlaeckCore.h"
       - "src/BlaeckCore.cpp"
       - "extras/core-source.txt"
+      - "extras/scripts/syncnetwork.py"
       - "examples/**/NetworkSetup.h"
   workflow_dispatch:
 
@@ -44,8 +46,7 @@ jobs:
             echo "$f matches"
           done
 
-  # Basic and every topic example carry the same NetworkSetup.h, because Arduino examples cannot share
-  # a file. A fix made in one copy has to reach all of them.
+  # Keep examples self-contained, with Basic as the source for NetworkSetup.h.
   network:
     name: Every NetworkSetup.h is the same
     runs-on: ubuntu-latest
@@ -53,18 +54,4 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Compare the copies
-        run: |
-          files=$(find examples -name NetworkSetup.h | sort)
-          if [ -z "$files" ]; then
-            echo "No NetworkSetup.h in the examples."; exit 0
-          fi
-          first=$(echo "$files" | head -n1)
-          status=0
-          for f in $files; do
-            if ! cmp -s "$first" "$f"; then
-              echo "::error file=$f::$f differs from $first. Every copy of NetworkSetup.h must be identical."
-              status=1
-            fi
-          done
-          [ $status -eq 0 ] && echo "$(echo "$files" | wc -l) copies, all identical"
-          exit $status
+        run: python3 extras/scripts/syncnetwork.py --check
