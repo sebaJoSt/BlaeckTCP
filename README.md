@@ -1,10 +1,6 @@
-<a href="url"><img src="https://user-images.githubusercontent.com/388152/185908831-4eccf7a6-5f43-405d-b7fe-5225eeba302d.png" height="75"></a>
-<a href="url"><img src="https://github.com/sebaJoSt/BlaeckTCP/assets/388152/15f6a932-2263-4453-9686-0ad9e36720fd"  alt="BlaeckTCP Logo SeeSaw Font" height="70"></a>
-===
-
-
-
 > [!IMPORTANT]
+> <picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sebaJoSt/blaeck/main/extras/blaeck-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sebaJoSt/blaeck/main/extras/blaeck-light.svg"><img src="https://raw.githubusercontent.com/sebaJoSt/blaeck/main/extras/blaeck-light.svg" alt="blaeck" height="28"></picture>
+>
 > BlaeckTCP is no longer developed; 6.0.1 is its final release. Its successor is
 > [blaeck](https://github.com/sebaJoSt/blaeck), which combines BlaeckSerial and BlaeckTCP in one
 > library from version 7.0.0.
