@@ -26,7 +26,6 @@ jobs:
 
       matrix:
         board:
-          # --- The Mega builds every core topic, WaveformGenerator with OTA and Bonjour. ---
           - fqbn: arduino:avr:mega
             platforms: |
               - name: arduino:avr
@@ -35,16 +34,14 @@ jobs:
               - name: CRC
               - name: TelnetStream
               - name: Ethernet
-              - name: EthernetBonjour
-              - name: ArduinoOTA
             sketch-paths: |
-              - examples/Basic
-              - examples/Commands
-              - examples/EventChannels
-              - examples/Signals
-              - examples/StateChannels
-              - examples/WaveformGenerator
-              - examples/WriteModes
+              - examples/BasicEthernet
+              - examples/SineGeneratorEthernet
+              - examples/SineGeneratorAndCommandsEthernet
+              - examples/CommandsEthernet
+              - examples/BridgeEthernet
+              - examples/WriteModesEthernet
+              - examples/SignalNamesInFlashLessRAMUsage
             artifact-name-suffix: arduino-avr-mega
           - fqbn: arduino:esp32:nano_nora
             platforms: |
@@ -54,7 +51,7 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/more/WiFi
+              - examples/SineGeneratorWiFi
             artifact-name-suffix: arduino-esp32-nano_nora
           - fqbn: arduino:renesas_uno:unor4wifi
             platforms: |
@@ -64,70 +61,9 @@ jobs:
               - name: CRC
               - name: TelnetStream
             sketch-paths: |
-              - examples/more/WiFi
+              - examples/SineGeneratorWiFiS3
+              - examples/TimeStampModesWiFiS3
             artifact-name-suffix: arduino-renesas_uno-unor4wifi
-          # --- Espressif ESP32 core: the ETH-based boards. These need esp32:esp32 from the
-          #     Espressif package index - arduino:esp32 does not carry the Olimex, WT32 or C6
-          #     board definitions. The ESP32-PoE builds every topic example but
-          #     WaveformGenerator, which has a job of its own below. ---
-          - fqbn: esp32:esp32:esp32-poe
-            platforms: |
-              - name: esp32:esp32
-                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
-            libraries: |
-              - source-path: ./
-              - name: CRC
-              - name: TelnetStream
-            sketch-paths: |
-              - examples/Basic
-              - examples/more/BridgeESP32PoE
-              - examples/Commands
-              - examples/EventChannels
-              - examples/Signals
-              - examples/StateChannels
-              - examples/more/TimestampsNTP
-              - examples/WriteModes
-            artifact-name-suffix: esp32-esp32-poe
-          - fqbn: esp32:esp32:wt32-eth01
-            platforms: |
-              - name: esp32:esp32
-                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
-            libraries: |
-              - source-path: ./
-              - name: CRC
-              - name: TelnetStream
-            sketch-paths: |
-              - examples/Basic
-              - examples/Signals
-              - examples/more/TimestampsNTP
-            artifact-name-suffix: esp32-wt32-eth01
-          - fqbn: esp32:esp32:esp32c6
-            platforms: |
-              - name: esp32:esp32
-                source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
-            libraries: |
-              - source-path: ./
-              - name: CRC
-              - name: TelnetStream
-            sketch-paths: |
-              - examples/more/ESP32C6BugBoard
-            artifact-name-suffix: esp32-esp32c6
-          # --- The Giga keeps its update on the QSPI flash, which takes Arduino_Portenta_OTA. ---
-          - fqbn: arduino:mbed_giga:giga
-            platforms: |
-              - name: arduino:mbed_giga
-            libraries: |
-              - source-path: ./
-              - name: CRC
-              - name: TelnetStream
-              - name: Ethernet
-              - name: EthernetBonjour
-              - name: ArduinoOTA
-              - name: Arduino_Portenta_OTA
-            sketch-paths: |
-              - examples/Signals
-              - examples/WaveformGenerator
-            artifact-name-suffix: arduino-mbed_giga-giga
 
     steps:
       - name: Checkout repository
@@ -150,28 +86,3 @@ jobs:
           if-no-files-found: error
           path: ${{ env.SKETCHES_REPORTS_PATH }}
           name: sketches-report-${{ matrix.board.artifact-name-suffix }}
-
-  # WaveformGenerator with OTA on the ESP32-PoE needs the Library Manager's ArduinoOTA, and the
-  # ESP32 core bundles another library of that name that takes priority. So this job deletes
-  # the bundled one first, as examples/WaveformGenerator/README.md tells a person to.
-  waveform-esp32-poe:
-    name: WaveformGenerator on esp32:esp32:esp32-poe
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - uses: arduino/setup-arduino-cli@v2
-
-      - name: Install the core and the libraries
-        run: |
-          arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          arduino-cli core install esp32:esp32 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
-          arduino-cli lib install CRC TelnetStream ArduinoOTA
-
-      - name: Delete the core's bundled ArduinoOTA
-        run: rm -rf ~/.arduino15/packages/esp32/hardware/esp32/*/libraries/ArduinoOTA
-
-      - name: Compile
-        run: arduino-cli compile --fqbn esp32:esp32:esp32-poe --library . examples/WaveformGenerator

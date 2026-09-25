@@ -1,146 +1,147 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="extras/blaeckTCP-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="extras/blaeckTCP-light.svg">
-  <img src="extras/blaeckTCP-light.svg" alt="BlaeckTCP" height="75">
-</picture>
+<a href="url"><img src="https://user-images.githubusercontent.com/388152/185908831-4eccf7a6-5f43-405d-b7fe-5225eeba302d.png" height="75"></a>
+<a href="url"><img src="https://github.com/sebaJoSt/BlaeckTCP/assets/388152/15f6a932-2263-4453-9686-0ad9e36720fd"  alt="BlaeckTCP Logo SeeSaw Font" height="70"></a>
+===
 
----
 
-BlaeckTCP is an Arduino library. It sends any value your sketch holds - sensor readings,
-calculated results, text - over Ethernet or WiFi as binary data, using the
-[Blaeck protocol](https://sebajost.github.io/blaeck-protocol/).
 
-Its sister library [BlaeckSerial](https://github.com/sebaJoSt/BlaeckSerial) does the same
-over a serial port.
+BlaeckTCP is a simple Arduino library to send binary (sensor) data via Ethernet/WiFi to your PC using the [Blaeck protocol](https://sebajost.github.io/blaeck-protocol/). The data can be sent periodically or requested on demand with [commands](#blaecktcp-commands).
+Also included is a message parser which reads input in the syntax of `<HelloWorld, 12, 47>`. You can register exact command handlers (`onCommand`) and a catch-all handler (`onAnyCommand`) in your sketch.
 
-It is the first part of a chain:
+## Getting Started
 
-1. **Your Arduino sketch** uses BlaeckTCP to register each variable it sends as a *signal* -
-   a temperature, a counter, a switch position. You can also register the commands the board
-   accepts and the events it fires.
-2. **Loggbok**, a data logging tool, connects to the board over TCP, reads the signals and
-   stores them in a database. It is also an MQTT bridge: it publishes the signals and commands
-   to a broker.
-3. **Home Assistant** subscribes to that broker and creates one entity for each: a sensor for
-   a signal, a slider or button for a command.
+Clone this repository into `Arduino/Libraries` or use the built-in Arduino IDE Library manager to install
+a copy of this library. You can find more detail about installing libraries 
+[here, on Arduino's website](https://docs.arduino.cc/software/ide-v2/tutorials/ide-v2-installing-a-library).
 
-Loggbok is an internal tool and is not publicly released. The protocol is documented, so you
-can write your own host.
+(Open BasicEthernet Example under `File -> Examples -> BlaeckTCP` for reference)
 
-## A first sketch
-
-This sketch sends two values from a Mega with an Ethernet shield:
-
-```cpp
+```CPP
+#include <Arduino.h>
 #include <SPI.h>
 #include <Ethernet.h>
 #include <BlaeckTCP.h>
+```
+### Instantiate BlaeckTCP
+```CPP
+BlaeckTCP BlaeckTCP;
+```
+### Initialize Serial & BlaeckTCP
+```CPP
+void setup()
+{
+  Serial.begin(9600);
 
-BlaeckTCP Blaeck;
+   BlaeckTCP.begin(
+      MAX_CLIENTS,  // Maximal number of allowed clients
+      &Serial,      // Serial reference, used for debugging
+      2,            // Maximal signal count used;
+      SERVER_PORT   // TCP server port
+  );
+}
+```
 
-byte mac[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
-const uint16_t SERVER_PORT = 23;
+### Add signals
+```CPP
+BlaeckTCP.addSignal("Small Number", &randomSmallNumber);
+BlaeckTCP.addSignal("Big Number", &randomBigNumber);
+```
 
-float temperature;
-long  pressure;
+If more signals are added than configured in `begin(...)`, additional `addSignal(...)`
+calls are ignored. You can inspect this with:
+```CPP
+if (BlaeckTCP.hasSignalOverflow()) {
+  Serial.print("Dropped addSignal calls: ");
+  Serial.println(BlaeckTCP.getSignalOverflowCount());
+}
+```
+
+### Update your variables and don't forget to `tick()`!
+```CPP
+void loop()
+{
+  UpdateYourVariables();
+
+ /*Keeps watching for commands from TCP client and
+     transmits the data back to client at the user-set interval*/
+  BlaeckTCP.tick();
+}
+```
+
+## BlaeckTCP commands
+
+See the [protocol documentation](https://sebajost.github.io/blaeck-protocol/protocol/commands) for the full list of commands and their parameters.
+
+### Interval lock mode
+
+By default, timed data is client-controlled (`BLAECK.ACTIVATE` / `BLAECK.DEACTIVATE`).
+You can lock interval behavior from sketch code:
+
+```CPP
+// Fixed interval lock: always send every 500 ms, ignore ACTIVATE/DEACTIVATE
+BlaeckTCP.setIntervalMs(500);
+
+// Off lock: disable timed data and ignore ACTIVATE
+BlaeckTCP.setIntervalMs(BLAECK_INTERVAL_OFF);
+
+// Back to client control (default behavior)
+BlaeckTCP.setIntervalMs(BLAECK_INTERVAL_CLIENT);
+```
+
+`setTimedData(...)` has been removed. Use `setIntervalMs(...)` instead.
+
+### Command handler API
+
+Available callbacks:
+- `onCommand(...)` and `onAnyCommand(...)` for parsed incoming commands
+- `setCommandCallback(...)` (deprecated, still supported with runtime warning)
+- `setBeforeWriteCallback(...)` before data is written
+- `setClientConnectedCallback(...)` / `setClientDisconnectedCallback(...)` for client connection events
+- `isClientDataEnabled(clientNo)` to query whether a client is allowed to receive data frames
+
+When handling commands, use `CommandingClient` to reply to the sender of the current command.
+
+Command parser defaults are architecture-aware:
+- AVR (`__AVR__`): 48 command chars, 4 registered handlers, 24 command-name chars, 10 params
+- Non-AVR: 96 command chars, 12 registered handlers, 40 command-name chars, 10 params
+
+These defaults can be overridden by placing a `BlaeckTCPConfig.h` file in your sketch folder:
+```CPP
+// BlaeckTCPConfig.h
+#define BLAECK_BUFFER_SIZE 512
+#define BLAECK_COMMAND_MAX_CHARS_DEFAULT 128
+#define BLAECK_COMMAND_MAX_HANDLERS_DEFAULT 8
+#define BLAECK_COMMAND_MAX_NAME_CHARS_DEFAULT 48
+#define BLAECK_COMMAND_MAX_PARAMS_DEFAULT 16
+#define BLAECK_TCP_NO_DELAY_DEFAULT false  // disable Nagle optimization
+```
+
+PlatformIO users can also use compiler flags in `platformio.ini`:
+```ini
+build_flags = -DBLAECK_BUFFER_SIZE=512
+```
+
+```CPP
+void onSwitchLED(const char *command, const char *const *params, byte paramCount)
+{
+  if (paramCount < 1) return;
+  int state = atoi(params[0]);
+  digitalWrite(LED_BUILTIN, state == 1 ? HIGH : LOW);
+}
+
+void onAny(const char *command, const char *const *params, byte paramCount)
+{
+  // Optional catch-all hook
+}
 
 void setup()
 {
-  Ethernet.begin(mac);
-  Blaeck.begin(SERVER_PORT);
-
-  Blaeck.DeviceName = "Weather Station";
-
-  Blaeck.addSignal(F("Temperature"), &temperature);
-  Blaeck.addSignal(F("Pressure"), &pressure);
-}
-
-void loop()
-{
-  ReadSensors();
-
-  Blaeck.tick();
+  // ...
+  BlaeckTCP.onCommand("SwitchLED", onSwitchLED);
+  BlaeckTCP.onAnyCommand(onAny);
 }
 ```
 
-Three calls do the work:
+## Protocol
 
-- `begin(SERVER_PORT)` starts a TCP server on that port, once the network is up.
-- `addSignal(...)` registers a variable. BlaeckTCP keeps a pointer to it and reads it whenever
-  it sends data, so you only have to keep the variable up to date.
-- `tick()` accepts connections, reads incoming commands and sends the values when they are
-  due. Call it in every `loop()`.
+Full protocol specification with version history: [sebajost.github.io/blaeck-protocol](https://sebajost.github.io/blaeck-protocol/blaecktcp/overview)
 
-The host decides how often data is sent. It sends `<BLAECK.ACTIVATE,1000>` to get one frame
-per second, and `<BLAECK.DEACTIVATE>` to stop.
-
-## Hosts and terminals
-
-Several connections can be open at once, and each is one of two kinds:
-
-- A **host**, such as Loggbok, speaks the protocol. A connection becomes a host by sending a
-  command starting with `BLAECK.`, and receives frames from then on.
-- A **terminal**, such as PuTTY, is for a person. It receives the text your sketch prints to
-  `Blaeck.Terminal`, never a frame, and the commands you type in it run as usual.
-
-```cpp
-Blaeck.begin(SERVER_PORT).withDebugStream(&Blaeck.Terminal);   // library messages on the terminal
-Blaeck.Terminal.println("LED is ON.");                         // your own text
-```
-
-[docs/network.md](docs/network.md) explains connections in full.
-
-## Documentation
-
-Everything about signals, commands, state channels and events is the same as in BlaeckSerial,
-and documented there. Read `begin(&Serial)` in those pages as `begin(SERVER_PORT)`.
-
-| Guide | What it covers |
-|---|---|
-| [Network](docs/network.md) | Hosts and terminals, connections, boards, OTA updates |
-| [Configuration](docs/configuration.md) | Settings that only BlaeckTCP has |
-| [Signals](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/signals.md) | Registering values, naming them, and describing how they are shown |
-| [Commands](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/commands.md) | Reacting to commands, and declaring them as controls |
-| [State channels](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/state-channels.md) | Reporting a value that is displayed but not logged |
-| [Events](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/events.md) | Reporting that something happened |
-| [Sending data](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/sending-data.md) | Intervals, sending it yourself, timestamps, buffered writes |
-| [Table sizes](https://github.com/sebaJoSt/BlaeckSerial/blob/master/docs/configuration.md) | Table sizes and switches |
-
-## Examples
-
-Open them with **File > Examples > BlaeckTCP**. Start with **Basic**, then **Signals** and
-**Commands**. Follow with **StateChannels** and **EventChannels**, then **WaveformGenerator**
-to see the pieces working together.
-
-| Example | What it teaches |
-|---|---|
-| [Basic](examples/Basic) | The smallest sketch that logs two values over TCP |
-| [Signals](examples/Signals) | Numeric, boolean and text signals, metadata, and numbered arrays |
-| [Commands](examples/Commands) | Plain commands and typed dashboard controls |
-| [StateChannels](examples/StateChannels) | Values shown but never logged, from variables, getters or explicit writes |
-| [EventChannels](examples/EventChannels) | Declaring and reporting occurrences |
-| [WaveformGenerator](examples/WaveformGenerator) | A complete waveform dashboard, with OTA and Bonjour |
-| [WriteModes](examples/WriteModes) | Immediate writes versus updated-only data sent on the host's interval |
-| [more / BridgeESP32PoE](examples/more/BridgeESP32PoE) | Put a BlaeckSerial device on the network through a transparent UART bridge |
-| [more / WiFi](examples/more/WiFi) | Connect an UNO R4 WiFi or ESP32 over WiFi |
-| [more / ESP32C6BugBoard](examples/more/ESP32C6BugBoard) | Connect a C6 Bug board through its W5500 Ethernet add-on |
-| [more / TimestampsNTP](examples/more/TimestampsNTP) | Wall-clock timestamps from NTP on an ESP32-PoE or WT32-ETH01 |
-
-The seven core topics stay at the top level and use the same `NetworkSetup.h`: Mega and Giga
-with an Ethernet shield, ESP32-PoE, or WT32-ETH01. `more/` holds the additional examples.
-The shared topics follow BlaeckSerial,
-with network setup and `begin(SERVER_PORT)` in place of its serial connection.
-
-## Reference
-
-Every method is documented in `src/BlaeckTCP.h` and `src/BlaeckCore.h`, with an example. Your
-editor shows it when you hover over a call.
-
-The frame formats and the connection rules are described in the
-[Blaeck protocol specification](https://sebajost.github.io/blaeck-protocol/blaecktcp/overview).
-
-## Help and licence
-
-For questions and bug reports, see [SUPPORT.md](SUPPORT.md). To contribute, see
-[CONTRIBUTING.md](CONTRIBUTING.md). BlaeckTCP is released under the MIT licence
-([LICENSE.md](LICENSE.md)).
